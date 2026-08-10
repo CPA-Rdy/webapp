@@ -4085,6 +4085,24 @@ renderDashboard(); }, 400);
 
 <script>
 // ============================================================
+// DATE HELPERS
+// ============================================================
+// Returns a YYYY-MM-DD calendar-day key in the user's LOCAL timezone.
+// Do not use `date.toISOString().split('T')[0]` for calendar-day keys —
+// toISOString() converts to UTC first, so for any timezone ahead of UTC
+// (e.g. Philippines, UTC+8) a day is misidentified as the previous day
+// for every local hour before UTC's midnight rolls over (00:00–07:59
+// local time in UTC+8). That silently logs study days under the wrong
+// date and breaks the streak calculation.
+function localDateStr(d) {
+  d = d || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// ============================================================
 // PIXEL AVATAR GENERATOR
 // ============================================================
 const PIXEL_AVATARS = [];
@@ -4978,7 +4996,7 @@ function seedActivityFromExistingData() {
     if(!e.date)return;
     const r=calcEntry(e); push(e.date,'score',`Recorded ${e.label||e.type}`,`${r.avg!==null?r.avg.toFixed(1)+'%':'Saved'}`);
   });
-  seeded.sort((a,b)=>b.ts.localeCompare(a.ts));
+  seeded.sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
   state.activityLog=seeded;
   compactActivityLog();
 }
@@ -4998,10 +5016,29 @@ function migrateHistoryTimestamps() {
   if (changed) save();
 }
 
+// One-time repair: activity entries recorded before the local-timezone fix
+// had their `day` bucket computed from UTC (via toISOString()), so an entry
+// logged in the early-morning hours in a UTC+ timezone got filed under the
+// PREVIOUS calendar day even though its actual time-of-day was correct.
+// That's why History could show "today's" activity meshed into yesterday's
+// group, with a time that looked wrong for the day it was filed under.
+// `ts` itself is a true timestamp and was never wrong, so recompute `day`
+// from it using the local calendar day.
+function repairActivityDayKeys() {
+  if (!Array.isArray(state.activityLog)) return;
+  let changed = false;
+  state.activityLog.forEach(e => {
+    if (!e || !e.ts) return;
+    const correctDay = localDateStr(new Date(e.ts));
+    if (e.day !== correctDay) { e.day = correctDay; changed = true; }
+  });
+  if (changed) { save(); compactActivityLog(); }
+}
+
 function addActivity(type, title, detail='') {
   if (!state.activityLog) state.activityLog = [];
   const now = new Date();
-  state.activityLog.unshift({id:'act_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),ts:now.toISOString(),day:now.toISOString().split('T')[0],type,title,detail});
+  state.activityLog.unshift({id:'act_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),ts:now.toISOString(),day:localDateStr(now),type,title,detail});
   compactActivityLog();
 }
 
@@ -5103,7 +5140,7 @@ function renderHistoryPage() {
     : historySelectedDay
       ? `<div class="history-selected-day"><span>Showing only <b>${new Date(historySelectedDay+'T00:00:00').toLocaleDateString('default',{weekday:'long',month:'short',day:'numeric'})}</b></span><button class="btn btn-ghost btn-sm" onclick="clearHistoryDay()">Show all days</button></div>`
       : '';
-  const today=new Date().toISOString().split('T')[0], yd=new Date(); yd.setDate(yd.getDate()-1); const yesterday=yd.toISOString().split('T')[0];
+  const today=localDateStr(), yd=new Date(); yd.setDate(yd.getDate()-1); const yesterday=localDateStr(yd);
   const dayLabel=d=>d===today?'Today':d===yesterday?'Yesterday':new Date(d+'T00:00:00').toLocaleDateString('default',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
   const recentHTML=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(day=>{
     const rows=groups[day].map(e=>{const t=e.ts ? new Date(e.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}) : 'Time unavailable';const icon=e.type==='score'?'✎':e.type==='milestone'?'🎯':e.type==='progress'?'✓':'📚';const color=e.type==='score'?'var(--accent2)':e.type==='milestone'?'var(--accent3)':e.type==='progress'?'var(--pass)':'var(--accent)';return `<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);align-items:flex-start"><div style="width:30px;height:30px;border-radius:9px;background:${color}18;border:1px solid ${color}35;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${icon}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--text)">${e.title}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5">${e.detail||'Activity'}</div></div><div style="font:10px var(--font-mono);color:var(--muted);white-space:nowrap" title="${e.ts?'Recorded automatically':'This older record only contains a date'}">${t}</div></div>`}).join('');
@@ -5158,7 +5195,7 @@ function renderRecentActivityHTML(limit=6) {
 function renderWeeklyFootprintHTML() {
   const days=[];
   const now=new Date(); now.setHours(0,0,0,0);
-  for(let i=6;i>=0;i--){ const d=new Date(now); d.setDate(now.getDate()-i); days.push(d.toISOString().split('T')[0]); }
+  for(let i=6;i>=0;i--){ const d=new Date(now); d.setDate(now.getDate()-i); days.push(localDateStr(d)); }
   const subjectData={};
   MAIN_SUBJECTS.forEach(s=>subjectData[s]=days.map(day=>0));
   (state.activityLog||[]).forEach(e=>{
@@ -5251,7 +5288,7 @@ function renderUpcomingSessions() {
   const upcoming = [];
   for (let i = 0; i <= 7; i++) {
     const d = new Date(today); d.setDate(today.getDate() + i);
-    const dStr = d.toISOString().split('T')[0];
+    const dStr = localDateStr(d);
     const evts = (state.calEvents[dStr] || []).filter(e => !e.completed);
     evts.forEach(e => {
       const mainKey = Object.keys(SUBJECTS_META).find(mk => SUBJECTS_META[mk].subs.includes(e.subjectKey)) || 'FAR';
@@ -5264,8 +5301,8 @@ function renderUpcomingSessions() {
     return;
   }
   el.innerHTML = upcoming.slice(0, 6).map(({ dStr, d, e, color }) => {
-    const isToday = dStr === new Date().toISOString().split('T')[0];
-    const isTomorrow = dStr === (() => { const t = new Date(); t.setDate(t.getDate()+1); return t.toISOString().split('T')[0]; })();
+    const isToday = dStr === localDateStr();
+    const isTomorrow = dStr === (() => { const t = new Date(); t.setDate(t.getDate()+1); return localDateStr(t); })();
     const dayLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : d.toLocaleDateString('default', { weekday:'short', month:'short', day:'numeric' });
     const subjectName = DEFAULT_TOPICS[e.subjectKey]?.name || e.subjectKey;
     return `<div class="reminder-item">
@@ -5332,6 +5369,7 @@ function addWidget(type) {
   const id = 'w_' + Date.now();
   if (type === 'image') {
     cropWidgetId = id;
+    cropTarget = 'widget';
     const inp = document.createElement('input');
     inp.type='file'; inp.accept='image/*';
     inp.onchange = e => {
@@ -5770,7 +5808,7 @@ function renderWidgetHTML(w, i) {
     const today = new Date();
     const dots = Array.from({length:14},(_,i)=>{
       const d = new Date(today); d.setDate(today.getDate()-(13-i));
-      const ds = d.toISOString().split('T')[0];
+      const ds = localDateStr(d);
       const isToday = i===13;
       const active = streak.days.includes(ds);
       return `<div style="width:10px;height:10px;border-radius:3px;background:${isToday?'var(--accent)':active?'var(--warn)':'var(--border)'};${isToday?'box-shadow:0 0 6px var(--accent)':''}"></div>`;
@@ -6317,7 +6355,7 @@ function openPracticeScoreModal(idx) {
   if(idx===-1){
     document.getElementById('practice-score-modal-title').textContent='Add Practice Score';
     document.getElementById('ps-label').value=''; document.getElementById('ps-type').value='Practice Set';
-    document.getElementById('ps-date').value=new Date().toISOString().split('T')[0];
+    document.getElementById('ps-date').value=localDateStr();
     main.innerHTML=MAIN_SUBJECTS.map(k=>`<option value="${k}">${SUBJECTS_META[k].name} — ${SUBJECTS_META[k].fullName}</option>`).join('');
     main.value=currentTrackerMain||'FAR'; updatePracticeSubsubjects(currentTrackerSub);
     document.getElementById('ps-topic').value=''; document.getElementById('ps-score').value=''; document.getElementById('ps-max').value='50'; document.getElementById('ps-notes').value='';
@@ -6606,7 +6644,7 @@ function openScoreModal(idx) {
     document.getElementById('score-modal-title').textContent = 'Add Score Entry';
     document.getElementById('sm-label').value = '';
     document.getElementById('sm-type').value = 'Preboard';
-    document.getElementById('sm-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('sm-date').value = localDateStr();
     ['far','afar','mas','audit','tax'].forEach(id => {
       document.getElementById('sm-' + id).value = '';
       document.getElementById('sm-max-' + id).value = '70';
@@ -6806,7 +6844,7 @@ function setTopicStatus(sKey, idx, val) {
   const topic = state.topics[sKey][idx];
   const previous = topic.status;
   topic.status = v;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   if (v !== previous && v > 0) {
     const subName = DEFAULT_TOPICS[sKey]?.name || sKey;
     const mainKey = Object.keys(SUBJECTS_META).find(mk => SUBJECTS_META[mk].subs.includes(sKey)) || '';
@@ -7017,7 +7055,7 @@ function calNav(dir) {
 
 function calToday() {
   calViewDate = new Date();
-  selectedCalDay = new Date().toISOString().split('T')[0];
+  selectedCalDay = localDateStr();
   renderCalView();
 }
 
@@ -7098,7 +7136,7 @@ function renderCalWeek() {
   });
   document.getElementById('cal-month-label').textContent =
     `${startOfWeek.toLocaleDateString('default',{month:'short',day:'numeric'})} – ${weekDays[6].toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}`;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   const dayNames=['SUN','MON','TUE','WED','THU','FRI','SAT'];
   const slots = Array.from({length:17}, (_,i) => i+6); // 6am-10pm
 
@@ -7108,7 +7146,7 @@ function renderCalWeek() {
   html += `<div style="background:var(--surface);border-bottom:1px solid var(--border);padding:8px 4px;font-size:9px;color:var(--muted);text-align:right;">GMT+08</div>`;
   // Day headers
   weekDays.forEach((day,i) => {
-    const dStr = day.toISOString().split('T')[0];
+    const dStr = localDateStr(day);
     const isToday = dStr === todayStr;
     const isSel = dStr === selectedCalDay;
     html += `<div style="background:${isSel?'rgba(124,106,247,0.16)':isToday?'rgba(124,106,247,0.08)':'var(--surface)'};padding:8px 4px;text-align:center;font-size:10px;border-bottom:${isSel?'2px solid var(--accent)':'1px solid var(--border)'};border-left:1px solid var(--border);cursor:pointer;box-shadow:${isSel?'inset 0 0 0 1px rgba(124,106,247,.2)':'none'}" onclick="selectCalDay('${dStr}')">
@@ -7124,7 +7162,7 @@ function renderCalWeek() {
     const label = hour === 12 ? '12 PM' : hour < 12 ? hour + ' AM' : (hour-12) + ' PM';
     html += `<div style="background:var(--surface);padding:0 6px 0 0;font-size:9px;color:var(--muted);text-align:right;border-bottom:1px solid var(--border);font-family:var(--font-mono);height:52px;display:flex;align-items:flex-start;justify-content:flex-end;padding-top:3px;">${label}</div>`;
     weekDays.forEach((day,i) => {
-      const dStr = day.toISOString().split('T')[0];
+      const dStr = localDateStr(day);
       const isToday = dStr === todayStr;
       const events = (state.calEvents[dStr]||[]).filter(e => {
         if (!e.time) return false;
@@ -7147,7 +7185,7 @@ function renderCalWeek() {
 }
 
 function renderCalDay() {
-  if (!selectedCalDay) selectedCalDay = new Date().toISOString().split('T')[0];
+  if (!selectedCalDay) selectedCalDay = localDateStr();
   const d = new Date(selectedCalDay+'T00:00:00');
   document.getElementById('cal-month-label').textContent = d.toLocaleDateString('default',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const events = state.calEvents[selectedCalDay]||[];
@@ -7806,6 +7844,7 @@ document.addEventListener('keydown', e => {
 function init() {
   initAvatars();
   load();
+  repairActivityDayKeys();
 
   // Ensure customWidgets state key exists
   if (!state.customWidgets) state.customWidgets = {};
@@ -7899,7 +7938,7 @@ function init() {
   refreshAllAvatars();
 
   // Today's date as selected cal day
-  selectedCalDay=new Date().toISOString().split('T')[0];
+  selectedCalDay=localDateStr();
 
    renderDashboard();
   checkAchievements();
@@ -8041,8 +8080,8 @@ function getAchievementProgressStats() {
   for (let w = 0; w < 8; w++) {
     const sun = new Date(todaySunday); sun.setDate(todaySunday.getDate() - w * 7);
     const sat = new Date(sun); sat.setDate(sun.getDate() - 1);
-    const sunStr = sun.toISOString().split('T')[0];
-    const satStr = sat.toISOString().split('T')[0];
+    const sunStr = localDateStr(sun);
+    const satStr = localDateStr(sat);
     if (daySet.has(satStr) || daySet.has(sunStr)) weekendStreak++;
     else break;
   }
@@ -8158,7 +8197,7 @@ function checkAchievements() {
 // ---- STREAK ----
 function recordStudyDay(dateStr) {
   if (!state.studyDays) state.studyDays = [];
-  const day = dateStr || new Date().toISOString().split('T')[0];
+  const day = dateStr || localDateStr();
   if (!state.studyDays.includes(day)) {
     state.studyDays.push(day);
     save();
@@ -8168,7 +8207,7 @@ function recordStudyDay(dateStr) {
 // Manually log "I studied today" without changing any topic's status —
 // for sessions where you continued an existing topic that isn't finished yet.
 function logStudyToday() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const already = (state.studyDays || []).includes(today);
   recordStudyDay(today);
   if (!already) addActivity('study', 'Study day logged', 'Continued your preparation without changing a topic status.');
@@ -8189,7 +8228,7 @@ function gapIsAllRestDays(fromDate, toDate) {
   d.setDate(d.getDate() + 1);
   const end = new Date(toDate + 'T00:00:00');
   while (d < end) {
-    const ds = d.toISOString().split('T')[0];
+    const ds = localDateStr(d);
     if (!isRestDay(ds)) return false;
     d.setDate(d.getDate() + 1);
   }
@@ -8200,7 +8239,7 @@ function calcStreak() {
   const days = Array.from(new Set(state.studyDays || [])).sort();
   if (!days.length) return { current: 0, longest: 0, days };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   let current = 0, longest = 0, streak = 0;
   let prev = null;
 
@@ -8256,7 +8295,7 @@ function renderAchievementsPage() {
   const dots = [];
   for (let i = 29; i >= 0; i--) {
     const d = new Date(today); d.setDate(today.getDate() - i);
-    const dStr = d.toISOString().split('T')[0];
+    const dStr = localDateStr(d);
     const isToday = i === 0;
     const active = streak.days.includes(dStr);
     dots.push(`<div class="streak-day-dot ${isToday ? 'today' : active ? 'active' : ''}" title="${dStr}"></div>`);
