@@ -1783,6 +1783,32 @@ body.light-mode.theme-rose .toast {
     height: min(520px, calc(100vh - 20px)) !important;
   }
 }
+
+#login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+#login-screen input {
+  padding: 10px;
+  width: 250px;
+}
+
+#login-screen button {
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+#login-error {
+  color: red;
+}
 </style>
 
 <style id="soft-calming-appearance-v2">
@@ -9329,5 +9355,56 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
 })();
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<div id="login-screen">
+  <h2>Login</h2>
+
+  <input id="email" type="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+
+  <button onclick="login()">Log In</button>
+
+  <p id="login-error"></p>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ctrcvxlzuuvurgrnpneg.supabase.co/rest/v1/
+";
+  const SUPABASE_KEY = "sb_publishable_KHz4V5ugmvTlMMpLx00spA_Gi20GUmu
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  async function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const error = document.getElementById("login-error");
+
+    error.textContent = "";
+
+    const { error: loginError } =
+      await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+    if (loginError) {
+      error.textContent = loginError.message;
+      return;
+    }
+
+    document.getElementById("login-screen").style.display = "none";
+  }
+  async function checkSession() {
+  const { data } = await supabaseClient.auth.getSession();
+
+  if (data.session) {
+    document.getElementById("login-screen").style.display = "none";
+  }
+}
+
+checkSession();
+</script>
 </body>
 </html>
