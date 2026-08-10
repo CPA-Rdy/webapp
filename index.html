@@ -9666,12 +9666,17 @@ checkSession();
 const favicon = document.querySelector('link[rel~="icon"]');
 
 if (favicon) {
-  document.getElementById("login-logo").src = favicon.href;
+  const logoSource = favicon.href;
 
+  const loginLogo = document.getElementById("login-logo");
   const paymentLogo = document.getElementById("payment-logo");
 
+  if (loginLogo) {
+    loginLogo.src = logoSource;
+  }
+
   if (paymentLogo) {
-    paymentLogo.src = favicon.href;
+    paymentLogo.src = logoSource;
   }
 }
 </script>
