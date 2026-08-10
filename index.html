@@ -9383,6 +9383,97 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
   </p>
 
 </div>
+  <div id="payment-screen" style="display:none;">
+
+  <img id="payment-logo" alt="CPA Ready logo"
+       style="width:80px;height:80px;object-fit:contain;margin-bottom:12px;">
+
+  <h2 style="margin:0 0 6px;">Complete your payment 💳</h2>
+
+  <p style="margin:0 0 20px;color:var(--muted);font-size:14px;">
+    Your account is verified. Complete the one-time payment to unlock CPA Ready.
+  </p>
+
+  <div style="
+    background:var(--card);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:18px;
+    text-align:center;
+  ">
+    <p style="margin:0 0 6px;color:var(--muted);font-size:13px;">
+      Your price
+    </p>
+
+    <div id="payment-price"
+         style="font-size:32px;font-weight:800;margin-bottom:14px;">
+      ₱150
+    </div>
+
+    <p style="margin:0;color:var(--muted);font-size:13px;">
+      One-time payment • Lifetime access
+    </p>
+  </div>
+
+  <div style="
+    background:var(--card);
+    border-radius:14px;
+    padding:18px;
+    margin-bottom:18px;
+    text-align:center;
+  ">
+    <strong>Pay via GCash</strong>
+
+    <p style="margin:10px 0 12px;color:var(--muted);font-size:13px;">
+      Scan the QR code below to make your payment.
+    </p>
+
+    <img
+      src="images/gcash-qr.png"
+      alt="GCash payment QR code"
+      style="
+        width:220px;
+        max-width:100%;
+        border-radius:12px;
+        display:block;
+        margin:0 auto 14px;
+      "
+    >
+
+    <p style="margin:0;color:var(--muted);font-size:13px;">
+      After paying, upload your GCash receipt below.
+    </p>
+  </div>
+
+  <label
+    for="payment-proof"
+    style="
+      display:block;
+      margin-top:16px;
+      margin-bottom:8px;
+      font-weight:700;
+    "
+  >
+    Upload your GCash receipt
+  </label>
+
+  <input
+    id="payment-proof"
+    type="file"
+    accept="image/png,image/jpeg,image/webp,application/pdf"
+    style="width:100%;margin-bottom:12px;"
+  >
+
+  <button id="upload-proof-button" onclick="uploadPaymentProof()">
+    Submit Payment Proof
+  </button>
+
+  <p
+    id="payment-message"
+    style="font-size:13px;margin-top:12px;"
+  ></p>
+
+</div>
 
 <script>
 const SUPABASE_URL = "https://ctrcvxlzuuvurgrnpneg.supabase.co";
@@ -9400,18 +9491,39 @@ async function login() {
 
   error.textContent = "";
 
-  const { error: loginError } =
-    await supabaseClient.auth.signInWithPassword({
-      email,
-      password
-    });
+  const { data, error: loginError } =
+  await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
 
-  if (loginError) {
-    error.textContent = loginError.message;
-    return;
-  }
+if (loginError) {
+  error.textContent = loginError.message;
+  return;
+}
 
-  document.getElementById("login-screen").style.display = "none";
+const user = data.user;
+
+const { data: profile, error: profileError } =
+  await supabaseClient
+    .from("profiles")
+    .select('"Offer_number", payment_status')
+    .eq("id", user.id)
+    .single();
+
+if (profileError) {
+  error.textContent = "Could not load your account. Please try again.";
+  return;
+}
+
+if (profile.payment_status !== "paid") {
+  const price = profile["Offer_number"] <= 100 ? 150 : 200;
+
+  error.textContent = `Payment required. Your price is ₱${price}.`;
+  return;
+}
+
+document.getElementById("login-screen").style.display = "none";
 }
 
 function showSignup() {
@@ -9450,6 +9562,48 @@ function showLogin() {
   `;
 }
 
+async function login() {
+  // existing login code
+  ...
+}
+
+async function uploadPaymentProof() {
+  const fileInput = document.getElementById("payment-proof");
+  const message = document.getElementById("payment-message");
+
+  if (!fileInput.files.length) {
+    message.textContent = "Please select your GCash receipt first.";
+    return;
+  }
+
+  const file = fileInput.files[0];
+
+  const { data: { user } } = await supabaseClient.auth.getUser();
+
+  if (!user) {
+    message.textContent = "Please log in first.";
+    return;
+  }
+
+  const fileExt = file.name.split(".").pop();
+  const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+
+  message.textContent = "Uploading payment proof...";
+
+  const { error } = await supabaseClient.storage
+    .from("payment-proofs")
+    .upload(filePath, file);
+
+  if (error) {
+    console.error(error);
+    message.textContent = "Upload failed. Please try again.";
+    return;
+  }
+
+  message.textContent =
+    "Payment proof submitted! Please wait for verification. ✅";
+}
+  
 async function signup() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -9473,13 +9627,37 @@ async function signup() {
 }
   
 async function checkSession() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  const { data: { session } } =
+    await supabaseClient.auth.getSession();
 
-  if (session) {
-    document.getElementById("login-screen").style.display = "none";
+  if (!session) {
+    return;
+  }
+
+  const { data: profile, error } =
+    await supabaseClient
+      .from("profiles")
+      .select("payment_status")
+      .eq("id", session.user.id)
+      .single();
+
+  if (error) {
+    console.error("Profile error:", error);
+    return;
+  }
+
+  document.getElementById("login-screen").style.display = "none";
+
+  if (profile.payment_status === "paid") {
+    // User already paid — continue to the app
+    document.getElementById("payment-screen").style.display = "none";
+
+    // Put your existing app-opening code here if needed
+  } else {
+    // User hasn't paid yet
+    document.getElementById("payment-screen").style.display = "block";
   }
 }
-
 checkSession();
 
 const favicon = document.querySelector('link[rel~="icon"]');
