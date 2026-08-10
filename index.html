@@ -9684,14 +9684,11 @@ checkSession();
 const favicon = document.querySelector('link[rel~="icon"]');
 
 if (favicon) {
-  const logoSource = favicon.href;
+  const logoSource = favicon.getAttribute("href");
 
-  const loginLogo = document.getElementById("login-logo");
+  document.getElementById("login-logo").src = logoSource;
+
   const paymentLogo = document.getElementById("payment-logo");
-
-  if (loginLogo) {
-    loginLogo.src = logoSource;
-  }
 
   if (paymentLogo) {
     paymentLogo.src = logoSource;
