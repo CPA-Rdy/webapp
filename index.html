@@ -9396,6 +9396,16 @@ async function login() {
 
   document.getElementById("login-screen").style.display = "none";
 }
+  
+async function checkSession() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  if (session) {
+    document.getElementById("login-screen").style.display = "none";
+  }
+}
+
+checkSession();
 </script>
 </body>
 </html>
