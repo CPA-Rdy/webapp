@@ -621,6 +621,7 @@ tr:hover td { background: rgba(124,106,247,0.03); }
   border-left: 1px solid var(--border);
   position: relative;
   padding: 2px;
+  min-width: 0;
 }
 .cal-timeline-event {
   position: absolute; left: 2px; right: 2px;
@@ -3176,7 +3177,7 @@ renderDashboard(); }, 400);
     </div>
     <div class="card" style="overflow-x:auto;margin-bottom:16px">
       <table id="practice-scores-table">
-        <thead><tr><th>#</th><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Date</th><th>Score</th><th>%</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Date</th><th>Score</th><th>%</th><th>Notes</th><th></th></tr></thead>
         <tbody id="practice-score-tbody"></tbody>
       </table>
     </div>
@@ -3306,12 +3307,16 @@ renderDashboard(); }, 400);
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-row">
         <label>Subject</label>
-        <select id="cal-subject-sel" onchange="updateCalTopics()"></select>
+        <select id="cal-main-subject-sel" onchange="updateCalSubsubjects()"></select>
       </div>
       <div class="form-row">
-        <label>Topic</label>
-        <select id="cal-topic-sel"></select>
+        <label>Sub-subject</label>
+        <select id="cal-subject-sel" onchange="updateCalTopics()"></select>
       </div>
+    </div>
+    <div class="form-row">
+      <label>Topic</label>
+      <select id="cal-topic-sel"></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-row">
@@ -3608,11 +3613,6 @@ renderDashboard(); }, 400);
     <h3 style="margin-bottom:16px">＋ Add Widget</h3>
     <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">📊 Study Info</div>
     <div class="add-widget-grid" style="margin-bottom:16px;">
-      <div class="add-widget-card" onclick="addWidget('countdown_card')">
-        <div class="aw-icon">⏳</div>
-        <div class="aw-name">Days to Exam</div>
-        <div class="aw-desc">Countdown card</div>
-      </div>
       <div class="add-widget-card" onclick="addWidget('completion_card')">
         <div class="aw-icon">📈</div>
         <div class="aw-name">Completion Card</div>
@@ -3695,11 +3695,6 @@ renderDashboard(); }, 400);
         <div class="aw-icon">💬</div>
         <div class="aw-name">Motivational Quote</div>
         <div class="aw-desc">Your saved quote</div>
-      </div>
-      <div class="add-widget-card" onclick="addWidget('stats')">
-        <div class="aw-icon">📊</div>
-        <div class="aw-name">Score Stats</div>
-        <div class="aw-desc">Avg, high, latest</div>
       </div>
     </div>
     <button class="btn btn-ghost" onclick="closeModal('modal-add-widget')" style="width:100%;margin-top:14px">Cancel</button>
@@ -5016,6 +5011,20 @@ function migrateHistoryTimestamps() {
   if (changed) save();
 }
 
+// One-time repair: 'countdown_card' ("Days to Exam") and 'stats' ("Score
+// Stats") were removed as duplicates of 'countdown' and 'score_stat_cards'
+// respectively. Rename any already-placed widgets so they keep working
+// instead of silently disappearing from the dashboard.
+function migrateWidgetTypes() {
+  const widgets = getWidgets();
+  let changed = false;
+  const rename = { countdown_card: 'countdown', stats: 'score_stat_cards' };
+  widgets.forEach(w => {
+    if (rename[w.type]) { w.type = rename[w.type]; changed = true; }
+  });
+  if (changed) { state.dashWidgets = widgets; save(); }
+}
+
 // One-time repair: activity entries recorded before the local-timezone fix
 // had their `day` bucket computed from UTC (via toISOString()), so an entry
 // logged in the early-morning hours in a UTC+ timezone got filed under the
@@ -5329,7 +5338,7 @@ let cropWidgetId = null, cropImgData = null, cropTarget = 'widget';
 let cropStartX, cropStartY, cropEndX, cropEndY, cropDragging = false;
 
 const DEFAULT_WIDGETS = [
-  { id:'w_countdown2', type:'countdown_card',  cols:2,  rows:12 },
+  { id:'w_countdown2', type:'countdown',       cols:2,  rows:12 },
   { id:'w_completion', type:'completion_card', cols:10, rows:12 },
   { id:'w_scorecards', type:'score_stat_cards',cols:12, rows:10 },
   { id:'w_ranklegend', type:'rank_legend',     cols:12, rows:14 },
@@ -5367,24 +5376,15 @@ function openAddWidgetModal() { openModal('modal-add-widget'); }
 function addWidget(type) {
   closeModal('modal-add-widget');
   const id = 'w_' + Date.now();
-  if (type === 'image') {
-    cropWidgetId = id;
-    cropTarget = 'widget';
-    const inp = document.createElement('input');
-    inp.type='file'; inp.accept='image/*';
-    inp.onchange = e => {
-      const file = e.target.files[0]; if (!file) return;
-      const r = new FileReader();
-      r.onload = ev => openCropModal(id, ev.target.result);
-      r.readAsDataURL(file);
-    };
-    inp.click(); return;
-  }
   const d = {cols:6,rows:12,notes:'',label:''};
   if (type==='clock')           { d.cols=4;  d.rows=12; d.clockFmt='12'; d.clockSec=true; d.clockDesign={timeColor:'#a78bfa',bgColor:'#16161f',dateColor:'#64748b',glowColor:'#7c6af7',font:"'JetBrains Mono',monospace",size:48,spacing:2,glowAmt:20,gradient:false,grad2Color:'#34d399',showDate:true,bold:true}; }
-  if (type==='stats'||type==='score_stat_cards') { d.cols=12; d.rows=10; }
+  // Image widgets land as an empty placeholder tile — like adding a blank
+  // photo slot to a tablet home screen — sized to a default square. Tap it
+  // (openWidgetImageEdit) any time to fill or replace the photo; resize it
+  // like any other widget via the drag handles.
+  if (type==='image')           { d.cols=4;  d.rows=24; d.dataUrl=null; }
+  if (type==='score_stat_cards') { d.cols=12; d.rows=10; }
   if (type==='streak')          { d.cols=6;  d.rows=12; }
-  if (type==='countdown_card')  { d.cols=2;  d.rows=12; }
   if (type==='completion_card') { d.cols=6;  d.rows=12; }
   if (type==='subject_bars')    { d.cols=12; d.rows=30; }
   if (type==='video_bars')      { d.cols=12; d.rows=30; }
@@ -5434,19 +5434,6 @@ function renderDashboardWidgets() {
   const widgets = getWidgets();
   grid.innerHTML = widgets.map((w,i) => renderWidgetHTML(w,i)).join('');
   if (layoutEditMode) grid.classList.add('layout-edit-mode');
-
-  // One-time auto-fit for image widgets that haven't been aspect-fitted yet
-  // (covers existing/legacy image widgets so the dead space around them
-  // is removed automatically, without overriding any later manual resize).
-  let legacyFitted = false;
-  widgets.forEach(w => {
-    if (w.type === 'image' && w.dataUrl && !w.aspectFitted) {
-      w.aspectFitted = true;
-      legacyFitted = true;
-      fitImageWidgetHeight(w.id);
-    }
-  });
-  if (legacyFitted) save();
 
   // ── Drag-to-reorder (pointer-based, scroll-safe) ───────────────────────────
   let dragSrcEl=null, dragClone=null, placeholder=null, dragSrcIdx=null;
@@ -5641,13 +5628,6 @@ function bindResizeHandles(grid) {
     function onUp() {
       widgetEl.classList.remove('resize-active');
       if (tooltip) tooltip.style.display='none';
-      // Image widgets: a manual resize is the user's chosen layout.
-      // Mark it as fitted so a later tab/dashboard render does not
-      // re-apply the legacy automatic aspect-ratio sizing.
-      // The explicit "↕ Fit" button still performs auto-fit on demand.
-      if (w.type === 'image' && w.dataUrl) {
-        w.aspectFitted = true;
-      }
       // update size badge
       const badge = widgetEl.querySelector('.widget-size-badge');
       if (badge) badge.textContent = `${w.cols}/12 · ${w.rows*ROW_UNIT}px`;
@@ -5677,7 +5657,7 @@ function wBase(w) {
     <span style="font-size:9px;color:rgba(255,255,255,0.4);flex:1;padding:0 6px;">drag any edge or corner to resize</span>
     <div class="widget-edit-actions">
       ${w.type==='clock'?`<button class="widget-ctrl-btn" onclick="openClockStyleModal('${w.id}')">🎨 Design</button>`:''}
-      ${w.type==='image'?`<button class="widget-ctrl-btn" title="Snap height to remove dead space" onclick="fitImageWidgetHeight('${w.id}')">↕ Fit</button>`:''}
+      ${w.type==='image'&&w.dataUrl?`<button class="widget-ctrl-btn" title="Choose a different photo" onclick="openWidgetImageEdit('${w.id}')">🖼️ Change photo</button>`:''}
       <button class="widget-ctrl-btn danger" onclick="removeWidget('${w.id}')">✕ Remove</button>
     </div>
   </div>
@@ -5718,17 +5698,19 @@ function renderWidgetHTML(w, i) {
 
   if (w.type === 'image') {
     if (w.dataUrl) {
-      return `<div class="dash-widget" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}cursor:pointer;background:var(--surface);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;" onclick="${layoutEditMode?'':''} openWidgetImageEdit('${w.id}')">
+      // object-fit:cover fills the whole tile with no empty space — the
+      // photo crops to match whatever shape the tile is, like a tablet
+      // home-screen widget, rather than letterboxing to fit the full image.
+      return `<div class="dash-widget" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}cursor:pointer;background:var(--surface);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:14px;" onclick="${layoutEditMode?'':''} openWidgetImageEdit('${w.id}')">
         ${b.editBar}
-        <div style="position:absolute;inset:0;background-image:url('${w.dataUrl}');background-size:cover;background-position:center;filter:blur(28px) brightness(0.55) saturate(1.2);transform:scale(1.2);"></div>
-        <img src="${w.dataUrl}" style="position:relative;width:100%;height:100%;object-fit:contain;border-radius:14px;display:block;z-index:1;">
+        <img src="${w.dataUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;">
         ${w.label?`<div style="position:absolute;bottom:0;left:0;right:0;z-index:2;background:linear-gradient(transparent,rgba(0,0,0,0.65));padding:20px 12px 10px;font-size:12px;color:white;font-weight:600;border-radius:0 0 14px 14px">${w.label}</div>`:''}
       </div>`;
     }
     return `<div class="dash-widget" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}background:var(--card);border:2px dashed var(--border);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-direction:column;gap:8px;color:var(--muted)" onclick="openWidgetImageEdit('${w.id}')">      ${b.editBar}
       <div style="font-size:36px">🖼️</div>
-      <div style="font-size:12px">Tap to add image</div>
-      <div style="font-size:10px;opacity:0.6">Crop tool included</div>
+      <div style="font-size:12px">Tap to add photo</div>
+      <div style="font-size:10px;opacity:0.6">Fills this tile automatically</div>
     </div>`;
   }
 
@@ -5778,31 +5760,6 @@ function renderWidgetHTML(w, i) {
     </div>`;
   }
 
-  if (w.type === 'stats') {
-    const scoreData = state.scores.map(s=>calcEntry(s));
-    const avgs = scoreData.map(s=>s.avg).filter(v=>v!==null);
-    const avg = avgs.length ? (avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1)+'%' : '—';
-    const high = avgs.length ? Math.max(...avgs).toFixed(1)+'%' : '—';
-    const latest = [...state.scores].reverse().find(s=>calcEntry(s).remark);
-    const remark = latest ? calcEntry(latest).remark : null;
-    const remarkMap = {PASSED:'pass',FAILED:'fail',CONDITIONAL:'cond'};
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-      ${b.editBar}
-      <div style="flex:1;min-width:80px;text-align:center">
-        <div class="stat-label">Avg Score</div>
-        <div style="font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--accent2)">${avg}</div>
-      </div>
-      <div style="flex:1;min-width:80px;text-align:center">
-        <div class="stat-label">Highest</div>
-        <div style="font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--pass)">${high}</div>
-      </div>
-      <div style="flex:1;min-width:80px;text-align:center">
-        <div class="stat-label">Latest Remark</div>
-        <div style="margin-top:6px">${remark?`<span class="badge badge-${remarkMap[remark]}">${remark}</span>`:'<span class="badge badge-none">No data</span>'}</div>
-      </div>
-    </div>`;
-  }
-
   if (w.type === 'streak') {
     const streak = calcStreak();
     const today = new Date();
@@ -5826,16 +5783,6 @@ function renderWidgetHTML(w, i) {
         <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--dim)">${streak.longest}</div>
         <div style="font-size:10px;color:var(--muted)">days</div>
       </div>
-    </div>`;
-  }
-
-  if (w.type === 'countdown_card') {
-    const days = countdownDays();
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-      ${b.editBar}
-      <div class="section-title" style="margin-bottom:4px;font-size:9px;">⏳ Days Left</div>
-      <div style="font-family:var(--font-mono);font-size:clamp(28px,4vw,44px);font-weight:800;color:var(--accent2);line-height:1">${days!==null?days:'—'}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;">${state.examDate||'Set exam date'}</div>
     </div>`;
   }
 
@@ -6278,33 +6225,7 @@ function saveWidgetImage(dataUrl) {
   }
   state.dashWidgets = widgets;
   save(); renderDashboardWidgets();
-  fitImageWidgetHeight(cropWidgetId);
   toast('Image widget updated!');
-}
-
-// Resizes an image widget's height to exactly match its image's aspect
-// ratio at the widget's current width — this removes the dead/empty
-// letterbox space around the image without ever cropping it.
-function fitImageWidgetHeight(id) {
-  const el = document.querySelector(`.dash-widget[data-id="${id}"]`);
-  if (!el) return;
-  const img = el.querySelector('img');
-  if (!img) return;
-  const apply = () => {
-    if (!img.naturalWidth || !img.naturalHeight) return;
-    const width = el.clientWidth;
-    if (!width) return;
-    const idealRows = Math.max(6, Math.round((width * (img.naturalHeight / img.naturalWidth)) / ROW_UNIT));
-    const widget = getWidgets().find(x => x.id === id);
-    if (widget && widget.rows !== idealRows) {
-      widget.rows = idealRows;
-      save();
-    }
-    el.style.gridRowEnd = 'span ' + idealRows;
-    const badge = el.querySelector('.widget-size-badge');
-    if (badge && widget) badge.textContent = `${widget.cols||6}/12 · ${idealRows*ROW_UNIT}px`;
-  };
-  if (img.complete) apply(); else img.onload = apply;
 }
 
 function triggerWidgetUpload(n) { openWidgetImageEdit('w_img' + n); }
@@ -6394,8 +6315,8 @@ function renderPracticeScores(){
     filters.innerHTML += '<div style="flex-basis:100%;height:0"></div>' + ['all',...subs].map(k=>`<button class="btn btn-sm ${practiceFilterSub===k?'btn-primary':'btn-ghost'}" onclick="practiceFilterSub='${k}';renderPracticeScores()">${k==='all'?'All Sub-subjects':(DEFAULT_TOPICS[k]?.name||k)}</button>`).join('');
   }
   const filtered=(state.practiceScores||[]).map((p,i)=>({p,i})).filter(({p})=>practiceFilterMain==='all'||p.mainSubject===practiceFilterMain).filter(({p})=>practiceFilterSub==='all'||p.subjectKey===practiceFilterSub);
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">No practice scores yet. Add a drill, exercise, or practice set.</td></tr>'; renderPracticeAnalytics(); return;}
-  tbody.innerHTML=filtered.map(({p,i})=>{const pct=p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null;const color=pct===null?'var(--muted)':pct>=75?'var(--pass)':pct>=65?'var(--warn)':'var(--danger)';return `<tr><td>${i+1}</td><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.date||'—'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`}).join('');
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">No practice scores yet. Add a drill, exercise, or practice set.</td></tr>'; renderPracticeAnalytics(); return;}
+  tbody.innerHTML=filtered.map(({p,i})=>{const pct=p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null;const color=pct===null?'var(--muted)':pct>=75?'var(--pass)':pct>=65?'var(--warn)':'var(--danger)';const noteText=(p.notes||'').trim();const noteEsc=noteText.replace(/"/g,'&quot;');const noteCell=noteText?`<span title="${noteEsc}" style="display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;cursor:help">📝 ${noteEsc}</span>`:'<span style="color:var(--muted)">—</span>';return `<tr><td>${i+1}</td><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.date||'—'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td style="max-width:160px">${noteCell}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`}).join('');
   renderPracticeAnalytics();
 }
 
@@ -7003,12 +6924,20 @@ function saveBulkTopics() {
 // CALENDAR
 // ============================================================
 function renderCalendar() {
-  // Populate subject selects
-  const calSubjEl = document.getElementById('cal-subject-sel');
-  calSubjEl.innerHTML = ALL_SUBJECT_KEYS.map(k=>`<option value="${k}">${DEFAULT_TOPICS[k].name}</option>`).join('');
-  updateCalTopics();
+  // Populate subject selects (Subject → Sub-subject cascade)
+  const calMainEl = document.getElementById('cal-main-subject-sel');
+  calMainEl.innerHTML = MAIN_SUBJECTS.map(k=>`<option value="${k}">${SUBJECTS_META[k].name} — ${SUBJECTS_META[k].fullName}</option>`).join('');
+  updateCalSubsubjects();
   renderCalLegend();
   renderCalView();
+}
+
+function updateCalSubsubjects(selected) {
+  const main = document.getElementById('cal-main-subject-sel').value;
+  const subs = SUBJECTS_META[main]?.subs || [];
+  document.getElementById('cal-subject-sel').innerHTML = subs.map(k=>`<option value="${k}">${DEFAULT_TOPICS[k]?.name||k}</option>`).join('');
+  if (selected && subs.includes(selected)) document.getElementById('cal-subject-sel').value = selected;
+  updateCalTopics();
 }
 
 function renderCalLegend() {
@@ -7081,7 +7010,7 @@ function renderCalGrid() {
   // Leading previous-month cells
   for(let i=0;i<firstDay;i++) {
     const dayNum = prevDays-firstDay+1+i;
-    html += `<div style="padding:6px 8px;min-height:90px;background:var(--surface);border-top:1px solid var(--border);${i>0?'border-left:1px solid var(--border)':''}opacity:0.45">
+    html += `<div style="padding:6px 8px;min-height:90px;min-width:0;overflow:hidden;background:var(--surface);border-top:1px solid var(--border);${i>0?'border-left:1px solid var(--border)':''}opacity:0.45">
       <span style="font-size:12px;color:var(--muted);font-weight:500">${dayNum}</span>
     </div>`;
   }
@@ -7101,11 +7030,11 @@ function renderCalGrid() {
       const color=mainKey?SUBJECTS_META[mainKey].color:'var(--accent)';
       const done=e.completed?'opacity:0.5':'';
       const label = e.label || DEFAULT_TOPICS[sKey]?.name || '';
-      return `<div style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;${done}">${label||e.topicName}</div>`;
+      return `<div style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;max-width:100%;${done}">${label||e.topicName}</div>`;
     }).join('');
     const moreLabel = events.length > 3 ? `<div style="font-size:9px;color:var(--muted);padding:0 2px">+${events.length-3} more</div>` : '';
 
-    html+=`<div onclick="selectCalDay('${dStr}')" style="padding:6px 8px;min-height:90px;cursor:pointer;background:${isSel?'rgba(124,106,247,0.16)':isToday?'rgba(124,106,247,0.07)':'var(--card)'};border:${isSel?'2px solid var(--accent)':'1px solid var(--border)'};box-shadow:${isSel?'inset 0 0 0 1px rgba(124,106,247,0.22)':'none'};${colIdx>0?'border-left:1px solid var(--border)':''};transition:background 0.15s;position:relative;" onmouseenter="this.style.background='rgba(124,106,247,0.08)'" onmouseleave="this.style.background='${isSel?'rgba(124,106,247,0.12)':isToday?'rgba(124,106,247,0.07)':'var(--card)'}'">
+    html+=`<div onclick="selectCalDay('${dStr}')" style="padding:6px 8px;min-height:90px;min-width:0;overflow:hidden;cursor:pointer;background:${isSel?'rgba(124,106,247,0.16)':isToday?'rgba(124,106,247,0.07)':'var(--card)'};border:${isSel?'2px solid var(--accent)':'1px solid var(--border)'};box-shadow:${isSel?'inset 0 0 0 1px rgba(124,106,247,0.22)':'none'};${colIdx>0?'border-left:1px solid var(--border)':''};transition:background 0.15s;position:relative;" onmouseenter="this.style.background='rgba(124,106,247,0.08)'" onmouseleave="this.style.background='${isSel?'rgba(124,106,247,0.12)':isToday?'rgba(124,106,247,0.07)':'var(--card)'}'">
       <div style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${isToday?'var(--accent)':'transparent'};margin-bottom:4px;">
         <span style="font-size:12px;font-weight:${isToday?'700':isSel?'700':'500'};color:${isToday?'white':isSel?'var(--accent2)':isWeekend?'var(--dim)':'var(--text)'}">${day}</span>
       </div>
@@ -7117,7 +7046,7 @@ function renderCalGrid() {
   const trailingCells = totalRows * 7 - firstDay - daysInMonth;
   for(let i=1;i<=trailingCells;i++) {
     const colIdx = (firstDay + daysInMonth + i - 1) % 7;
-    html += `<div style="padding:6px 8px;min-height:90px;background:var(--surface);border-top:1px solid var(--border);${colIdx>0?'border-left:1px solid var(--border)':''}opacity:0.45">
+    html += `<div style="padding:6px 8px;min-height:90px;min-width:0;overflow:hidden;background:var(--surface);border-top:1px solid var(--border);${colIdx>0?'border-left:1px solid var(--border)':''}opacity:0.45">
       <span style="font-size:12px;color:var(--muted);font-weight:500">${i}</span>
     </div>`;
   }
@@ -7149,7 +7078,7 @@ function renderCalWeek() {
     const dStr = localDateStr(day);
     const isToday = dStr === todayStr;
     const isSel = dStr === selectedCalDay;
-    html += `<div style="background:${isSel?'rgba(124,106,247,0.16)':isToday?'rgba(124,106,247,0.08)':'var(--surface)'};padding:8px 4px;text-align:center;font-size:10px;border-bottom:${isSel?'2px solid var(--accent)':'1px solid var(--border)'};border-left:1px solid var(--border);cursor:pointer;box-shadow:${isSel?'inset 0 0 0 1px rgba(124,106,247,.2)':'none'}" onclick="selectCalDay('${dStr}')">
+    html += `<div style="background:${isSel?'rgba(124,106,247,0.16)':isToday?'rgba(124,106,247,0.08)':'var(--surface)'};padding:8px 4px;text-align:center;font-size:10px;min-width:0;overflow:hidden;border-bottom:${isSel?'2px solid var(--accent)':'1px solid var(--border)'};border-left:1px solid var(--border);cursor:pointer;box-shadow:${isSel?'inset 0 0 0 1px rgba(124,106,247,.2)':'none'}" onclick="selectCalDay('${dStr}')">
       <div style="font-size:10px;color:${isToday?'var(--accent2)':'var(--muted)'};font-weight:700;letter-spacing:0.5px">${dayNames[i]}</div>
       <div style="width:28px;height:28px;border-radius:50%;background:${isToday?'var(--accent)':'transparent'};margin:2px auto 0;display:flex;align-items:center;justify-content:center;">
         <span style="font-size:15px;font-weight:700;color:${isToday?'white':isSel?'var(--accent2)':'var(--text)'}">${day.getDate()}</span>
@@ -7172,9 +7101,9 @@ function renderCalWeek() {
         const mainKey = Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(e.subjectKey));
         const color = mainKey ? SUBJECTS_META[mainKey].color : 'var(--accent)';
         const durH = Math.max(1, Math.round((e.duration||60)/52));
-        return `<div style="background:${color}25;border-left:3px solid ${color};padding:2px 5px;font-size:9px;border-radius:3px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:${color};font-weight:700;">${DEFAULT_TOPICS[e.subjectKey]?.name||''} · ${e.topicName}</div>`;
+        return `<div style="background:${color}25;border-left:3px solid ${color};padding:2px 5px;font-size:9px;border-radius:3px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;color:${color};font-weight:700;">${DEFAULT_TOPICS[e.subjectKey]?.name||''} · ${e.topicName}</div>`;
       }).join('');
-      html += `<div style="background:${isToday?'rgba(124,106,247,0.03)':'var(--card)'};height:52px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);position:relative;cursor:pointer;padding:2px;transition:background 0.15s;" onclick="selectCalDay('${dStr}')" onmouseenter="this.style.background='rgba(124,106,247,0.06)'" onmouseleave="this.style.background='${isToday?'rgba(124,106,247,0.03)':'var(--card)'}'">
+      html += `<div style="background:${isToday?'rgba(124,106,247,0.03)':'var(--card)'};height:52px;min-width:0;overflow:hidden;border-bottom:1px solid var(--border);border-left:1px solid var(--border);position:relative;cursor:pointer;padding:2px;transition:background 0.15s;" onclick="selectCalDay('${dStr}')" onmouseenter="this.style.background='rgba(124,106,247,0.06)'" onmouseleave="this.style.background='${isToday?'rgba(124,106,247,0.03)':'var(--card)'}'">
         ${evContent}
       </div>`;
     });
@@ -7349,10 +7278,12 @@ function openCalSessionModal(){
   const date = new Date(selectedCalDay+'T00:00:00');
   const dateEl=document.getElementById('cal-session-modal-date');
   if(dateEl) dateEl.textContent='Selected date: '+date.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const subj=document.getElementById('cal-subject-sel');
-  subj.innerHTML=ALL_SUBJECT_KEYS.map(k=>`<option value="${k}">${DEFAULT_TOPICS[k].name}</option>`).join('');
-  subj.value=currentTrackerMain && ALL_SUBJECT_KEYS.includes(currentTrackerMain)?currentTrackerMain:ALL_SUBJECT_KEYS[0];
-  updateCalTopics();
+  const mainSel=document.getElementById('cal-main-subject-sel');
+  mainSel.innerHTML=MAIN_SUBJECTS.map(k=>`<option value="${k}">${SUBJECTS_META[k].name} — ${SUBJECTS_META[k].fullName}</option>`).join('');
+  const preselectMain = currentTrackerMain && MAIN_SUBJECTS.includes(currentTrackerMain) ? currentTrackerMain : MAIN_SUBJECTS[0];
+  mainSel.value = preselectMain;
+  const preselectSub = currentTrackerSub && SUBJECTS_META[preselectMain]?.subs.includes(currentTrackerSub) ? currentTrackerSub : undefined;
+  updateCalSubsubjects(preselectSub);
   document.getElementById('cal-label').value='';
   document.getElementById('cal-time').value='';
   document.getElementById('cal-duration').value='';
@@ -7690,7 +7621,7 @@ function exportData() {
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='cpale_tracker_rcl_backup.json';
+  a.download='cpale_tracker_ln_backup.json';
   a.click(); toast('Backup exported!');
   setSidebarBackupStatus('✓ Exported ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
 }
@@ -7761,7 +7692,7 @@ async function saveToFile() {
       }
       // Show file picker
       const opts = {
-        suggestedName: 'cpale_tracker_rcl.json',
+        suggestedName: 'cpale_tracker_ln.json',
         types: [{ description: 'JSON Backup', accept: { 'application/json': ['.json'] } }],
       };
       const handle = await window.showSaveFilePicker(opts);
@@ -7786,7 +7717,7 @@ async function saveToFile() {
 function _fallbackDownload(blob) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'cpale_tracker_rcl.json';
+  a.download = 'cpale_tracker_ln.json';
   a.click();
   toast('💾 File saved! (Tip: Use Chrome/Edge for better save-to-file support)');
   setSidebarBackupStatus('✓ Saved ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
@@ -7845,6 +7776,7 @@ function init() {
   initAvatars();
   load();
   repairActivityDayKeys();
+  migrateWidgetTypes();
 
   // Ensure customWidgets state key exists
   if (!state.customWidgets) state.customWidgets = {};
@@ -7929,10 +7861,10 @@ function init() {
   window.addEventListener('orientationchange', () => setTimeout(handleResize, 150));
   handleResize();
 
-  // Calendar selects
-  const calSubjEl=document.getElementById('cal-subject-sel');
-  calSubjEl.innerHTML=ALL_SUBJECT_KEYS.map(k=>`<option value="${k}">${DEFAULT_TOPICS[k].name}</option>`).join('');
-  updateCalTopics();
+  // Calendar selects (Subject → Sub-subject cascade)
+  const calMainEl=document.getElementById('cal-main-subject-sel');
+  calMainEl.innerHTML=MAIN_SUBJECTS.map(k=>`<option value="${k}">${SUBJECTS_META[k].name} — ${SUBJECTS_META[k].fullName}</option>`).join('');
+  updateCalSubsubjects();
 
   // Avatar
   refreshAllAvatars();
