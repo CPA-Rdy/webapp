@@ -9357,19 +9357,20 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <div id="login-screen">
+
   <img id="login-logo" alt="CPA Ready logo"
        style="width:80px;height:80px;object-fit:contain;margin-bottom:12px;">
 
-  <h2 style="margin:0 0 6px;">Welcome back 👋</h2>
+  <h2 id="auth-title" style="margin:0 0 6px;">Welcome back 👋</h2>
 
-  <p style="margin:0 0 20px;color:var(--muted);font-size:14px;">
+  <p id="auth-subtitle" style="margin:0 0 20px;color:var(--muted);font-size:14px;">
     Ready to keep making progress?
   </p>
 
   <input id="email" type="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
 
-  <button onclick="login()">Log In</button>
+  <button id="auth-button" onclick="login()">Log In</button>
 
   <p id="login-error"></p>
 
@@ -9380,6 +9381,7 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
       Create one
     </button>
   </p>
+
 </div>
 
 <script>
@@ -9410,6 +9412,63 @@ async function login() {
   }
 
   document.getElementById("login-screen").style.display = "none";
+}
+
+function showSignup() {
+  document.getElementById("auth-title").textContent = "Create your account ✨";
+  document.getElementById("auth-subtitle").textContent = "Start your CPA Ready journey.";
+  document.getElementById("auth-button").textContent = "Create Account";
+  document.getElementById("auth-button").onclick = signup;
+
+  document.getElementById("login-error").textContent = "";
+
+  const accountPrompt = document.querySelector("#login-screen p:last-child");
+  accountPrompt.innerHTML = `
+    Already have an account?
+    <button type="button" onclick="showLogin()"
+      style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;">
+      Log in
+    </button>
+  `;
+}
+
+function showLogin() {
+  document.getElementById("auth-title").textContent = "Welcome back 👋";
+  document.getElementById("auth-subtitle").textContent = "Ready to keep making progress.";
+  document.getElementById("auth-button").textContent = "Log In";
+  document.getElementById("auth-button").onclick = login;
+
+  document.getElementById("login-error").textContent = "";
+
+  const accountPrompt = document.querySelector("#login-screen p:last-child");
+  accountPrompt.innerHTML = `
+    Don't have an account?
+    <button type="button" onclick="showSignup()"
+      style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;">
+      Create one
+    </button>
+  `;
+}
+
+async function signup() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const error = document.getElementById("login-error");
+
+  error.textContent = "";
+
+  const { data, error: signupError } =
+    await supabaseClient.auth.signUp({
+      email,
+      password
+    });
+
+  if (signupError) {
+    error.textContent = signupError.message;
+    return;
+  }
+
+  error.textContent = "Account created! You can now log in.";
 }
   
 async function checkSession() {
