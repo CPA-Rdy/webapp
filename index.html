@@ -9522,12 +9522,30 @@ if (profileError) {
 if (profile.payment_status !== "paid") {
   const price = profile["Offer_number"] <= 100 ? 150 : 200;
 
-  error.textContent = `Payment required. Your price is ₱${price}.`;
+  document.getElementById("login-screen").style.display = "none";
+
+  const paymentScreen = document.getElementById("payment-screen");
+  const paymentPrice = document.getElementById("payment-price");
+  const paymentLogo = document.getElementById("payment-logo");
+
+  if (paymentScreen) {
+    paymentScreen.style.display = "block";
+  }
+
+  if (paymentPrice) {
+    paymentPrice.textContent = `₱${price}`;
+  }
+
+  const favicon = document.querySelector('link[rel~="icon"]');
+
+  if (favicon && paymentLogo) {
+    paymentLogo.src = favicon.href;
+  }
+
   return;
 }
 
 document.getElementById("login-screen").style.display = "none";
-}
 
 function showSignup() {
   document.getElementById("auth-title").textContent = "Create your account ✨";
