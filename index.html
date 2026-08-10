@@ -9357,6 +9357,8 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <div id="login-screen">
+  <img id="login-logo" alt="CPA Ready logo" style="width:80px;height:80px;object-fit:contain;margin-bottom:16px;">
+  
   <h2>Login</h2>
 
   <input id="email" type="email" placeholder="Email">
@@ -9406,6 +9408,12 @@ async function checkSession() {
 }
 
 checkSession();
+
+const favicon = document.querySelector('link[rel~="icon"]');
+
+if (favicon) {
+  document.getElementById("login-logo").src = favicon.href;
+}
 </script>
 </body>
 </html>
