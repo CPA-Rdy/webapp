@@ -9357,9 +9357,14 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <div id="login-screen">
-  <img id="login-logo" alt="CPA Ready logo" style="width:80px;height:80px;object-fit:contain;margin-bottom:16px;">
-  
-  <h2>Login</h2>
+  <img id="login-logo" alt="CPA Ready logo"
+       style="width:80px;height:80px;object-fit:contain;margin-bottom:12px;">
+
+  <h2 style="margin:0 0 6px;">Welcome back 👋</h2>
+
+  <p style="margin:0 0 20px;color:var(--muted);font-size:14px;">
+    Ready to keep making progress?
+  </p>
 
   <input id="email" type="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
@@ -9367,6 +9372,14 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
   <button onclick="login()">Log In</button>
 
   <p id="login-error"></p>
+
+  <p style="font-size:13px;margin-top:10px;">
+    Don't have an account?
+    <button type="button" onclick="showSignup()"
+      style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;">
+      Create one
+    </button>
+  </p>
 </div>
 
 <script>
