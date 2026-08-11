@@ -2943,6 +2943,7 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
   width:40px;height:40px;display:block;color:#fff;position:relative;z-index:2;
 }
 .video-achievement-icon.video-afar{background:linear-gradient(145deg,var(--accent),var(--accent2))!important}
+.video-achievement-icon.video-afar-advanced{background:linear-gradient(145deg,var(--accent2),var(--accent3))!important}
 .video-achievement-icon.video-mas{background:linear-gradient(145deg,var(--accent2),var(--accent3))!important}
 .video-achievement-icon.video-audit{background:linear-gradient(145deg,var(--accent3),var(--accent))!important}
 .video-achievement-icon.video-tax{background:linear-gradient(145deg,var(--accent),var(--accent3))!important}
@@ -6918,7 +6919,7 @@ function setTopicStatus(sKey, idx, val) {
     state.topics[sKey][idx].dateStarted = '';
     state.topics[sKey][idx].dateEnded = '';
   }
-  recordStudyDay(); checkAchievements(); save(); renderTracker(); renderCoach();
+  recordStudyDay(); checkAchievements(); save(); renderTracker(); renderDashboard(); renderCoach();
 }
 
 function setTopicDate(sKey, idx, field, value) {
@@ -8452,8 +8453,8 @@ function renderAchievementsPage() {
         visual:'<svg class="video-distinct-svg" viewBox="0 0 64 64" aria-hidden="true"><path d="M14 15h24a8 8 0 0 1 8 8v28H22a8 8 0 0 1-8-8V15z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M22 51V23a8 8 0 0 1 8-8h16" fill="none" stroke="currentColor" stroke-width="3"/><path d="M26 29h13M26 37h13M26 45h9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
       },
       video_afar_complete: {
-        cls:'video-afar',
-        visual:'<svg class="video-distinct-svg" viewBox="0 0 64 64" aria-hidden="true"><path d="M14 15h24a8 8 0 0 1 8 8v28H22a8 8 0 0 1-8-8V15z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M22 51V23a8 8 0 0 1 8-8h16" fill="none" stroke="currentColor" stroke-width="3"/><path d="M26 29h13M26 37h13M26 45h9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
+        cls:'video-afar-advanced',
+        visual:'<svg class="video-distinct-svg" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 20h24a7 7 0 0 1 7 7v25H17a7 7 0 0 1-7-7V20z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M23 20v-5h24a7 7 0 0 1 7 7v25h-6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M20 30h15M20 38h15M20 46h10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M43 30l5 5 8-10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       },
       video_mas_complete: {
         cls:'video-mas',
