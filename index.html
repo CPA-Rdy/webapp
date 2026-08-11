@@ -774,7 +774,20 @@ body.light-mode.theme-custom select.status-select.status-2 {
 .avatar-option.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(124,106,247,0.35); }
 .avatar-option canvas { image-rendering: pixelated; }
 
-/* ---- SUBJECT QUICKNAV ---- */
+/* ---- FREEZE PANE — shared "sticky controls" treatment ----
+   Any filter/tab bar that sits above a long scrollable list gets pinned to the
+   top of the viewport while the list underneath scrolls, mirroring the
+   Subject Tracker table's frozen header. Used by Settings' subject quicknav,
+   the Achievements tier tabs, and Study History's filter/search controls. */
+.freeze-pane-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card, var(--surface));
+  border-bottom: 1px solid var(--border);
+}
+
+#settings-tabbar.freeze-pane-bar { z-index: 6; }
 #subject-quicknav {
   position: sticky;
   top: 0;
@@ -1161,15 +1174,27 @@ body.light-mode.theme-custom select.status-select.status-2 {
     position: relative;
   }
   #main {
-    overflow-x: hidden !important;
+    /* overflow-x:clip (not hidden) — hidden pairs with the unset overflow-y
+       and gets computed to overflow-y:auto, which makes #main a scroll
+       container and hijacks position:sticky for anything inside it that
+       expects to stick to the viewport (e.g. .freeze-pane-bar). clip avoids
+       that coupling while still preventing horizontal scroll. */
+    overflow-x: clip !important;
     max-width: 100vw !important;
     width: 100% !important;
     padding: 56px 12px 80px !important;
     box-sizing: border-box !important;
   }
   .page, .card, .stat-card, .dash-widget {
+    /* Same overflow-x:clip reasoning as #main above — .page is the direct
+       parent of .freeze-pane-bar on the Settings/Achievements/History pages,
+       so overflow-x:hidden here was the actual cause of freeze pane bars not
+       sticking on mobile (it silently turned .page into its own scroll
+       container, so sticky elements stuck to .page's box instead of the
+       viewport, and since .page never scrolls internally, they never
+       appeared to stick at all). */
     max-width: 100% !important;
-    overflow-x: hidden !important;
+    overflow-x: clip !important;
     box-sizing: border-box !important;
     width: 100% !important;
   }
@@ -2562,10 +2587,7 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
 #profile-viewer-canvas{width:100%;height:100%;display:block}
 
 
-.history-search-area{flex:1 1 260px;min-width:220px}
-.history-search-area .history-search-box{width:100%;box-sizing:border-box}
-.history-search-hint{font-size:9px;color:var(--muted);margin:5px 2px 0;line-height:1.4}
-.history-search-hint b{color:var(--text)}
+.history-subject-area{flex:1 1 260px;min-width:220px}
 .history-day-select{width:100%;border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px 6px;font:800 10px var(--font-body);text-transform:uppercase;letter-spacing:1.5px;text-align:left}
 .history-day-select span:last-child{font-size:9px;letter-spacing:.3px;text-transform:none;font-weight:600;opacity:0;transition:opacity .15s}
 .history-day-select:hover span:last-child,.history-day-select.selected span:last-child{opacity:1}
@@ -3164,11 +3186,13 @@ renderDashboard(); }, 400);
   </div>
 
   <!-- Filter tabs -->
-  <div class="tabs" style="margin-bottom:16px;">
-    <div class="tab active" id="ach-tab-all" onclick="setAchTab('all')">All</div>
-    <div class="tab" id="ach-tab-short" onclick="setAchTab('short')">🟢 Grind</div>
-    <div class="tab" id="ach-tab-mid" onclick="setAchTab('mid')">🟡 Rising</div>
-    <div class="tab" id="ach-tab-long" onclick="setAchTab('long')">🔵 Elite</div>
+  <div class="freeze-pane-bar" style="padding:8px 0 16px;">
+    <div class="tabs" style="margin-bottom:0;">
+      <div class="tab active" id="ach-tab-all" onclick="setAchTab('all')">All</div>
+      <div class="tab" id="ach-tab-short" onclick="setAchTab('short')">🟢 Grind</div>
+      <div class="tab" id="ach-tab-mid" onclick="setAchTab('mid')">🟡 Rising</div>
+      <div class="tab" id="ach-tab-long" onclick="setAchTab('long')">🔵 Elite</div>
+    </div>
   </div>
   <div id="achievements-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;"></div>
 </div>
@@ -3186,7 +3210,7 @@ renderDashboard(); }, 400);
     <div class="tab" id="scoresheet-tab-practice" onclick="setScoresheetTab('practice')">🎯 Drills & Practice Sets</div>
   </div>
   <div id="scoresheet-panel-exams">
-  <div class="card" style="overflow-x:auto;margin-bottom:16px">
+  <div class="card tracker-table-wrap" style="overflow:auto;margin-bottom:16px">
     <table id="scoresheet-table">
       <thead>
         <tr>
@@ -3202,7 +3226,7 @@ renderDashboard(); }, 400);
           <th>RFBT</th><th>RFBT%</th>
           <th>Avg%</th>
           <th>Remark</th>
-          <th></th>
+          <th class="tracker-actions-col"></th>
         </tr>
       </thead>
       <tbody id="score-tbody"></tbody>
@@ -3249,9 +3273,9 @@ renderDashboard(); }, 400);
       </div>
       <div id="practice-score-filters" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"></div>
     </div>
-    <div class="card" style="overflow-x:auto;margin-bottom:16px">
+    <div class="card tracker-table-wrap" style="overflow:auto;margin-bottom:16px">
       <table id="practice-scores-table">
-        <thead><tr><th>#</th><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Date</th><th>Score</th><th>%</th><th>Notes</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Date</th><th>Score</th><th>%</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
         <tbody id="practice-score-tbody"></tbody>
       </table>
     </div>
@@ -3416,13 +3440,6 @@ renderDashboard(); }, 400);
 <div class="page" id="page-history">
   <div class="page-header">
     <div><h2>Study History</h2><p>Your study footprint — meaningful activity, not every click.</p></div>
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-      <button class="btn btn-ghost btn-sm history-filter active" data-filter="all" onclick="setHistoryFilter('all')">All</button>
-      <button class="btn btn-ghost btn-sm history-filter" data-filter="study" onclick="setHistoryFilter('study')">📚 Study</button>
-      <button class="btn btn-ghost btn-sm history-filter" data-filter="progress" onclick="setHistoryFilter('progress')">✓ Progress</button>
-      <button class="btn btn-ghost btn-sm history-filter" data-filter="score" onclick="setHistoryFilter('score')">✎ Scores</button>
-      <button class="btn btn-ghost btn-sm history-filter" data-filter="milestone" onclick="setHistoryFilter('milestone')">🎯 Milestones</button>
-    </div>
   </div>
   <div class="card" style="margin-bottom:16px;padding:16px;">
     <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
@@ -3432,21 +3449,26 @@ renderDashboard(); }, 400);
       <button class="btn btn-primary btn-sm" onclick="logStudyToday()">✓ Log Today</button>
     </div>
   </div>
-  <div class="history-nav card">
-    <div class="history-search-area">
-      <div class="history-search-box">
-        <span>⌕</span>
-        <input id="history-search" type="search" placeholder="Search a subject, lecture, score, or activity..." oninput="setHistorySearch(this.value)">
-      </div>
-      <div class="history-search-hint">Try <b>FAR</b>, <b>MAS</b>, <b>lecture</b>, <b>score</b>, or <b>completed</b>.</div>
+  <div class="freeze-pane-bar" style="padding-top:8px;">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn btn-ghost btn-sm history-filter active" data-filter="all" onclick="setHistoryFilter('all')">All</button>
+      <button class="btn btn-ghost btn-sm history-filter" data-filter="progress" onclick="setHistoryFilter('progress')">✓ Progress</button>
+      <button class="btn btn-ghost btn-sm history-filter" data-filter="score" onclick="setHistoryFilter('score')">✎ Scores</button>
+      <button class="btn btn-ghost btn-sm history-filter" data-filter="milestone" onclick="setHistoryFilter('milestone')">🎯 Milestones</button>
     </div>
-    <div class="history-range-buttons">
-      <button class="btn btn-ghost btn-sm history-range active" data-range="all" onclick="setHistoryRange('all')">All</button>
-      <button class="btn btn-ghost btn-sm history-range" data-range="7" onclick="setHistoryRange('7')">7 days</button>
-      <button class="btn btn-ghost btn-sm history-range" data-range="30" onclick="setHistoryRange('30')">30 days</button>
-      <button class="btn btn-ghost btn-sm" onclick="focusHistoryToday()">Today</button>
-      <button class="btn btn-ghost btn-sm history-date-button" onclick="openHistoryDatePicker()">📅 Pick a date</button>
-      <input id="history-date-picker" class="history-date-picker" type="date" onchange="selectHistoryDate(this.value)" aria-label="Select a history date">
+    <div class="history-nav card">
+      <div class="history-subject-area">
+        <div class="section-title" style="margin-bottom:8px;">Filter by Subject</div>
+        <div id="history-subject-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <div class="history-range-buttons">
+        <button class="btn btn-ghost btn-sm history-range active" data-range="all" onclick="setHistoryRange('all')">All</button>
+        <button class="btn btn-ghost btn-sm history-range" data-range="7" onclick="setHistoryRange('7')">7 days</button>
+        <button class="btn btn-ghost btn-sm history-range" data-range="30" onclick="setHistoryRange('30')">30 days</button>
+        <button class="btn btn-ghost btn-sm" onclick="focusHistoryToday()">Today</button>
+        <button class="btn btn-ghost btn-sm history-date-button" onclick="openHistoryDatePicker()">📅 Pick a date</button>
+        <input id="history-date-picker" class="history-date-picker" type="date" onchange="selectHistoryDate(this.value)" aria-label="Select a history date">
+      </div>
     </div>
   </div>
   <div id="history-list"></div>
@@ -3457,7 +3479,7 @@ renderDashboard(); }, 400);
     <div><h2>Settings</h2><p>Customize your tracker</p></div>
   </div>
 
-  <div id="settings-tabbar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+  <div id="settings-tabbar" class="freeze-pane-bar" style="display:flex;gap:6px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:16px;">
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="subjects" onclick="setSettingsTab('subjects')">📚 Subjects</button>
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="profile" onclick="setSettingsTab('profile')">👤 Profile</button>
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="ai" onclick="setSettingsTab('ai')">🤖 AI Coach</button>
@@ -4993,7 +5015,7 @@ function countdownDays() {
 // DASHBOARD
 // ============================================================
 let historyFilter = 'all';
-let historySearch = '';
+let historySubject = 'all';
 let historyRange = 'all';
 let historySelectedDay = null;
 let historyDate = null;
@@ -5134,11 +5156,16 @@ function setHistoryFilter(filter) {
   document.querySelectorAll('.history-filter').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));
   renderHistoryPage();
 }
-function setHistorySearch(value) {
-  historySearch=String(value||'').trim().toLowerCase();
+function setHistorySubject(subject) {
+  historySubject=subject;
   historySelectedDay=null;
-  historyDate=null;
+  renderHistorySubjectChips();
   renderHistoryPage();
+}
+function renderHistorySubjectChips() {
+  const wrap=document.getElementById('history-subject-chips'); if(!wrap)return;
+  const chip=(key,label,color)=>`<button class="btn btn-sm ${historySubject===key?'btn-primary':'btn-ghost'}" style="${historySubject===key&&color?`background:${color};border-color:${color};color:#fff;`:color?`color:${color};border-color:${color}55;`:''}" onclick="setHistorySubject('${key}')">${label}</button>`;
+  wrap.innerHTML = chip('all','All Subjects') + MAIN_SUBJECTS.map(s=>chip(s,s,SUBJECTS_META[s]?.color)).join('');
 }
 function setHistoryRange(range) {
   historyRange=range;
@@ -5186,10 +5213,7 @@ function historyMatches(e) {
   if(historyDate && e.day!==historyDate) return false;
   if(historySelectedDay && e.day!==historySelectedDay) return false;
   if(historyFilter!=='all' && e.type!==historyFilter) return false;
-  if(historySearch) {
-    const hay=[e.title,e.detail,e.day,e.type].filter(Boolean).join(' ').toLowerCase();
-    if(!hay.includes(historySearch)) return false;
-  }
+  if(historySubject!=='all' && activitySubjectFromEvent(e)!==historySubject) return false;
   if(historyRange!=='all' && e.day) {
     const now=new Date(); now.setHours(0,0,0,0);
     const d=new Date(e.day+'T00:00:00');
@@ -5198,13 +5222,20 @@ function historyMatches(e) {
   }
   return true;
 }
+// Archive months only store type-counts and subject-counts separately, not their
+// intersection, so when both a type and subject filter are active we approximate
+// with the smaller of the two — good enough for a coarse "older than 90 days" summary.
+function archiveEstimatedCount(a) {
+  const byType = historyFilter==='all' ? (a.count||0) : (a.types?.[historyFilter]||0);
+  const bySubject = historySubject==='all' ? null : (a.subjects?.[historySubject]||0);
+  if (bySubject===null) return byType;
+  if (historyFilter==='all') return bySubject;
+  return Math.min(byType, bySubject);
+}
 function historyArchiveMatches(a) {
   if(historySelectedDay) return false;
   if(historyFilter!=='all' && !(a.types&&a.types[historyFilter])) return false;
-  if(historySearch) {
-    const hay=[a.day,...Object.keys(a.subjects||{}),...Object.keys(a.types||{})].join(' ').toLowerCase();
-    if(!hay.includes(historySearch)) return false;
-  }
+  if(historySubject!=='all' && !(a.subjects&&a.subjects[historySubject])) return false;
   if(historyRange!=='all' && a.day) {
     const now=new Date(); now.setHours(0,0,0,0);
     const d=new Date(a.day+'T00:00:00');
@@ -5215,10 +5246,11 @@ function historyArchiveMatches(a) {
 }
 function renderHistoryPage() {
   const list=document.getElementById('history-list'); if(!list)return;
+  renderHistorySubjectChips();
   const events=(state.activityLog||[]).filter(historyMatches);
   const archive=(state.activityArchive||[]).filter(historyArchiveMatches);
   const daysEl=document.getElementById('history-days'); if(daysEl)daysEl.textContent=new Set([...(state.studyDays||[]),...(state.activityArchive||[]).map(a=>a.day)]).size;
-  const evEl=document.getElementById('history-events'); if(evEl)evEl.textContent=events.length + archive.reduce((n,a)=>n + (historyFilter==='all'?a.count:(a.types?.[historyFilter]||0)),0);
+  const evEl=document.getElementById('history-events'); if(evEl)evEl.textContent=events.length + archive.reduce((n,a)=>n + archiveEstimatedCount(a),0);
   if(!events.length && !archive.length){list.innerHTML='<div class="card" style="padding:34px;text-align:center;color:var(--muted)"><div style="font-size:28px;margin-bottom:8px">↺</div><div style="font-size:13px;color:var(--dim);font-weight:700;margin-bottom:4px">Your footprint starts here</div><div style="font-size:11px">Complete a topic, log a study day, or record a score and it will appear here.</div></div>';return;}
   const groups={}; events.forEach(e=>(groups[e.day] ||= []).push(e));
   const selectedDayNotice = historyDate
@@ -5255,7 +5287,7 @@ function renderHistoryPage() {
     const monthRows=Object.keys(months).sort((a,b)=>b.localeCompare(a)).slice(0,24).map(key=>{
       const m=months[key];
       const subjects=Object.entries(m.subjects).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(' · ');
-      const count=historyFilter==='all'?m.count:Object.values(m.types).length ? Object.entries(m.types).reduce((n,[t,v])=>n+(t===historyFilter?v:0),0):0;
+      const count=archiveEstimatedCount(m);
       if(count===0)return '';
       return `<div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-bottom:1px solid var(--border)">
         <div style="width:100px;color:var(--text);font-size:10px;font-weight:800">${monthLabel(key)}</div>
@@ -5375,7 +5407,7 @@ function renderUpcomingSessions() {
   for (let i = 0; i <= 7; i++) {
     const d = new Date(today); d.setDate(today.getDate() + i);
     const dStr = localDateStr(d);
-    const evts = (state.calEvents[dStr] || []).filter(e => !e.completed);
+    const evts = (state.calEvents[dStr] || []);
     evts.forEach(e => {
       const mainKey = Object.keys(SUBJECTS_META).find(mk => SUBJECTS_META[mk].subs.includes(e.subjectKey)) || 'FAR';
       const color = SUBJECTS_META[mainKey].color;
@@ -6436,7 +6468,7 @@ function renderPracticeScores(){
   }
   const filtered=(state.practiceScores||[]).map((p,i)=>({p,i})).filter(({p})=>practiceFilterMain==='all'||p.mainSubject===practiceFilterMain).filter(({p})=>practiceFilterSub==='all'||p.subjectKey===practiceFilterSub);
   if(!filtered.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">No practice scores yet. Add a drill, exercise, or practice set.</td></tr>'; renderPracticeAnalytics(); return;}
-  tbody.innerHTML=filtered.map(({p,i})=>{const pct=p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null;const color=pct===null?'var(--muted)':pct>=75?'var(--pass)':pct>=65?'var(--warn)':'var(--danger)';const noteText=(p.notes||'').trim();const noteEsc=noteText.replace(/"/g,'&quot;');const noteCell=noteText?`<span title="${noteEsc}" style="display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;cursor:help">📝 ${noteEsc}</span>`:'<span style="color:var(--muted)">—</span>';return `<tr><td>${i+1}</td><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.date||'—'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td style="max-width:160px">${noteCell}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`}).join('');
+  tbody.innerHTML=filtered.map(({p,i})=>{const pct=p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null;const color=pct===null?'var(--muted)':pct>=75?'var(--pass)':pct>=65?'var(--warn)':'var(--danger)';const noteText=(p.notes||'').trim();const noteEsc=noteText.replace(/"/g,'&quot;');const noteCell=noteText?`<span title="${noteEsc}" style="display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;cursor:help">📝 ${noteEsc}</span>`:'<span style="color:var(--muted)">—</span>';return `<tr><td>${i+1}</td><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.date||'—'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td style="max-width:160px">${noteCell}</td><td class="tracker-actions-col" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`}).join('');
   renderPracticeAnalytics();
 }
 
@@ -6552,7 +6584,7 @@ function renderScoresheet() {
         <td>${fmtScore(s.rfbt, s.maxRfbt || 100)}</td><td>${fmtPct(c.rfbt)}</td>
         <td>${c.avg!==null?`<strong style="font-family:var(--font-mono);color:${c.avg>=75?'var(--pass)':'var(--danger)'}">${c.avg.toFixed(1)}%</strong>`:'—'}</td>
         <td>${remarkBadge(c.remark)}</td>
-        <td style="white-space:nowrap">
+        <td class="tracker-actions-col" style="white-space:nowrap">
           <button class="btn btn-ghost btn-sm" onclick="openScoreModal(${i})">✏</button>
           <button class="btn btn-danger btn-sm" onclick="deleteScoreByIdx(${i})">✕</button>
         </td>
@@ -7153,9 +7185,8 @@ function renderCalGrid() {
       const sKey=e.subjectKey;
       const mainKey=Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(sKey));
       const color=mainKey?SUBJECTS_META[mainKey].color:'var(--accent)';
-      const done=e.completed?'opacity:0.5':'';
       const label = e.label || DEFAULT_TOPICS[sKey]?.name || '';
-      return `<div style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;max-width:100%;${done}">${label||e.topicName}</div>`;
+      return `<div style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;max-width:100%;">${label||e.topicName}</div>`;
     }).join('');
     const moreLabel = events.length > 3 ? `<div style="font-size:9px;color:var(--muted);padding:0 2px">+${events.length-3} more</div>` : '';
 
@@ -7374,7 +7405,6 @@ function renderCalDayEvents() {
   const mainKeyOf = sKey => Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(sKey));
   document.getElementById('cal-day-events').innerHTML = events.map((e,i) => {
     const color = SUBJECTS_META[mainKeyOf(e.subjectKey)||'FAR']?.color||'var(--accent)';
-    const isCompleted = e.completed;
     return `<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:8px;padding:10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
@@ -7383,19 +7413,11 @@ function renderCalDayEvents() {
           <div style="font-size:10px;color:var(--muted)">${e.time ? e.time : 'Any time'}${e.duration ? ' · '+e.duration+'min' : ''}${e.notes?' · '+e.notes:''}</div>
         </div>
         <div style="display:flex;gap:4px;flex-direction:column;align-items:flex-end">
-          <button class="btn btn-sm ${isCompleted?'btn-success':'btn-ghost'}" onclick="toggleCalEventDone('${selectedCalDay}',${i})">${isCompleted?'✓ Done':'Mark Done'}</button>
           <button class="btn btn-danger btn-sm" onclick="deleteCalEvent('${selectedCalDay}',${i})">✕</button>
         </div>
       </div>
     </div>`;
   }).join('');
-}
-
-function toggleCalEventDone(dateStr, idx) {
-  const e = state.calEvents[dateStr][idx];
-  e.completed = !e.completed;
-  save(); renderCalDayEvents(); renderCalView();
-  toast(e.completed ? 'Session marked done!' : 'Session unmarked.');
 }
 
 function openCalSessionModal(){
@@ -7430,8 +7452,7 @@ function addCalEvent() {
     label:document.getElementById('cal-label').value,
     time:document.getElementById('cal-time').value,
     duration:durationValue ? parseInt(durationValue) : null,
-    notes:document.getElementById('cal-notes').value,
-    completed:false
+    notes:document.getElementById('cal-notes').value
   });
   document.getElementById('cal-duration').value='';
   save(); checkAchievements(); renderCalView(); renderCalDayEvents();
@@ -7463,6 +7484,21 @@ function setSettingsTab(tab) {
   });
 }
 
+// Settings has two stacked sticky bars when the Subjects tab is active — the
+// top-level Settings tab bar, and below it the subject quicknav. Since both
+// are position:sticky at the top of the viewport, the quicknav's offset has
+// to equal the tabbar's actual rendered height (which varies as the tabbar
+// wraps to 2+ rows on narrower screens), so we measure it instead of guessing.
+function syncSettingsStickyOffset() {
+  const tabbar = document.getElementById('settings-tabbar');
+  const quicknav = document.getElementById('subject-quicknav');
+  if (!tabbar || !quicknav) return;
+  quicknav.style.top = tabbar.getBoundingClientRect().height + 'px';
+}
+window.addEventListener('resize', () => {
+  if (document.getElementById('page-settings')?.classList.contains('active')) syncSettingsStickyOffset();
+});
+
 let currentSubjectManageTab = null;
 function setSubjectManageTab(mainKey) {
   currentSubjectManageTab = mainKey;
@@ -7471,6 +7507,7 @@ function setSubjectManageTab(mainKey) {
 
 function renderSettings() {
   setSettingsTab(currentSettingsTab);
+  syncSettingsStickyOffset();
   document.getElementById('set-name').value = state.name || '';
   document.getElementById('set-exam-date').value = state.examDate || '';
   document.getElementById('set-quote').value = state.quote || '';
