@@ -403,6 +403,35 @@ tr:hover td { background: rgba(124,106,247,0.03); }
 .status-0 { border-color: var(--border); color: var(--muted); }
 .status-1 { border-color: rgba(245,158,11,0.5); color: var(--warn); background: rgba(245,158,11,0.08); }
 .status-2 { border-color: rgba(52,211,153,0.5); color: var(--pass); background: rgba(52,211,153,0.08); }
+/* The light-mode theme blocks below style every <select> with !important,
+   which was silently wiping out the In Progress / Completed colors above.
+   These higher-specificity rules (element + 2 classes) always win, in every
+   theme, so the status colors stay visible regardless of theme. */
+select.status-select.status-0 { border-color: var(--border) !important; color: var(--muted) !important; background: transparent !important; }
+select.status-select.status-1 { border-color: rgba(245,158,11,0.6) !important; color: var(--warn) !important; background: rgba(245,158,11,0.12) !important; }
+select.status-select.status-2 { border-color: rgba(52,211,153,0.6) !important; color: var(--pass) !important; background: rgba(52,211,153,0.12) !important; }
+/* The Rose and Custom light-mode themes each carry their own <select>
+   override with higher CSS specificity than the rule above, so their
+   background/border-color still won out over the status colors even after
+   the fix above. These theme-scoped rules are specific enough to beat them. */
+body.light-mode.theme-rose select.status-select.status-1,
+body.light-mode.theme-custom select.status-select.status-1 { border-color: rgba(245,158,11,0.6) !important; color: var(--warn) !important; background: rgba(245,158,11,0.14) !important; }
+body.light-mode.theme-rose select.status-select.status-2,
+body.light-mode.theme-custom select.status-select.status-2 { border-color: rgba(52,211,153,0.6) !important; color: var(--pass) !important; background: rgba(52,211,153,0.14) !important; }
+body.light-mode.theme-rose select.status-select.status-0,
+body.light-mode.theme-custom select.status-select.status-0 { border-color: var(--border) !important; color: var(--muted) !important; background: transparent !important; }
+/* The bright mint --pass color reads clearly on dark backgrounds but washes
+   out on light ones, so Completed didn't stand out enough in light mode.
+   Use a darker, more saturated green + bold weight there instead, across
+   every light theme (including Rose and Custom). */
+body.light-mode select.status-select.status-2,
+body.light-mode.theme-rose select.status-select.status-2,
+body.light-mode.theme-custom select.status-select.status-2 {
+  border-color: #10b981 !important;
+  color: #047857 !important;
+  background: rgba(16,185,129,0.16) !important;
+  font-weight: 700 !important;
+}
 
 /* ---- COUNTDOWN ---- */
 .countdown-display {
@@ -4405,6 +4434,9 @@ function showPage(id) {
     history: renderHistoryPage,
   };
   if (renders[id]) renders[id]();
+  // Remember the active tab so a refresh reopens the same page instead of
+  // always resetting to the dashboard.
+  try { localStorage.setItem('cpale_last_page', id); } catch (e) {}
   // Close sidebar on mobile/tablet after navigation
   if (window.innerWidth <= 1024) closeSidebar();
 }
@@ -7919,6 +7951,15 @@ function init() {
   checkAchievements();
   renderHistoryPage();
   renderCoach();
+
+  // Reopen whatever tab the user was last on instead of always landing back
+  // on the dashboard after a refresh.
+  try {
+    const lastPage = localStorage.getItem('cpale_last_page');
+    if (lastPage && lastPage !== 'dashboard' && document.getElementById('page-' + lastPage)) {
+      showPage(lastPage);
+    }
+  } catch (e) {}
 
   // Show onboarding for first-time users
   if (!state.onboarded && !state.name) {
