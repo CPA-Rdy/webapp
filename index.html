@@ -5374,6 +5374,11 @@ function getWidgets() {
 function openAddWidgetModal() { openModal('modal-add-widget'); }
 
 function addWidget(type) {
+  // Figure out which widget is currently centered in view BEFORE the modal
+  // closes or the DOM changes, so the new widget can be inserted right there
+  // instead of always landing at the top or bottom of the list.
+  const insertAfterIdx = getCurrentViewWidgetIndex();
+
   closeModal('modal-add-widget');
   const id = 'w_' + Date.now();
   const d = {cols:6,rows:12,notes:'',label:''};
@@ -5393,7 +5398,12 @@ function addWidget(type) {
   if (type==='activity')         { d.cols=6;  d.rows=18; }
   if (type==='weekly_footprint') { d.cols=12; d.rows=28; }
   const ws = getWidgets();
-  ws.unshift({id, type, ...d});
+  const newWidget = {id, type, ...d};
+  if (insertAfterIdx >= 0 && insertAfterIdx < ws.length) {
+    ws.splice(insertAfterIdx + 1, 0, newWidget);
+  } else {
+    ws.push(newWidget); // fallback: nothing was in view (e.g. empty dashboard)
+  }
   state.dashWidgets = ws;
   save(); renderDashboardWidgets();
 
@@ -5409,6 +5419,27 @@ function addWidget(type) {
     }
   });
 }
+
+// Finds the widget closest to the vertical center of the current viewport,
+// so a newly added widget can be dropped in right where the user is looking
+// instead of always at the very top or very bottom of the list.
+function getCurrentViewWidgetIndex() {
+  const grid = document.getElementById('dash-custom-grid');
+  if (!grid) return -1;
+  const els = grid.querySelectorAll('.dash-widget');
+  if (!els.length) return -1;
+  const viewCenter = window.innerHeight / 2;
+  let bestIdx = -1, bestDist = Infinity;
+  els.forEach((el, i) => {
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > window.innerHeight) return; // fully offscreen
+    const elCenter = rect.top + rect.height / 2;
+    const dist = Math.abs(elCenter - viewCenter);
+    if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+  });
+  return bestIdx; // -1 if nothing currently visible
+}
+
 
 function removeWidget(id) {
   state.dashWidgets = getWidgets().filter(w => w.id !== id);
