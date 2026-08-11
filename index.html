@@ -5393,9 +5393,21 @@ function addWidget(type) {
   if (type==='activity')         { d.cols=6;  d.rows=18; }
   if (type==='weekly_footprint') { d.cols=12; d.rows=28; }
   const ws = getWidgets();
-  ws.push({id, type, ...d});
+  ws.unshift({id, type, ...d});
   state.dashWidgets = ws;
   save(); renderDashboardWidgets();
+
+  // Scroll the new widget into view and give it a brief highlight so it's
+  // obvious where it landed, instead of leaving the user to hunt for it.
+  requestAnimationFrame(() => {
+    const el = document.querySelector(`.dash-widget[data-id="${id}"]`);
+    if (el) {
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      el.style.transition = 'box-shadow 0.3s ease';
+      el.style.boxShadow = '0 0 0 3px var(--accent)';
+      setTimeout(() => { el.style.boxShadow = ''; }, 1200);
+    }
+  });
 }
 
 function removeWidget(id) {
