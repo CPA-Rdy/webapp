@@ -387,6 +387,24 @@ th {
 td { padding: 9px 12px; border-bottom: 1px solid rgba(30,30,46,0.4); vertical-align: middle; }
 tr:hover td { background: rgba(124,106,247,0.03); }
 
+/* ---- TRACKER TABLE FREEZE PANE ----
+   Subjects can have long topic lists, so the header row (with the Status/
+   Confidence columns) and the row action buttons stay pinned in view while
+   scrolling through topics, instead of scrolling out of sight. */
+.tracker-table-wrap { max-height: 65vh; }
+.tracker-table-wrap thead th {
+  position: sticky; top: 0; z-index: 3;
+  background: var(--card);
+}
+.tracker-table-wrap .tracker-actions-col {
+  position: sticky; right: 0; z-index: 1;
+  background: var(--card);
+}
+.tracker-table-wrap thead th.tracker-actions-col { z-index: 4; }
+/* Row hover tint needs to also cover the frozen actions cell, or it'll look
+   like a seam cutting through the highlighted row. */
+.tracker-table-wrap tr:hover td.tracker-actions-col { background: color-mix(in srgb, var(--card) 88%, rgba(124,106,247,0.1)); }
+
 /* ---- MOBILE TABLE COLUMNS ---- */
 @media (max-width: 600px) {
   /* Hide non-essential tracker columns on phones */
@@ -2322,6 +2340,33 @@ body.light-mode .btn-ghost {
   color: color-mix(in srgb, var(--accent) 62%, #56606d) !important;
 }
 
+/* The icon-only edit/delete buttons (✏ / ✕) were nearly invisible in light
+   mode — the icon color was a pale tint blending straight into an equally
+   pale background. Use a solid, high-contrast icon color instead, in every
+   light theme including Rose and Custom. */
+body.light-mode .btn-ghost,
+body.light-mode.theme-rose .btn-ghost,
+body.light-mode.theme-custom .btn-ghost {
+  background: color-mix(in srgb, var(--accent) 14%, white) !important;
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border)) !important;
+  color: color-mix(in srgb, var(--accent) 85%, black) !important;
+}
+body.light-mode .btn-ghost:hover,
+body.light-mode.theme-rose .btn-ghost:hover,
+body.light-mode.theme-custom .btn-ghost:hover {
+  background: color-mix(in srgb, var(--accent) 24%, white) !important;
+  color: color-mix(in srgb, var(--accent) 92%, black) !important;
+}
+body.light-mode .btn-danger {
+  background: rgba(239,68,68,0.15) !important;
+  border-color: rgba(239,68,68,0.45) !important;
+  color: #b91c1c !important;
+}
+body.light-mode .btn-danger:hover {
+  background: rgba(239,68,68,0.24) !important;
+  color: #991b1b !important;
+}
+
 /* Appearance control: always visible in both states. */
 body.light-mode .toggle-switch {
   background: color-mix(in srgb, var(--accent) 13%, #d9dee7) !important;
@@ -3263,7 +3308,7 @@ renderDashboard(); }, 400);
     <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--accent2)"></div><span style="color:var(--accent2);font-weight:600;min-width:60px">Level 4</span><span style="color:var(--dim)" id="conf-guide-l4">I'm quite confident — I can answer most questions on this topic.</span></div>
     <div class="conf-level-row" style="margin-bottom:0"><div class="conf-level-dot" style="background:var(--pass)"></div><span style="color:var(--pass);font-weight:600;min-width:60px">Level 5</span><span style="color:var(--dim)" id="conf-guide-l5">Fully mastered — I can teach this topic and ace any question.</span></div>
   </div>
-  <div class="card" style="overflow-x:auto">
+  <div class="card tracker-table-wrap" style="overflow:auto;">
     <table>
       <thead>
         <tr>
@@ -3273,7 +3318,7 @@ renderDashboard(); }, 400);
           <th id="conf-col-header">Confidence</th>
           <th>Date Started</th>
           <th>Date Ended</th>
-          <th>Actions</th>
+          <th class="tracker-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="tracker-tbody"></tbody>
@@ -5808,12 +5853,12 @@ function renderWidgetHTML(w, i) {
   }
 
   if (w.type === 'progress') {
-    const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectStats(subj),color=SUBJECTS_META[subj].color,r=30,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='subRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px"><svg width="74" height="74" viewBox="0 0 74 74"><defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs><circle cx="37" cy="37" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/><circle cx="37" cy="37" r="${r}" fill="none" stroke="url(#${g})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 37 37)"/><text x="37" y="35" text-anchor="middle" font-size="12" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="37" y="47" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:10px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
+    const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectStats(subj),color=SUBJECTS_META[subj].color,r=30,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='subRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px"><svg width="74" height="74" viewBox="0 0 74 74"><defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs><circle cx="37" cy="37" r="${r}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="7"/><circle cx="37" cy="37" r="${r}" fill="none" stroke="url(#${g})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 37 37)"/><text x="37" y="35" text-anchor="middle" font-size="12" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="37" y="47" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:10px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="section-title">📚 Subject Progress</div><div style="font-size:9px;color:var(--muted)">Completed topics</div></div><div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">${rings}</div></div>`;
   }
 
   if (w.type === 'video_progress_rings') {
-    const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectVideoStats(subj);if(!st.total)return '';const color=SUBJECTS_META[subj].color,r=27,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='vidRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:70px"><svg width="68" height="68" viewBox="0 0 68 68"><defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs><circle cx="34" cy="34" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/><circle cx="34" cy="34" r="${r}" fill="none" stroke="url(#${g})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 34 34)"/><text x="34" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="34" y="43" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:9px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
+    const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectVideoStats(subj);if(!st.total)return '';const color=SUBJECTS_META[subj].color,r=27,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='vidRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:70px"><svg width="68" height="68" viewBox="0 0 68 68"><defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs><circle cx="34" cy="34" r="${r}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="7"/><circle cx="34" cy="34" r="${r}" fill="none" stroke="url(#${g})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 34 34)"/><text x="34" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="34" y="43" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:9px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
     const has=MAIN_SUBJECTS.some(x=>getMainSubjectVideoStats(x).total>0);
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="section-title">🎥 Video Progress</div><div style="font-size:9px;color:var(--muted)">Lectures watched</div></div>${has?`<div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">${rings}</div>`:'<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">No video lectures added yet.</div>'}</div>`;
   }
@@ -5954,7 +5999,7 @@ function renderWidgetHTML(w, i) {
               <stop offset="100%" stop-color="var(--accent3)"/>
             </linearGradient>
           </defs>
-          <circle cx="35" cy="35" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/>
+          <circle cx="35" cy="35" r="${r}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="7"/>
           <circle cx="35" cy="35" r="${r}" fill="none" stroke="url(#${gid})" stroke-width="7"
             stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}"
             stroke-dashoffset="${offset.toFixed(1)}"
@@ -6792,10 +6837,15 @@ function renderTracker() {
   tbody.innerHTML = topics.map((t,i) => {
     const confDots = Array.from({length:5},(_,ci) => {
       const filled = ci < t.confidence;
-      const col = filled ? confColors[t.confidence] : 'var(--border)';
+      // Unfilled dots used to fill with var(--border), which is a very pale
+      // near-white in light mode and basically disappeared against the card.
+      // Render them as a clearly visible outlined (empty) circle instead.
+      const style = filled
+        ? `background:${confColors[t.confidence]};border-color:${confColors[t.confidence]}`
+        : `background:transparent;border-color:var(--muted)`;
       const newVal = (t.confidence === ci+1) ? 0 : ci+1;
       const tip = (t.confidence === ci+1) ? 'Click to reset' : (isVideoSub ? 'Watch level '+(ci+1) : 'Level '+(ci+1));
-      return `<span class="conf-dot" style="background:${col};border-color:${col}" onclick="setConfidence('${currentTrackerSub}',${i},${newVal})" title="${tip}"></span>`;
+      return `<span class="conf-dot" style="${style}" onclick="setConfidence('${currentTrackerSub}',${i},${newVal})" title="${tip}"></span>`;
     }).join('');
     const doneRow = t.status===2 ? 'opacity:0.6' : '';
     return `<tr style="${doneRow}">
@@ -6811,7 +6861,7 @@ function renderTracker() {
       <td><div style="display:flex;gap:3px">${confDots}</div></td>
       <td><input type="date" class="tracker-date-input" value="${t.dateStarted || ''}" onchange="setTopicDate('${currentTrackerSub}',${i},'dateStarted',this.value)" style="font-size:11px;color:var(--muted);font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 4px;width:126px"></td>
       <td><input type="date" class="tracker-date-input" value="${t.dateEnded || ''}" onchange="setTopicDate('${currentTrackerSub}',${i},'dateEnded',this.value)" style="font-size:11px;color:var(--muted);font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 4px;width:126px"></td>
-      <td>
+      <td class="tracker-actions-col">
         <button class="btn btn-ghost btn-sm" onclick="editTopicName('${currentTrackerSub}',${i})" title="Edit name">✏</button>
         <button class="btn btn-danger btn-sm" onclick="deleteTopic('${currentTrackerSub}',${i})" title="Delete">✕</button>
       </td>
