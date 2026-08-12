@@ -2709,7 +2709,7 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
 </button>
 
 <!-- ===== STUDY COACH CHAT MODAL ===== -->
-<div id="coach-chat-modal" style="display:none;position:fixed;bottom:24px;left:calc(var(--sidebar-w) + 16px);z-index:200;width:320px;max-height:480px;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.18);overflow:hidden;font-family:var(--font-body);">
+<div id="coach-chat-modal" style="display:none;position:fixed;bottom:24px;left:calc(var(--sidebar-w) + 16px);z-index:200;width:400px;max-height:640px;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.18);overflow:hidden;font-family:var(--font-body);">
   <!-- Header -->
   <div class="coach-chat-header" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-bottom:1px solid var(--border);">
     <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:none;flex-shrink:0;">✦</div>
@@ -2721,16 +2721,17 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
     <button onclick="closeCoachChat()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:2px 4px;" title="Close">✕</button>
   </div>
   <!-- Messages -->
-  <div id="coach-chat-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:200px;max-height:300px;"></div>
+  <div id="coach-chat-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:280px;max-height:460px;"></div>
   <!-- Suggestions -->
   <div id="coach-chat-suggestions" style="padding:0 14px 8px;display:flex;flex-wrap:wrap;gap:5px;"></div>
   <!-- Input -->
-  <div style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);">
-    <input id="coach-chat-input" type="text" placeholder="Ask your coach..." maxlength="120"
-      style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--text);font-family:var(--font-body);outline:none;"
-      onkeydown="if(event.key==='Enter')sendCoachMessage()"
+  <div style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);align-items:flex-end;">
+    <textarea id="coach-chat-input" placeholder="Ask your coach... (Shift+Enter for a new line)" maxlength="4000" rows="1"
+      style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--text);font-family:var(--font-body);outline:none;resize:none;max-height:120px;overflow-y:auto;line-height:1.5;"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';"
+      onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendCoachMessage();}"
       onfocus="this.style.borderColor='var(--accent)'"
-      onblur="this.style.borderColor='var(--border)'" />
+      onblur="this.style.borderColor='var(--border)'"></textarea>
     <button onclick="sendCoachMessage()" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">➤</button>
   </div>
 </div>
@@ -2867,12 +2868,28 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
 .calendar-style-option .mini{width:28px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--surface);position:relative;overflow:hidden}
 .calendar-style-option .mini:after{content:'';position:absolute;left:4px;right:4px;top:8px;height:2px;background:var(--accent);box-shadow:0 5px 0 var(--border)}
 .calendar-style-option strong{font-size:10px}.calendar-style-option small{display:block;font-size:8px;color:var(--muted);margin-top:1px}
-#page-calendar.cal-style-focus .card{box-shadow:0 10px 30px color-mix(in srgb,var(--accent) 9%,transparent);border-color:color-mix(in srgb,var(--accent) 20%,var(--border))}
-#page-calendar.cal-style-focus #cal-grid-container{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 3%,transparent),transparent)}
-#page-calendar.cal-style-colorful #cal-grid > *{transition:.18s}
-#page-calendar.cal-style-colorful .cal-cell{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 3%,transparent),transparent)}
-#page-calendar.cal-style-soft .card{border-radius:18px;box-shadow:0 8px 24px rgba(40,45,80,.06)}
-#page-calendar.cal-style-soft .cal-cell{background:rgba(255,255,255,.45)}
+/* Calendar style presets — real hooks on the actual generated cells
+   (.cal-day-cell / .cal-grid-outer / .cal-week-cell / .cal-day-timeline / .cal-timeline-cell),
+   controlled through CSS variables so month, week and day views all respond together. */
+#page-calendar{
+  --cal-radius:8px; --cal-gap:0px; --cal-cell-pad:6px 8px; --cal-cell-minh:90px;
+  --cal-week-h:52px; --cal-timeline-h:44px; --cal-saturate:1; --cal-cell-shadow:none;
+}
+.cal-grid-outer{border-radius:var(--cal-radius) !important;gap:var(--cal-gap) !important;filter:saturate(var(--cal-saturate));transition:filter .2s;}
+.cal-day-cell{padding:var(--cal-cell-pad) !important;min-height:var(--cal-cell-minh) !important;box-shadow:var(--cal-cell-shadow);}
+.cal-week-cell{height:var(--cal-week-h) !important;}
+#page-calendar #cal-grid-container{border-radius:var(--cal-radius);}
+#page-calendar .cal-day-timeline{border-radius:var(--cal-radius) !important;filter:saturate(var(--cal-saturate));}
+#page-calendar .cal-timeline-hour,#page-calendar .cal-timeline-cell{height:var(--cal-timeline-h) !important;}
+
+#page-calendar.cal-style-compact{--cal-radius:6px;--cal-gap:0px;--cal-cell-pad:3px 5px;--cal-cell-minh:60px;--cal-week-h:34px;--cal-timeline-h:30px;--cal-saturate:1;--cal-cell-shadow:none;}
+#page-calendar.cal-style-compact .card{box-shadow:none;}
+
+#page-calendar.cal-style-comfortable{--cal-radius:10px;--cal-gap:1px;--cal-cell-pad:8px 10px;--cal-cell-minh:92px;--cal-week-h:54px;--cal-timeline-h:46px;--cal-saturate:1;--cal-cell-shadow:0 1px 5px rgba(20,25,50,.05);}
+
+#page-calendar.cal-style-spacious{--cal-radius:20px;--cal-gap:5px;--cal-cell-pad:16px 17px;--cal-cell-minh:130px;--cal-week-h:70px;--cal-timeline-h:60px;--cal-saturate:1;--cal-cell-shadow:0 3px 12px rgba(20,25,50,.08);}
+#page-calendar.cal-style-spacious .card{border-radius:20px;}
+#page-calendar.cal-style-spacious .cal-grid-outer,#page-calendar.cal-style-spacious .cal-day-timeline{border:none !important;}
 
 
 /* Distinct visual identities for each video-library achievement */
@@ -2924,16 +2941,6 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
 .video-achievement-icon.video-rfbt .video-distinct-svg{color:var(--accent2)}
 .video-achievement-icon.video-momentum .video-distinct-svg,
 .video-achievement-icon.video-marathon .video-distinct-svg{color:var(--accent)}
-
-#page-calendar.cal-style-compact .cal-cell{padding:5px 3px;border-radius:5px}
-#page-calendar.cal-style-compact .cal-day{padding:5px 3px}
-#page-calendar.cal-style-compact .cal-header{padding:6px 3px;font-size:9px}
-#page-calendar.cal-style-compact .cal-dot{width:5px;height:5px}
-#page-calendar.cal-style-spacious .cal-cell{padding:11px 7px;border-radius:10px}
-#page-calendar.cal-style-spacious .cal-day{padding:11px 7px}
-#page-calendar.cal-style-spacious .cal-header{padding:11px 6px}
-#page-calendar.cal-style-spacious .calendar-grid,
-#page-calendar.cal-style-spacious .cal-month-grid{gap:4px}
 
 
 .video-achievement-card{position:relative;overflow:hidden;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 7%,var(--card)),color-mix(in srgb,var(--accent3) 5%,var(--card)));border-color:color-mix(in srgb,var(--accent) 22%,var(--border)) !important}
@@ -3051,9 +3058,6 @@ renderDashboard(); }, 400);
         <h2 id="dash-name-heading" style="font-size:26px;font-weight:800;letter-spacing:-0.3px;">Good day! 👋</h2>
         <p id="dash-quote-sub" style="color:var(--muted);font-size:11px;margin-top:3px;">Your CPALE readiness at a glance</p>
         <div id="dash-coach-line" style="display:none;"></div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn btn-ghost btn-sm" onclick="showPage('settings')">⚙ Settings</button>
       </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -3395,6 +3399,10 @@ renderDashboard(); }, 400);
       <label>Topic</label>
       <select id="cal-topic-sel"></select>
     </div>
+    <div class="form-row">
+      <label>What will you do? (optional)</label>
+      <select id="cal-activity-type"></select>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-row">
         <label>Time (optional)</label>
@@ -3702,6 +3710,11 @@ renderDashboard(); }, 400);
         <div class="aw-icon">📚</div>
         <div class="aw-name">Subject Bars</div>
         <div class="aw-desc">Completion per subject</div>
+      </div>
+      <div class="add-widget-card" onclick="addWidget('mastery')">
+        <div class="aw-icon">🧠</div>
+        <div class="aw-name">Mastery</div>
+        <div class="aw-desc">Confidence-based mastery per subject</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('video_bars')">
         <div class="aw-icon">🎥</div>
@@ -4322,6 +4335,19 @@ const SUBJECTS_META = {
 };
 const MAIN_SUBJECTS = ['FAR','AFAR','MAS','AUDIT','TAX','RFBT'];
 
+// What you intend to DO with a topic in a study session — common active-learning /
+// spaced-repetition modes, distinct from the topic's own status/confidence.
+const CAL_ACTIVITY_TYPES = [
+  { id:'firstview',  icon:'👀', label:'First View',        desc:'Seeing this topic for the first time' },
+  { id:'review',     icon:'🔁', label:'Review',            desc:'Re-reading or re-watching to refresh it' },
+  { id:'recall',     icon:'🧠', label:'Active Recall',     desc:'Recalling it from memory, no notes' },
+  { id:'retrieval',  icon:'📝', label:'Retrieval Practice',desc:'Quizzing / testing yourself on it' },
+  { id:'synthesis',  icon:'🧩', label:'Synthesis',         desc:'Connecting it with other topics/concepts' },
+  { id:'drill',      icon:'✍️', label:'Drill / Practice Problems', desc:'Working problems or exercises' },
+  { id:'mock',       icon:'⏱️', label:'Mock Exam',         desc:'Timed, exam-condition practice' },
+];
+function calActivityById(id){ return CAL_ACTIVITY_TYPES.find(a=>a.id===id) || null; }
+
 const DEFAULT_TOPICS = {
   FOA:        { name:'FOA',                         subject:'FAR',   topics:['Introduction to Accounting','Accounting Concepts and Principles','The accounting equation','Types of major accounts','Books of accounts and double-entry system','Business transaction and their analysis','Posting to the Ledger','Adjusting Entries','Accounting Cycle of a service Business','Accounting Cycle of a merchandise Business','Inventories','Fraud, Internal Control, and Cash','Accounting for Receivables','Plant Assets, Natural Resources, and Intangible Assets','Current Liabilities','Non-current Liabilities','Special and Combination Journals, and Voucher System','Manufacturing Operations','Payroll','Partnership Formation','Partnership Operation','Partnership Liquidation','Partnership Dissolution','Accounting for Corporations: Basic Considerations','Corporations: Share Capital, Retained Earnings and Financial Reporting','Investments','Statement of Cash Flows','Financial Analysis: The big picture'] },
   CFAS:       { name:'CFAS',                        subject:'FAR',   topics:['The accountancy profession','Conceptual framework - objectives of financial reporting','Conceptual framework - qualitative characteristics','Conceptual framework - financial statements and reporting entity underlying assumptions','Conceptual framework - elements of financial statements','Conceptual framework - recognition and measurement','Conceptual framework - presentation and disclosure','Presentation of financial statements - SFP (PAS 1)','Presentation of financial statements - Statement of CI (PAS 1)','Statement of cash flows PAS 7','Accounting policies, estimate, and errors PAS 8','Events after the reporting period PAS 10','Related party disclosures PAS 24','Inventories PAS 2','Property, plant, and equipment PAS 16','Government grant PAS 20','Borrowing costs PAS 23','Investment in associates PAS 28','Impairment of assets PAS 36','Intangible assets PAS 38','Investment property PAS 40','Agriculture PAS 41','Provision, contingent liability and asset PAS 37','Financial instruments - presentation PAS 32','Income taxes PAS 12','Employee benefits PAS 19','Earnings per share PAS 33','Interim financial reporting PAS 34','Reporting in hyperinflationary economy PAS 29','First time adoption of PFRS PFRS 1','Share-based payment PFRS 2','Noncurrent asset held for sale PFRS 5','Discontinued operation PFRS 5','Exploration and evaluation of mineral resources PFRS 6','Operating segments PFRS 8','Financial instruments measurement PFRS 9','Fair value measurement PFRS 13','Revenue from contracts with customers PFRS 15','Leases PFRS 16','IFRIC interpretations: IFRIC 1, 2, 17, 19'] },
@@ -4698,16 +4724,28 @@ function updateCustomPreview() {
   document.documentElement.style.setProperty('--accent3', c3);
   
   if (state.darkMode) {
-    document.documentElement.style.setProperty('--bg', tints.bg);
-    document.documentElement.style.setProperty('--surface', tints.surface);
-    document.documentElement.style.setProperty('--card', tints.card);
-    document.documentElement.style.setProperty('--border', tints.border);
+    // Preset dark themes never tint the background — they keep the same
+    // neutral dark canvas and let the accent color do all the work, which is
+    // why they look crisp. Tinting the background here (even lightly) made
+    // the accent compete with a colored backdrop instead of popping against
+    // it, so it read as duller/muddier than the presets. Match the presets:
+    // leave --bg/--surface/--card/--border at their neutral defaults.
+    document.documentElement.style.removeProperty('--bg');
+    document.documentElement.style.removeProperty('--surface');
+    document.documentElement.style.removeProperty('--card');
+    document.documentElement.style.removeProperty('--border');
   } else {
     document.body.classList.add('light-mode');
-    /* Mood CSS owns the light-mode atmosphere. Keep the base tokens readable
-       and let the mood recipe control the actual canvas/surface personality. */
+    /* The background used to be picked from a fixed 5-color table keyed only
+       by mood, so two different main colors in the same mood produced the
+       IDENTICAL background — no visible distinction between color choices.
+       Derive it from the chosen color's actual hue instead, with the mood
+       only controlling how saturated/warm the tint feels. */
     const softBase = CUSTOM_MOODS[customMood] ? customMood : 'soft';
-    const baseBg = {soft:'#f7f9fb',dreamy:'#fff7fb',fresh:'#f3faf6',warm:'#fff9ef',focus:'#f6f7fc'}[softBase];
+    const moodSat = {soft:8, dreamy:12, fresh:11, warm:10, focus:6}[softBase] ?? 8;
+    const [bh, bs] = hexToHsl(c1);
+    const bgSat = Math.min(Math.max(bs*0.3, 4) + moodSat, 26);
+    const baseBg = `hsl(${bh}, ${bgSat.toFixed(0)}%, 97%)`;
     document.documentElement.style.setProperty('--bg', baseBg);
     document.documentElement.style.setProperty('--surface', '#ffffff');
     document.documentElement.style.setProperty('--card', '#ffffff');
@@ -4741,7 +4779,28 @@ function applyCustomColors() {
   const c2 = document.getElementById('custom-color-2').value;
   const c3 = document.getElementById('custom-color-3').value;
   const tints = generateBgTints(c1);
-  
+
+  document.documentElement.style.setProperty('--accent', c1);
+  document.documentElement.style.setProperty('--accent2', c2);
+  document.documentElement.style.setProperty('--accent3', c3);
+  if (state.darkMode) {
+    // Match preset dark themes: no background tint, just the accent colors.
+    // Without this, "Apply My Theme" could leave a stale --bg/--surface/
+    // --card/--border tint (e.g. from an earlier light-mode preview) sitting
+    // on the page, making dark mode look washed out instead of the clean
+    // neutral canvas the presets use.
+    document.documentElement.style.removeProperty('--bg');
+    document.documentElement.style.removeProperty('--surface');
+    document.documentElement.style.removeProperty('--card');
+    document.documentElement.style.removeProperty('--border');
+  } else {
+    document.body.classList.add('light-mode');
+    document.documentElement.style.setProperty('--bg', `color-mix(in srgb, ${c1} 7%, #f8f9fc)`);
+    document.documentElement.style.setProperty('--surface', `color-mix(in srgb, ${c1} 10%, #ffffff)`);
+    document.documentElement.style.setProperty('--card', `color-mix(in srgb, ${c1} 5%, #ffffff)`);
+    document.documentElement.style.setProperty('--border', `color-mix(in srgb, ${c1} 18%, #e1e4eb)`);
+  }
+
   state.customColors = { c1, c2, c3, tints, mood: customMood };
   state.accentScheme = -1;
   save();
@@ -4806,10 +4865,11 @@ function toggleDarkMode() {
     document.documentElement.style.setProperty('--accent2', state.darkMode ? c2 : c2);
     document.documentElement.style.setProperty('--accent3', state.darkMode ? c3 : c3);
     if (state.darkMode) {
-      document.documentElement.style.setProperty('--bg', tints.bg);
-      document.documentElement.style.setProperty('--surface', tints.surface);
-      document.documentElement.style.setProperty('--card', tints.card);
-      document.documentElement.style.setProperty('--border', tints.border);
+      // Match preset dark themes: no background tint, just the accent colors.
+      document.documentElement.style.removeProperty('--bg');
+      document.documentElement.style.removeProperty('--surface');
+      document.documentElement.style.removeProperty('--card');
+      document.documentElement.style.removeProperty('--border');
     } else {
       document.documentElement.style.setProperty('--bg', `color-mix(in srgb, ${c1} 7%, #f8f9fc)`);
       document.documentElement.style.setProperty('--surface', `color-mix(in srgb, ${c1} 10%, #ffffff)`);
@@ -4949,6 +5009,54 @@ function getMainSubjectVideoStats(mainKey) {
     completed += arr.filter(t=>t.status===2).length;
   });
   return { total, completed, pct: total ? completed/total*100 : 0 };
+}
+
+// Mastery = how well you actually KNOW the material, based on the 1–5 confidence
+// rating per topic — distinct from completion (getMainSubjectStats), which only
+// tracks whether a topic was touched. The percentage is measured against the
+// FULL topic baseline (excluding video lectures, and reflecting whatever
+// topics you've added/removed) — not just the topics you've rated so far.
+// That way rating one topic a perfect 5 doesn't spike overall mastery to
+// 100%; unrated topics count as 0 toward the baseline until you rate them.
+function getMainSubjectMastery(mainKey) {
+  const subs = SUBJECTS_META[mainKey].subs;
+  let sumConf=0, rated=0, total=0;
+  subs.forEach(k => {
+    if (DEFAULT_TOPICS[k] && DEFAULT_TOPICS[k].kind === 'video') return;
+    const arr = state.topics[k]||[];
+    total += arr.length;
+    arr.forEach(t => { if ((t.confidence||0) > 0) { sumConf += t.confidence; rated++; } });
+  });
+  const avg = rated ? sumConf/rated : 0; // 1–5 scale, average of only the rated topics
+  const pct = total ? (sumConf / (total*5)) * 100 : 0; // measured against ALL topics
+  return { avg, pct, rated, total };
+}
+
+function getOverallMastery() {
+  let sumConf=0, rated=0, total=0;
+  Object.keys(state.topics).forEach(sKey => {
+    if (DEFAULT_TOPICS[sKey] && DEFAULT_TOPICS[sKey].kind === 'video') return;
+    const arr = state.topics[sKey]||[];
+    total += arr.length;
+    arr.forEach(t => { if ((t.confidence||0) > 0) { sumConf += t.confidence; rated++; } });
+  });
+  const avg = rated ? sumConf/rated : 0;
+  const pct = total ? (sumConf / (total*5)) * 100 : 0; // measured against ALL topics
+  return { avg, pct, rated, total };
+}
+
+const MASTERY_TIERS = [
+  { label:'Just Starting', min:0,  max:30,  color:'var(--muted)' },
+  { label:'Shaky',         min:30, max:55,  color:'var(--danger)' },
+  { label:'Developing',    min:55, max:75,  color:'var(--warn)' },
+  { label:'Strong',        min:75, max:90,  color:'var(--accent2)' },
+  { label:'Mastered',      min:90, max:100, color:'var(--pass)' },
+];
+function getMasteryLabel(pct) {
+  for (let i = MASTERY_TIERS.length - 1; i >= 0; i--) {
+    if (pct >= MASTERY_TIERS[i].min) return MASTERY_TIERS[i].label;
+  }
+  return MASTERY_TIERS[0].label;
 }
 
 // Builds the indented sub-subject bars for a main subject, splitting
@@ -5483,6 +5591,7 @@ function addWidget(type) {
   if (type==='video_bars')      { d.cols=12; d.rows=30; }
   if (type==='video_progress_rings') { d.cols=12; d.rows=18; }
   if (type==='rank_legend')     { d.cols=12; d.rows=14; }
+  if (type==='mastery')         { d.cols=12; d.rows=32; }
   if (type==='activity')         { d.cols=6;  d.rows=18; }
   if (type==='weekly_footprint') { d.cols=12; d.rows=28; }
   const ws = getWidgets();
@@ -5973,6 +6082,61 @@ function renderWidgetHTML(w, i) {
       ${b.editBar}
       <div class="section-title" style="margin-bottom:14px;">Completion Per Subject</div>
       ${barsHTML}
+    </div>`;
+  }
+
+  if (w.type === 'mastery') {
+    const overall = getOverallMastery();
+    const r = 34, circ = 2*Math.PI*r, off = circ - (overall.pct/100)*circ;
+    const gid = 'masteryRing_'+w.id;
+    const subRings = MAIN_SUBJECTS.map(subj => {
+      const m = getMainSubjectMastery(subj);
+      const color = SUBJECTS_META[subj].color;
+      const r2=27, circ2=2*Math.PI*r2, off2=circ2-(m.pct/100)*circ2;
+      const g2 = 'masterySub_'+w.id+'_'+subj;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:70px">
+        <svg width="68" height="68" viewBox="0 0 68 68">
+          <defs><linearGradient id="${g2}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs>
+          <circle cx="34" cy="34" r="${r2}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="7"/>
+          <circle cx="34" cy="34" r="${r2}" fill="none" stroke="url(#${g2})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ2.toFixed(1)}" stroke-dashoffset="${off2.toFixed(1)}" transform="rotate(-90 34 34)"/>
+          <text x="34" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)" font-family="monospace">${m.rated?m.pct.toFixed(0)+'%':'—'}</text>
+          <text x="34" y="43" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${m.rated}/${m.total} rated</text>
+        </svg>
+        <div style="font-size:9px;font-weight:800;color:${color}">${subj}</div>
+      </div>`;
+    }).join('');
+    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;">
+      ${b.editBar}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div><div class="section-title" style="margin-bottom:2px">🧠 Mastery</div><div style="font-size:9px;color:var(--muted)">Based on your confidence ratings, not just completion</div></div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+        <svg width="82" height="82" viewBox="0 0 82 82">
+          <defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs>
+          <circle cx="41" cy="41" r="${r}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="8"/>
+          <circle cx="41" cy="41" r="${r}" fill="none" stroke="url(#${gid})" stroke-width="8" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 41 41)"/>
+          <text x="41" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="var(--text)" font-family="monospace">${overall.rated?overall.pct.toFixed(0)+'%':'—'}</text>
+          <text x="41" y="51" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="monospace">${overall.rated}/${overall.total}</text>
+        </svg>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--accent2)">${overall.rated?getMasteryLabel(overall.pct):'No ratings yet'}</div>
+          <div style="font-size:10px;color:var(--muted);max-width:200px;line-height:1.5">Overall mastery across all rated topics. Rate topics in the Tracker with the 1–5 confidence stars.</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap;margin-bottom:12px">${subRings}</div>
+      <div style="border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:7px">Mastery Ranks — where you currently stand</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${MASTERY_TIERS.map(t => {
+            const active = overall.rated && getMasteryLabel(overall.pct) === t.label;
+            return `<div style="display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:8px;background:${active?`color-mix(in srgb, ${t.color} 16%, transparent)`:'transparent'};border:1px solid ${active?`color-mix(in srgb, ${t.color} 45%, transparent)`:'var(--border)'}">
+              <span style="width:7px;height:7px;border-radius:50%;background:${t.color};flex-shrink:0"></span>
+              <span style="font-size:9px;font-weight:${active?800:600};color:${active?t.color:'var(--muted)'}">${t.label}</span>
+              <span style="font-size:8px;color:var(--muted);font-family:var(--font-mono)">${t.min}–${t.max}%</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
     </div>`;
   }
 
@@ -7135,7 +7299,7 @@ function renderCalGrid() {
   const totalCells = firstDay + daysInMonth;
   const totalRows = Math.ceil(totalCells / 7);
 
-  let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:auto repeat(${totalRows},1fr);gap:0;height:100%;width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden;">`;
+  let html = `<div class="cal-grid-outer" style="display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:auto repeat(${totalRows},minmax(var(--cal-cell-minh),1fr));width:100%;border:1px solid var(--border);overflow:hidden;">`;
 
   // Day-of-week headers (Google Calendar style)
   days.forEach((d,i) => {
@@ -7146,7 +7310,7 @@ function renderCalGrid() {
   // Leading previous-month cells
   for(let i=0;i<firstDay;i++) {
     const dayNum = prevDays-firstDay+1+i;
-    html += `<div style="padding:6px 8px;min-height:90px;min-width:0;overflow:hidden;background:var(--surface);border-top:1px solid var(--border);${i>0?'border-left:1px solid var(--border)':''}opacity:0.45">
+    html += `<div class="cal-day-cell" style="min-width:0;overflow:hidden;background:var(--surface);border-top:1px solid var(--border);${i>0?'border-left:1px solid var(--border)':''}opacity:0.45">
       <span style="font-size:12px;color:var(--muted);font-weight:500">${dayNum}</span>
     </div>`;
   }
@@ -7165,11 +7329,12 @@ function renderCalGrid() {
       const mainKey=Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(sKey));
       const color=mainKey?SUBJECTS_META[mainKey].color:'var(--accent)';
       const label = e.label || DEFAULT_TOPICS[sKey]?.name || '';
-      return `<div style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;max-width:100%;">${label||e.topicName}</div>`;
+      const actIcon = e.activityType ? (calActivityById(e.activityType)?.icon||'') + ' ' : '';
+      return `<div style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;max-width:100%;">${actIcon}${label||e.topicName}</div>`;
     }).join('');
     const moreLabel = events.length > 3 ? `<div style="font-size:9px;color:var(--muted);padding:0 2px">+${events.length-3} more</div>` : '';
 
-    html+=`<div onclick="selectCalDay('${dStr}')" style="padding:6px 8px;min-height:90px;min-width:0;overflow:hidden;cursor:pointer;background:${isSel?'rgba(124,106,247,0.16)':isToday?'rgba(124,106,247,0.07)':'var(--card)'};border:${isSel?'2px solid var(--accent)':'1px solid var(--border)'};box-shadow:${isSel?'inset 0 0 0 1px rgba(124,106,247,0.22)':'none'};${colIdx>0?'border-left:1px solid var(--border)':''};transition:background 0.15s;position:relative;" onmouseenter="this.style.background='rgba(124,106,247,0.08)'" onmouseleave="this.style.background='${isSel?'rgba(124,106,247,0.12)':isToday?'rgba(124,106,247,0.07)':'var(--card)'}'">
+    html+=`<div class="cal-day-cell" data-today="${isToday?1:0}" data-selected="${isSel?1:0}" onclick="selectCalDay('${dStr}')" style="min-width:0;overflow:hidden;cursor:pointer;background:${isSel?'rgba(124,106,247,0.16)':isToday?'rgba(124,106,247,0.07)':'var(--card)'};border:${isSel?'2px solid var(--accent)':'1px solid var(--border)'};box-shadow:${isSel?'inset 0 0 0 1px rgba(124,106,247,0.22)':'none'};${colIdx>0?'border-left:1px solid var(--border)':''};transition:background 0.15s;position:relative;" onmouseenter="this.style.background='rgba(124,106,247,0.08)'" onmouseleave="this.style.background='${isSel?'rgba(124,106,247,0.12)':isToday?'rgba(124,106,247,0.07)':'var(--card)'}'">
       <div style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${isToday?'var(--accent)':'transparent'};margin-bottom:4px;">
         <span style="font-size:12px;font-weight:${isToday?'700':isSel?'700':'500'};color:${isToday?'white':isSel?'var(--accent2)':isWeekend?'var(--dim)':'var(--text)'}">${day}</span>
       </div>
@@ -7181,7 +7346,7 @@ function renderCalGrid() {
   const trailingCells = totalRows * 7 - firstDay - daysInMonth;
   for(let i=1;i<=trailingCells;i++) {
     const colIdx = (firstDay + daysInMonth + i - 1) % 7;
-    html += `<div style="padding:6px 8px;min-height:90px;min-width:0;overflow:hidden;background:var(--surface);border-top:1px solid var(--border);${colIdx>0?'border-left:1px solid var(--border)':''}opacity:0.45">
+    html += `<div class="cal-day-cell" style="min-width:0;overflow:hidden;background:var(--surface);border-top:1px solid var(--border);${colIdx>0?'border-left:1px solid var(--border)':''}opacity:0.45">
       <span style="font-size:12px;color:var(--muted);font-weight:500">${i}</span>
     </div>`;
   }
@@ -7204,7 +7369,7 @@ function renderCalWeek() {
   const dayNames=['SUN','MON','TUE','WED','THU','FRI','SAT'];
   const slots = Array.from({length:17}, (_,i) => i+6); // 6am-10pm
 
-  let html = `<div style="display:grid;grid-template-columns:56px repeat(7,1fr);border:1px solid var(--border);border-radius:8px;overflow:hidden;">`;
+  let html = `<div class="cal-grid-outer" style="display:grid;grid-template-columns:56px repeat(7,1fr);border:1px solid var(--border);overflow:hidden;">`;
 
   // Header: top-left corner
   html += `<div style="background:var(--surface);border-bottom:1px solid var(--border);padding:8px 4px;font-size:9px;color:var(--muted);text-align:right;">GMT+08</div>`;
@@ -7224,7 +7389,7 @@ function renderCalWeek() {
   // Time slot rows
   slots.forEach(hour => {
     const label = hour === 12 ? '12 PM' : hour < 12 ? hour + ' AM' : (hour-12) + ' PM';
-    html += `<div style="background:var(--surface);padding:0 6px 0 0;font-size:9px;color:var(--muted);text-align:right;border-bottom:1px solid var(--border);font-family:var(--font-mono);height:52px;display:flex;align-items:flex-start;justify-content:flex-end;padding-top:3px;">${label}</div>`;
+    html += `<div class="cal-week-cell" style="background:var(--surface);padding:0 6px 0 0;font-size:9px;color:var(--muted);text-align:right;border-bottom:1px solid var(--border);font-family:var(--font-mono);display:flex;align-items:flex-start;justify-content:flex-end;padding-top:3px;">${label}</div>`;
     weekDays.forEach((day,i) => {
       const dStr = localDateStr(day);
       const isToday = dStr === todayStr;
@@ -7236,9 +7401,10 @@ function renderCalWeek() {
         const mainKey = Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(e.subjectKey));
         const color = mainKey ? SUBJECTS_META[mainKey].color : 'var(--accent)';
         const durH = Math.max(1, Math.round((e.duration||60)/52));
-        return `<div style="background:${color}25;border-left:3px solid ${color};padding:2px 5px;font-size:9px;border-radius:3px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;color:${color};font-weight:700;">${DEFAULT_TOPICS[e.subjectKey]?.name||''} · ${e.topicName}</div>`;
+        const actIcon = e.activityType ? (calActivityById(e.activityType)?.icon||'') + ' ' : '';
+        return `<div style="background:${color}25;border-left:3px solid ${color};padding:2px 5px;font-size:9px;border-radius:3px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;color:${color};font-weight:700;">${actIcon}${DEFAULT_TOPICS[e.subjectKey]?.name||''} · ${e.topicName}</div>`;
       }).join('');
-      html += `<div style="background:${isToday?'rgba(124,106,247,0.03)':'var(--card)'};height:52px;min-width:0;overflow:hidden;border-bottom:1px solid var(--border);border-left:1px solid var(--border);position:relative;cursor:pointer;padding:2px;transition:background 0.15s;" onclick="selectCalDay('${dStr}')" onmouseenter="this.style.background='rgba(124,106,247,0.06)'" onmouseleave="this.style.background='${isToday?'rgba(124,106,247,0.03)':'var(--card)'}'">
+      html += `<div class="cal-week-cell" style="background:${isToday?'rgba(124,106,247,0.03)':'var(--card)'};min-width:0;overflow:hidden;border-bottom:1px solid var(--border);border-left:1px solid var(--border);position:relative;cursor:pointer;padding:2px;transition:background 0.15s;" onclick="selectCalDay('${dStr}')" onmouseenter="this.style.background='rgba(124,106,247,0.06)'" onmouseleave="this.style.background='${isToday?'rgba(124,106,247,0.03)':'var(--card)'}'">
         ${evContent}
       </div>`;
     });
@@ -7277,8 +7443,9 @@ function renderCalDay() {
         const mainKey = Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(e.subjectKey)) || 'FAR';
         const color = SUBJECTS_META[mainKey].color;
         const durationPx = Math.max(Math.round((e.duration||60)/60*44), 20);
-        html += `<div class="cal-timeline-event" style="background:${color}25;border-left:3px solid ${color};color:${color};top:2px;height:${durationPx}px" title="${e.topicName}${e.duration ? ' · '+e.duration+'min' : ''}">
-          ${e.time} ${e.topicName}
+        const act = e.activityType ? calActivityById(e.activityType) : null;
+        html += `<div class="cal-timeline-event" style="background:${color}25;border-left:3px solid ${color};color:${color};top:2px;height:${durationPx}px" title="${act?act.label+' · ':''}${e.topicName}${e.duration ? ' · '+e.duration+'min' : ''}">
+          ${e.time} ${act?act.icon+' ':''}${e.topicName}
         </div>`;
       });
     }
@@ -7384,12 +7551,14 @@ function renderCalDayEvents() {
   const mainKeyOf = sKey => Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(sKey));
   document.getElementById('cal-day-events').innerHTML = events.map((e,i) => {
     const color = SUBJECTS_META[mainKeyOf(e.subjectKey)||'FAR']?.color||'var(--accent)';
+    const act = e.activityType ? calActivityById(e.activityType) : null;
     return `<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:8px;padding:10px;margin-bottom:7px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
           <div style="font-size:12px;font-weight:600;color:${color}">${DEFAULT_TOPICS[e.subjectKey]?.name||''}</div>
           <div style="font-size:12px;color:var(--text)">${e.topicName}</div>
-          <div style="font-size:10px;color:var(--muted)">${e.time ? e.time : 'Any time'}${e.duration ? ' · '+e.duration+'min' : ''}${e.notes?' · '+e.notes:''}</div>
+          ${act?`<div style="display:inline-block;margin-top:3px;font-size:9px;font-weight:700;color:${color};background:${color}18;border-radius:99px;padding:2px 8px">${act.icon} ${act.label}</div>`:''}
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">${e.time ? e.time : 'Any time'}${e.duration ? ' · '+e.duration+'min' : ''}${e.notes?' · '+e.notes:''}</div>
         </div>
         <div style="display:flex;gap:4px;flex-direction:column;align-items:flex-end">
           <button class="btn btn-danger btn-sm" onclick="deleteCalEvent('${selectedCalDay}',${i})">✕</button>
@@ -7414,6 +7583,9 @@ function openCalSessionModal(){
   document.getElementById('cal-time').value='';
   document.getElementById('cal-duration').value='';
   document.getElementById('cal-notes').value='';
+  const actSel=document.getElementById('cal-activity-type');
+  actSel.innerHTML='<option value="">— Not specified —</option>'+CAL_ACTIVITY_TYPES.map(a=>`<option value="${a.id}">${a.icon} ${a.label}</option>`).join('');
+  actSel.value='';
   openModal('modal-cal-session');
 }
 
@@ -7429,6 +7601,7 @@ function addCalEvent() {
   state.calEvents[selectedCalDay].push({
     subjectKey:sKey, topicIdx, topicName:topic.name,
     label:document.getElementById('cal-label').value,
+    activityType:document.getElementById('cal-activity-type').value||'',
     time:document.getElementById('cal-time').value,
     duration:durationValue ? parseInt(durationValue) : null,
     notes:document.getElementById('cal-notes').value
@@ -7963,10 +8136,11 @@ function init() {
     document.documentElement.style.setProperty('--accent2', c2);
     document.documentElement.style.setProperty('--accent3', c3);
     if (state.darkMode) {
-      document.documentElement.style.setProperty('--bg', tints.bg);
-      document.documentElement.style.setProperty('--surface', tints.surface);
-      document.documentElement.style.setProperty('--card', tints.card);
-      document.documentElement.style.setProperty('--border', tints.border);
+      // Match preset dark themes: no background tint, just the accent colors.
+      document.documentElement.style.removeProperty('--bg');
+      document.documentElement.style.removeProperty('--surface');
+      document.documentElement.style.removeProperty('--card');
+      document.documentElement.style.removeProperty('--border');
     } else {
       document.documentElement.style.setProperty('--bg', `color-mix(in srgb, ${c1} 7%, #f8f9fc)`);
       document.documentElement.style.setProperty('--surface', `color-mix(in srgb, ${c1} 10%, #ffffff)`);
@@ -8700,6 +8874,7 @@ function sendCoachMessage() {
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
+  input.style.height = 'auto';
   respondToCoach(text);
 }
 
@@ -8708,14 +8883,19 @@ function coachContextForAI(d) {
   return [
     `Name: ${d.name}`,
     `Overall completion: ${Math.round(d.stats.pct)}% (${d.stats.completed}/${d.stats.total} topics done, ${d.stats.inprog} in progress)`,
+    `Overall mastery (confidence-based, from Tracker ratings): ${d.overallMastery.rated ? d.overallMastery.pct.toFixed(0)+'% ('+d.overallMastery.rated+'/'+d.overallMastery.total+' topics rated)' : 'no topics rated yet'}`,
+    `Per-subject mastery: ${MAIN_SUBJECTS.map(s => `${s} ${d.subjMastery[s].rated ? d.subjMastery[s].pct.toFixed(0)+'%' : 'unrated'}`).join(', ')}`,
     `Current streak: ${d.streak.current} days (longest: ${d.streak.longest})`,
+    `Configured rest day(s): ${d.restDays.length ? d.restDays.join(', ') : 'none set'}`,
     `Days until exam: ${d.daysLeft !== null && d.daysLeft !== undefined ? d.daysLeft : 'not set'}`,
     `Per-subject completion: ${MAIN_SUBJECTS.map(s => `${s} ${d.subjPcts[s]}%`).join(', ')}`,
     `Weakest subject: ${d.weakest} (${d.subjPcts[d.weakest]}%); strongest: ${d.strongest} (${d.subjPcts[d.strongest]}%)`,
     d.latestPreboardAvg !== null ? `Latest preboard average: ${d.latestPreboardAvg}%${d.preboardTrend ? ' ('+d.preboardTrend+')' : ''}` : 'No preboard scores logged yet',
     d.practiceValid.length ? `Practice/drill performance (separate from preboards): ${MAIN_SUBJECTS.filter(s => d.practiceSubjectAvg[s] !== null).map(s => `${s} ${d.practiceSubjectAvg[s].toFixed(1)}%`).join(', ')}; ${d.practiceValid.length} scored sets` : 'No scored practice/drill sets logged yet',
     `Completed topics with low confidence: ${d.lowConfTopics.length}`,
-    d.topicsPerDay !== null ? `Topics/day needed to finish before exam: ${d.topicsPerDay}` : ''
+    d.topicsPerDay !== null ? `Topics/day needed to finish before exam: ${d.topicsPerDay}` : '',
+    d.upcomingSessions.length ? `Upcoming Calendar sessions: ${d.upcomingSessions.map(s => `${s.day}${s.time?' '+s.time:''} — ${s.topicName}${s.activity?' ('+s.activity+')':''}`).join('; ')}` : 'No upcoming sessions scheduled on the Calendar',
+    d.recentActivity.length ? `Recent activity (Study History tab): ${d.recentActivity.join('; ')}` : ''
   ].filter(Boolean).join('\n');
 }
 
@@ -8732,7 +8912,7 @@ async function generateCoachReplyAI(userText) {
     .map(m => `${m.role === 'coach' ? 'Coach' : 'Candidate'}: ${stripCoachHtml(m.text)}`)
     .join('\n');
 
-  const prompt = `You are an encouraging but direct study coach chatbot inside "CPA Ready", a tracker app for the Philippine CPA Licensure Exam (CPALE). Answer the candidate's latest message using ONLY the real data given below — never invent numbers. Keep the reply concise (under ~120 words), conversational, and you may use simple HTML tags like <strong> or <br> for emphasis (no markdown asterisks).
+  const prompt = `You are an encouraging but direct study coach chatbot inside "CPA Ready", a tracker app for the Philippine CPA Licensure Exam (CPALE). Answer the candidate's latest message using ONLY the real data given below — never invent numbers. You can be as thorough as the question needs — a quick question deserves a short answer, but if the candidate asks for a detailed study plan, breakdown, or explanation, give a complete, well-organized answer (use <strong>, <br>, and simple bullet-style lines with — for structure; no markdown asterisks).
 
 CANDIDATE DATA:
 ${context}
@@ -8751,7 +8931,7 @@ Reply as the Coach:`;
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': state.geminiApiKey },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 2048 } })
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => null);
@@ -8865,10 +9045,35 @@ function coachGetData() {
   const hr   = new Date().getHours();
   const timeOfDay = hr < 12 ? 'morning' : hr < 18 ? 'afternoon' : 'evening';
 
+  // Mastery (confidence-based, from the Tracker's 1–5 rating) — separate
+  // signal from raw completion %, mirrors the Dashboard's Mastery widget.
+  const overallMastery = getOverallMastery();
+  const subjMastery = {};
+  MAIN_SUBJECTS.forEach(mk => { subjMastery[mk] = getMainSubjectMastery(mk); });
+
+  // Upcoming Calendar sessions (from the Study Calendar tab) so the coach
+  // knows what's already scheduled instead of only what's been completed.
+  const todayStr = localDateStr();
+  const upcomingSessions = Object.entries(state.calEvents || {})
+    .filter(([day]) => day >= todayStr)
+    .sort((a,b) => a[0].localeCompare(b[0]))
+    .flatMap(([day, evs]) => (evs||[]).map(e => ({
+      day, time: e.time || null, topicName: e.topicName,
+      activity: e.activityType ? (calActivityById(e.activityType)?.label || '') : null
+    })))
+    .slice(0, 6);
+
+  // Configured rest days (Settings → Rest Days)
+  const restDays = (state.restDays || []).map(i => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i]).filter(Boolean);
+
+  // Recent Study History activity (last 5 entries) — study/progress/score/milestone
+  const recentActivity = (state.activityLog || []).slice(0, 5).map(e => `${e.type}: ${e.title}${e.day ? ' ('+e.day+')' : ''}`);
+
   return {
     stats, streak, daysLeft, subjPcts, subjStats, sorted, weakest, strongest, allSame,
     latestPreboardAvg, preboardTrend, preboards, lowConfTopics, notStarted,
-    topicsPerDay, subjectScores, practiceValid, practiceBySubject, practiceSubjectAvg, practiceWeakest, name, scores, timeOfDay
+    topicsPerDay, subjectScores, practiceValid, practiceBySubject, practiceSubjectAvg, practiceWeakest, name, scores, timeOfDay,
+    overallMastery, subjMastery, upcomingSessions, restDays, recentActivity
   };
 }
 
@@ -9432,7 +9637,7 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
     let m=document.getElementById('calendar-style-menu');
     if(m){m.remove();return;}
     m=document.createElement('div');m.id='calendar-style-menu';m.className='calendar-style-menu';
-    const presets=[['minimal','Minimal','Clean, quiet grid'],['soft','Soft','Rounded, airy cards'],['focus','Focus','Sharper active accents'],['colorful','Colorful','More visible subject color'],['compact','Compact','Tighter cells and spacing'],['spacious','Spacious','More breathing room']];
+    const presets=[['compact','Compact','Tight cells, fits more on screen'],['comfortable','Comfortable','Balanced default sizing'],['spacious','Spacious','Large cells, more breathing room']];
     m.innerHTML='<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:var(--muted);padding:3px 7px 8px">CALENDAR STYLE</div>'+presets.map(([id,n,d])=>`<button class="calendar-style-option" onclick="setCalendarStyle('${id}')"><span class="mini"></span><span><strong>${n}</strong><small>${d}</small></span></button>`).join('');
     document.body.appendChild(m);
     const r=ev.currentTarget.getBoundingClientRect();m.style.top=(r.bottom+7)+'px';m.style.left=Math.max(8,Math.min(window.innerWidth-238,r.right-230))+'px';
@@ -9440,11 +9645,17 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
   };
   window.setCalendarStyle=function(style){
     const page=document.getElementById('page-calendar'); if(!page)return;
-    page.classList.remove('cal-style-minimal','cal-style-soft','cal-style-focus','cal-style-colorful','cal-style-compact','cal-style-spacious'); page.classList.add('cal-style-'+style);
+    page.classList.remove('cal-style-minimal','cal-style-soft','cal-style-focus','cal-style-colorful','cal-style-compact','cal-style-comfortable','cal-style-spacious'); page.classList.add('cal-style-'+style);
     try{localStorage.setItem('cpa-ready-calendar-style',style)}catch(e){}
     const m=document.getElementById('calendar-style-menu');if(m)m.remove();
   };
-  function initCalStyle(){let st='minimal';try{st=localStorage.getItem('cpa-ready-calendar-style')||'minimal'}catch(e){};setCalendarStyle(st)}
+  function initCalStyle(){
+    let st='comfortable';
+    try{st=localStorage.getItem('cpa-ready-calendar-style')||'comfortable'}catch(e){}
+    // Migrate old preset names (minimal/soft/focus/colorful) that no longer exist.
+    if(!['compact','comfortable','spacious'].includes(st)) st='comfortable';
+    setCalendarStyle(st);
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initCalStyle);else initCalStyle();
 
 })();
