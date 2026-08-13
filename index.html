@@ -2803,6 +2803,9 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
     <div class="nav-item" data-page="settings" onclick="showPage('settings')">
       <span class="nav-icon" data-icon="settings"></span> Settings
     </div>
+    <div class="nav-item" id="install-app-nav" onclick="installApp()" style="display:none">
+      <span class="nav-icon" data-icon="install"></span> <span id="install-app-nav-label">Install App</span>
+    </div>
     <button class="coach-sidebar-launch" onclick="openCoachChat()" aria-label="Open Study Coach">
       <span class="coach-sidebar-icon">✦</span>
       <span class="coach-sidebar-copy"><strong>Study Coach</strong><small>Ask for guidance</small></span>
@@ -9598,20 +9601,114 @@ if ('serviceWorker' in navigator) {
   }
 })();
 
-// ---- Android / Chrome install prompt ----
+// ---- Install App: persistent nav entry + on-demand install ----
+// Exposes window.installApp() so it can be triggered from a permanent sidebar
+// item at any time, not just the one-shot beforeinstallprompt banner (which
+// browsers may not re-fire right after an uninstall).
 (function() {
-  let deferredPrompt = null;
+  window.__pwaDeferredPrompt = null;
+
+  function isStandaloneNow() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  }
+
+  function ua() {
+    const u = navigator.userAgent;
+    const isIos = /iphone|ipad|ipod/i.test(u);
+    const isAndroid = /android/i.test(u);
+    const isEdge = /edg\//i.test(u);
+    const isChrome = /chrome\//i.test(u) && !isEdge && !/opr\//i.test(u);
+    const isFirefox = /firefox\//i.test(u);
+    const isSafari = /safari\//i.test(u) && !isChrome && !isEdge && !isFirefox;
+    return { isIos, isAndroid, isEdge, isChrome, isFirefox, isSafari };
+  }
+
+  function refreshInstallNav() {
+    const item = document.getElementById('install-app-nav');
+    const label = document.getElementById('install-app-nav-label');
+    if (!item) return;
+    if (isStandaloneNow()) {
+      // Already running as the installed app — no need to offer install.
+      item.style.display = 'none';
+      return;
+    }
+    item.style.display = '';
+    if (label) label.textContent = 'Install App';
+  }
+
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
-    deferredPrompt = e;
+    window.__pwaDeferredPrompt = e;
+    refreshInstallNav();
+  });
+  window.addEventListener('appinstalled', () => {
+    window.__pwaDeferredPrompt = null;
+    refreshInstallNav();
+  });
+
+  function closeInstallModal() {
+    const m = document.getElementById('install-app-modal');
+    if (m) m.remove();
+  }
+
+  function showManualInstructions() {
+    const { isIos, isAndroid, isFirefox, isSafari } = ua();
+    let steps;
+    if (isIos) {
+      steps = ['Tap the <strong>Share</strong> icon in Safari\'s toolbar.', 'Scroll down and tap <strong>"Add to Home Screen"</strong>.', 'Tap <strong>Add</strong> to confirm.'];
+    } else if (isAndroid) {
+      steps = ['Tap the <strong>⋮</strong> menu (top right of the browser).', 'Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.', 'Confirm to add the icon to your home screen.'];
+    } else if (isFirefox) {
+      steps = ['Firefox on desktop doesn\'t support installing this as an app.', 'Open this same page in <strong>Chrome</strong> or <strong>Edge</strong> to install it, or use the mobile Firefox "Add to Home screen" option.'];
+    } else if (isSafari) {
+      steps = ['In Safari\'s menu bar, go to <strong>File</strong>.', 'Choose <strong>"Add to Dock"</strong> (Safari 17+) if available.', 'If you don\'t see that option, open this page in Chrome or Edge instead.'];
+    } else {
+      steps = ['Look for a small install icon (a monitor with a ↓, or a "+") at the right edge of the address bar and click it.', 'If you don\'t see it, open the <strong>⋮</strong> browser menu and look for <strong>"Install CPA Ready…"</strong> or <strong>"Cast, save, and share" → "Install page as app"</strong>.', 'Confirm the install dialog.'];
+    }
+    const modal = document.createElement('div');
+    modal.id = 'install-app-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;font-family:\'Sora\',sans-serif;';
+    modal.innerHTML = `
+      <div style="background:linear-gradient(135deg,#111118,#16161f);border:1px solid #2a2a3e;border-radius:14px;max-width:380px;width:100%;padding:22px;color:#e2e8f0;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
+        <div style="font-weight:700;font-size:15px;color:#a78bfa;margin-bottom:10px;">Install CPA Ready</div>
+        <ol style="margin:0 0 16px;padding-left:18px;font-size:13px;line-height:1.6;color:#cbd5e1;">
+          ${steps.map(s => `<li style="margin-bottom:6px;">${s}</li>`).join('')}
+        </ol>
+        <div style="font-size:11px;color:#64748b;margin-bottom:16px;">Your saved data lives in this browser and stays put — installing just adds a shortcut, it won't reset anything.</div>
+        <button id="install-app-modal-close" style="width:100%;background:#7c6af7;border:none;color:white;font-family:'Sora',sans-serif;font-weight:600;font-size:13px;padding:10px;border-radius:8px;cursor:pointer;">Got it</button>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeInstallModal(); });
+    document.getElementById('install-app-modal-close').addEventListener('click', closeInstallModal);
+  }
+
+  window.installApp = function() {
+    if (isStandaloneNow()) return; // nothing to do
+    if (window.__pwaDeferredPrompt) {
+      const p = window.__pwaDeferredPrompt;
+      window.__pwaDeferredPrompt = null;
+      p.prompt();
+      p.userChoice.finally(() => refreshInstallNav());
+    } else {
+      showManualInstructions();
+    }
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshInstallNav);
+  else refreshInstallNav();
+})();
+
+// ---- Android / Chrome install prompt (banner) ----
+(function() {
+  window.addEventListener('beforeinstallprompt', e => {
     if (localStorage.getItem('pwa-android-dismissed')) return;
     const b = document.createElement('div');
     b.innerHTML = `<div id="pwa-android-banner" style="position:fixed;bottom:0;left:0;right:0;z-index:99999;background:linear-gradient(135deg,#111118,#16161f);border-top:1px solid #2a2a3e;padding:14px 16px 20px;display:flex;align-items:center;gap:12px;font-family:'Sora',sans-serif;font-size:13px;color:#e2e8f0;box-shadow:0 -4px 24px rgba(0,0,0,0.5)"><div style="font-size:28px;flex-shrink:0">📋</div><div style="flex:1"><div style="font-weight:700;color:#a78bfa;margin-bottom:3px">Install CPA Ready</div><div style="color:#94a3b8;font-size:11px">Add to home screen for the full app experience</div></div><button id="pwa-install-btn" style="background:#7c6af7;border:none;color:white;font-family:'Sora',sans-serif;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;flex-shrink:0">Install</button><button onclick="document.getElementById('pwa-android-banner').remove();localStorage.setItem('pwa-android-dismissed','1')" style="background:transparent;border:none;color:#64748b;font-size:20px;cursor:pointer;padding:4px">✕</button></div>`;
     document.body.appendChild(b);
     document.getElementById('pwa-install-btn').addEventListener('click', () => {
       document.getElementById('pwa-android-banner').remove();
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+      installApp();
     });
   });
 })();
@@ -9812,7 +9909,8 @@ setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
     calendar:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg>',
     achievements:'<svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M9 17h6"/></svg>',
     history:'<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2-5"/><path d="M4 5v5h5"/><path d="M12 8v5l3 2"/></svg>',
-    settings:'<svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19 13 .9 1.5-2 2-.9-.6-1.4.6-.3 1.1h-2.8l-.3-1.1-1.4-.6-.9.6-2-2L5 13l.6-1.5L5 10l.9-1.5 2 .6.9-.6.3-1.1h2.8l.3 1.1 1.4.6.9-.6 2 2-.9 1.5Z"/></svg>'
+    settings:'<svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19 13 .9 1.5-2 2-.9-.6-1.4.6-.3 1.1h-2.8l-.3-1.1-1.4-.6-.9.6-2-2L5 13l.6-1.5L5 10l.9-1.5 2 .6.9-.6.3-1.1h2.8l.3 1.1 1.4.6.9-.6 2 2-.9 1.5Z"/></svg>',
+    install:'<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>'
   };
   function paintNav(){document.querySelectorAll('.nav-icon[data-icon]').forEach(el=>{el.innerHTML=icons[el.dataset.icon]||'';});}
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',paintNav); else paintNav();
