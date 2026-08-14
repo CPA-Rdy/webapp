@@ -818,24 +818,6 @@ body.light-mode.theme-custom select.status-select.status-2 {
 .tracker-subtab-group {
   display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
 }
-.tracker-subtab-group.video-group {
-  flex-direction: column; align-items: flex-start; gap: 6px;
-  padding-top: 6px; border-top: 1px dashed var(--border);
-}
-.tracker-subtab-group-items {
-  display: flex; gap: 4px; flex-wrap: wrap;
-}
-.tracker-subtab-group.video-group.collapsed .tracker-subtab-group-items { display: none; }
-.tracker-subtab-group-label {
-  font-size: 10px; font-weight: 700; color: var(--muted);
-  white-space: nowrap; margin-right: 2px; letter-spacing: 0.02em;
-  cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;
-}
-.tracker-subtab-group-label:hover { color: var(--accent2); }
-.tracker-subtab-group-chevron {
-  display: inline-block; font-size: 9px; transition: transform 0.15s;
-}
-.tracker-subtab-group.video-group.collapsed .tracker-subtab-group-chevron { transform: rotate(-90deg); }
 .tracker-subtab {
   padding: 5px 12px; border-radius: 6px; cursor: pointer;
   font-size: 11px; font-weight: 500; color: var(--muted);
@@ -843,6 +825,25 @@ body.light-mode.theme-custom select.status-select.status-2 {
 }
 .tracker-subtab:hover { border-color: var(--accent); color: var(--accent2); }
 .tracker-subtab.active { border-color: var(--accent); color: var(--accent2); background: rgba(124,106,247,0.1); }
+
+/* ---- SUB-SUBJECT DROPDOWN (used for both Topics and Video Lectures groups) ---- */
+.tracker-menu-dropdown { position: relative; display: inline-block; }
+.tracker-menu-btn { display: inline-flex; align-items: center; gap: 6px; }
+.tracker-menu-btn .hamburger-icon { font-size: 11px; line-height: 1; }
+.tracker-menu {
+  display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+  min-width: 240px; max-height: 320px; overflow-y: auto;
+  background: var(--card-bg, #14141c); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); padding: 4px;
+}
+.tracker-menu.open { display: block; animation: fadein 0.12s ease; }
+.tracker-menu-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 6px; cursor: pointer;
+  font-size: 11px; color: var(--muted); white-space: nowrap;
+}
+.tracker-menu-item:hover { background: rgba(124,106,247,0.12); color: var(--text); }
+.tracker-menu-item.active { color: var(--accent2); background: rgba(124,106,247,0.1); font-weight: 600; }
 
 /* ---- SCORE QUIZ TYPE BADGE ---- */
 .quiz-type-badge {
@@ -4684,7 +4685,8 @@ const BUG_REPORT_FORM_URL = 'https://forms.gle/KAJDvSpFK5VwhCEm6';
 
 let currentTrackerMain = 'FAR';
 let currentTrackerSub = 'FOA';
-let trackerVideoGroupCollapsed = localStorage.getItem('trackerVideoGroupCollapsed') === '1';
+let trackerVideoGroupCollapsed = true; // video dropdown starts closed
+let trackerTopicGroupCollapsed = true; // topics dropdown starts closed
 let calViewDate = new Date();
 let calView = 'month';
 let selectedCalDay = null;
@@ -7276,9 +7278,41 @@ function deleteScoreEntry() {
 // ============================================================
 function toggleTrackerVideoGroup() {
   trackerVideoGroupCollapsed = !trackerVideoGroupCollapsed;
-  localStorage.setItem('trackerVideoGroupCollapsed', trackerVideoGroupCollapsed ? '1' : '0');
+  trackerTopicGroupCollapsed = true; // only one dropdown open at a time
   renderTracker();
 }
+
+function selectTrackerVideoSub(key) {
+  trackerVideoGroupCollapsed = true;
+  setTrackerSub(key);
+}
+
+function toggleTrackerTopicGroup() {
+  trackerTopicGroupCollapsed = !trackerTopicGroupCollapsed;
+  trackerVideoGroupCollapsed = true; // only one dropdown open at a time
+  renderTracker();
+}
+
+function selectTrackerTopicSub(key) {
+  trackerTopicGroupCollapsed = true;
+  setTrackerSub(key);
+}
+
+// Close either dropdown when clicking anywhere else on the page.
+document.addEventListener('click', (e) => {
+  if (!trackerVideoGroupCollapsed && !e.target.closest('.tracker-menu-dropdown')) {
+    trackerVideoGroupCollapsed = true;
+    if (document.getElementById('page-tracker') && document.getElementById('page-tracker').classList.contains('active')) {
+      renderTracker();
+    }
+  }
+  if (!trackerTopicGroupCollapsed && !e.target.closest('.tracker-menu-dropdown')) {
+    trackerTopicGroupCollapsed = true;
+    if (document.getElementById('page-tracker') && document.getElementById('page-tracker').classList.contains('active')) {
+      renderTracker();
+    }
+  }
+});
 
 function renderTracker() {
   // Main subject tabs
@@ -7291,9 +7325,9 @@ function renderTracker() {
     </div>`;
   }).join('');
 
-  // Sub-subject tabs — split into "Topics" and "🎥 Video Lectures" groups so the
-  // row doesn't turn into one long wrapping wall of chips as video sub-subjects
-  // get added (they tend to have longer names like "... - VID LEC").
+  // Sub-subject tabs — both Topics and Video Lectures are tucked behind their
+  // own dropdown button instead of being rendered as a flat row of chips, so
+  // the row stays compact no matter how many sub-subjects get added.
   const subs = SUBJECTS_META[currentTrackerMain].subs;
   const topicSubs = subs.filter(k => !DEFAULT_TOPICS[k] || DEFAULT_TOPICS[k].kind !== 'video');
   const videoSubs = subs.filter(k => DEFAULT_TOPICS[k] && DEFAULT_TOPICS[k].kind === 'video');
@@ -7306,13 +7340,37 @@ function renderTracker() {
       ${label} <span style="font-size:10px;opacity:0.7">${ss.pct.toFixed(0)}%</span>
     </div>`;
   };
-  let subTabsHTML = `<div class="tracker-subtab-group">${topicSubs.map(k => tabHTML(k, false)).join('')}</div>`;
+  let subTabsHTML = '';
+  if (topicSubs.length) {
+    const currentIsTopic = topicSubs.includes(currentTrackerSub);
+    const currentTopicLabel = currentIsTopic ? DEFAULT_TOPICS[currentTrackerSub].name : null;
+    const topicDropdownItems = topicSubs.map(k => {
+      const ss = getSubjectStats(k);
+      return `<div class="tracker-menu-item${k===currentTrackerSub?' active':''}" onclick="event.stopPropagation();selectTrackerTopicSub('${k}')">
+        <span>${DEFAULT_TOPICS[k].name}</span><span style="font-size:10px;opacity:0.7">${ss.pct.toFixed(0)}%</span>
+      </div>`;
+    }).join('');
+    subTabsHTML += `<div class="tracker-menu-dropdown">
+      <button type="button" class="tracker-subtab tracker-menu-btn${currentIsTopic ? ' active' : ''}" onclick="event.stopPropagation();toggleTrackerTopicGroup()">
+        <span class="hamburger-icon">☰</span> 📚 ${currentIsTopic ? currentTopicLabel : 'Topics'} <span style="font-size:10px;opacity:0.7">(${topicSubs.length})</span>
+      </button>
+      <div class="tracker-menu${trackerTopicGroupCollapsed ? '' : ' open'}">${topicDropdownItems}</div>
+    </div>`;
+  }
   if (videoSubs.length) {
-    subTabsHTML += `<div class="tracker-subtab-group video-group${trackerVideoGroupCollapsed ? ' collapsed' : ''}">
-      <div class="tracker-subtab-group-label" onclick="toggleTrackerVideoGroup()">
-        <span class="tracker-subtab-group-chevron">▾</span> 🎥 Video Lectures${trackerVideoGroupCollapsed ? ` <span style="font-weight:400;opacity:0.7">(${videoSubs.length})</span>` : ''}
-      </div>
-      <div class="tracker-subtab-group-items">${videoSubs.map(k => tabHTML(k, true)).join('')}</div>
+    const currentIsVideo = videoSubs.includes(currentTrackerSub);
+    const dropdownItems = videoSubs.map(k => {
+      const ss = getSubjectStats(k);
+      const label = DEFAULT_TOPICS[k].name.replace(/\s*-?\s*VID(?:EO)?\s*LEC(?:TURE)?S?\s*$/i, '').trim() || DEFAULT_TOPICS[k].name;
+      return `<div class="tracker-menu-item${k===currentTrackerSub?' active':''}" onclick="event.stopPropagation();selectTrackerVideoSub('${k}')">
+        <span>${label}</span><span style="font-size:10px;opacity:0.7">${ss.pct.toFixed(0)}%</span>
+      </div>`;
+    }).join('');
+    subTabsHTML += `<div class="tracker-menu-dropdown">
+      <button type="button" class="tracker-subtab tracker-menu-btn${currentIsVideo ? ' active' : ''}" onclick="event.stopPropagation();toggleTrackerVideoGroup()">
+        <span class="hamburger-icon">☰</span> 🎥 Video Lectures <span style="font-size:10px;opacity:0.7">(${videoSubs.length})</span>
+      </button>
+      <div class="tracker-menu${trackerVideoGroupCollapsed ? '' : ' open'}">${dropdownItems}</div>
     </div>`;
   }
   subTabsEl.innerHTML = subTabsHTML;
