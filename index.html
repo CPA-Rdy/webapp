@@ -8410,6 +8410,7 @@ const ACHIEVEMENTS = [
   // ── SHORT TERM ──
   { id:'first_topic', tier:'short', icon:'🌱', name:'First Step', desc:'Mark your first topic as In Progress or Done.', progress:s=>Math.min(1,s.completed+s.inprog), total:1 },
   { id:'first_score', tier:'short', icon:'✍️', name:'First Entry', desc:'Log your first scoresheet entry.', progress:s=>s.scores, total:1 },
+  { id:'practice_5', tier:'short', icon:'🎯', name:'Drill Starter', desc:'Log 5 entries in Practice Set / Drill.', progress:s=>s.practiceCount, total:5 },
   { id:'first_preboard', tier:'short', icon:'📋', name:'Preboard Debut', desc:'Log your first Preboard exam.', progress:s=>s.preboards, total:1 },
   { id:'first_study_day', tier:'short', icon:'📚', name:'Study Day', desc:'Log your first study day.', progress:s=>s.studyDays, total:1 },
   { id:'first_video', tier:'short', icon:'🎥', name:'First Lecture', desc:'Complete your first video lecture.', progress:s=>s.videoCompleted, total:1 },
@@ -8417,7 +8418,7 @@ const ACHIEVEMENTS = [
   { id:'streak_3', tier:'short', icon:'🔥', name:'On a Roll', desc:'Maintain a 3-day study streak.', progress:s=>s.streak, total:3 },
   { id:'topics_10', tier:'short', icon:'📖', name:'Getting Started', desc:'Complete 10 topics.', progress:s=>s.completed, total:10 },
   { id:'conf_5', tier:'short', icon:'✨', name:'First Spark', desc:'Mark 5 topics with max confidence.', progress:s=>s.highConf, total:5 },
-  { id:'score_pass', tier:'short', icon:'✅', name:'First PASS', desc:'Get a PASSED remark on any scoresheet entry.', progress:null, total:1 },
+  { id:'score_pass', tier:'short', icon:'✅', name:'First PASS', desc:'Get a PASSED remark on any Preboard or Mock Exam entry.', progress:null, total:1 },
   { id:'scores_3', tier:'short', icon:'📝', name:'Practice Makes Progress', desc:'Log 3 scoresheet entries.', progress:s=>s.scores, total:3 },
   { id:'history_10', tier:'short', icon:'🧭', name:'Footprint', desc:'Build 10 meaningful study-history activities.', progress:s=>s.activityCount, total:10 },
   { id:'early_bird', tier:'short', icon:'🌅', name:'First Light', desc:'Log a study session before 8 AM — if mornings are when you focus best.', progress:null, total:1 },
@@ -8433,11 +8434,14 @@ const ACHIEVEMENTS = [
   { id:'preboards_3', tier:'mid', icon:'📋', name:'Preboard Regular', desc:'Log 3 Preboard exams.', progress:s=>s.preboards, total:3 },
   { id:'preboard_pass', tier:'mid', icon:'🎉', name:'Preboard Passer', desc:'Get a PASSED remark on any Preboard exam.', progress:null, total:1 },
   { id:'notes_10', tier:'mid', icon:'🗒️', name:'Note Taker', desc:'Add notes to 10 scoresheet entries.', progress:s=>s.notesCount, total:10 },
+  { id:'practice_15', tier:'mid', icon:'🎯', name:'Drill Regular', desc:'Log 15 entries in Practice Set / Drill.', progress:s=>s.practiceCount, total:15 },
+  { id:'practice_single90', tier:'mid', icon:'🌟', name:'Personal Best', desc:'Score 90% or higher on any single Practice Set / Drill entry.', progress:null, total:1 },
+  { id:'practice_avg75', tier:'mid', icon:'📐', name:'Sharp Practice', desc:'Average 75% or higher across at least 5 Practice Set / Drill entries.', progress:s=>(s.practiceRatedCount>=5?Math.min(75,s.practiceAvgPct||0):0), total:75 },
   { id:'cal_sessions_25', tier:'mid', icon:'📆', name:'Session Scheduler', desc:'Log 25 study sessions in the calendar.', progress:s=>s.calSessionsCount, total:25 },
   { id:'activity_variety', tier:'mid', icon:'🧩', name:'Well-Rounded Learner', desc:'Use every session type (First View, Review, Recall, Retrieval, Synthesis, Drill, Mock) at least once.', progress:s=>s.activityTypesUsed, total:7 },
   { id:'mastery_50', tier:'mid', icon:'🧠', name:'Mastery Rising', desc:'Reach 50% overall mastery based on your confidence ratings.', progress:s=>Math.min(50,s.masteryPct), total:50 },
   { id:'scores_5', tier:'mid', icon:'🗒️', name:'Consistent Taker', desc:'Log 5 scoresheet entries.', progress:s=>s.scores, total:5 },
-  { id:'scores_10', tier:'mid', icon:'🗂️', name:'Mock Exam Pro', desc:'Log 10 scoresheet entries.', progress:s=>s.scores, total:10 },
+  { id:'scores_10', tier:'mid', icon:'🗂️', name:'Scoresheet Pro', desc:'Log 10 scoresheet entries — Preboards, Exams, Drills, or Practice Sets all count.', progress:s=>s.scores, total:10 },
   { id:'conf_master', tier:'mid', icon:'🧠', name:'Confidence Master', desc:'Mark 20 topics with max confidence.', progress:s=>s.highConf, total:20 },
   { id:'video_10', tier:'mid', icon:'🎬', name:'Lecture Momentum', desc:'Complete 10 video lectures.', progress:s=>s.videoCompleted, total:10 },
   { id:'video_25', tier:'mid', icon:'🎞️', name:'Lecture Marathon', desc:'Complete 25 video lectures.', progress:s=>s.videoCompleted, total:25 },
@@ -8458,9 +8462,12 @@ const ACHIEVEMENTS = [
   { id:'score_85', tier:'long', icon:'⭐', name:'Elite Zone', desc:'Average 85% or higher on any exam.', progress:null, total:1 },
   { id:'score_90', tier:'long', icon:'🏆', name:'Topnotcher', desc:'Average 90% or higher on any exam.', progress:null, total:1 },
   { id:'perfect_score', tier:'long', icon:'💎', name:'Perfect Score', desc:'Average 95% or higher on any single exam.', progress:null, total:1 },
-  { id:'scores_20', tier:'long', icon:'📋', name:'Test Veteran', desc:'Log 20 scoresheet entries.', progress:s=>s.scores, total:20 },
+  { id:'scores_20', tier:'long', icon:'📋', name:'Scoresheet Veteran', desc:'Log 20 scoresheet entries — Preboards, Exams, Drills, or Practice Sets all count.', progress:s=>s.scores, total:20 },
   { id:'conf_40', tier:'long', icon:'💪', name:'Master of Confidence', desc:'Mark 40 topics with max confidence.', progress:s=>s.highConf, total:40 },
   { id:'preboards_5', tier:'long', icon:'🗃️', name:'Preboard Veteran', desc:'Log 5 Preboard exams.', progress:s=>s.preboards, total:5 },
+  { id:'practice_30', tier:'long', icon:'🎯', name:'Drill Veteran', desc:'Log 30 entries in Practice Set / Drill.', progress:s=>s.practiceCount, total:30 },
+  { id:'practice_60', tier:'long', icon:'🏹', name:'Drill Legend', desc:'Log 60 entries in Practice Set / Drill.', progress:s=>s.practiceCount, total:60 },
+  { id:'practice_avg85', tier:'long', icon:'🏅', name:'Practice Mastery', desc:'Average 85% or higher across at least 10 Practice Set / Drill entries.', progress:s=>(s.practiceRatedCount>=10?Math.min(85,s.practiceAvgPct||0):0), total:85 },
   { id:'mastery_80', tier:'long', icon:'👑', name:'Mastery Achieved', desc:'Reach 80% overall mastery based on your confidence ratings.', progress:s=>Math.min(80,s.masteryPct), total:80 },
   { id:'mastery_far', tier:'long', icon:'📊', name:'FAR Mastery', desc:'Reach 80% mastery in FAR.', progress:()=>Math.min(80,getMainSubjectMastery('FAR').pct), total:80 },
   { id:'mastery_afar', tier:'long', icon:'📈', name:'AFAR Mastery', desc:'Reach 80% mastery in AFAR.', progress:()=>Math.min(80,getMainSubjectMastery('AFAR').pct), total:80 },
@@ -8559,8 +8566,21 @@ function getAchievementProgressStats() {
     const day = new Date(todayD); day.setDate(todayD.getDate() - d);
     if (daySet.has(localDateStr(day))) weeklyConsistency++;
   }
-  // Notes usage on scoresheet entries
-  const notesCount = (state.scores || []).filter(sc => sc.notes && sc.notes.trim()).length;
+  // Notes usage — lives on Practice Set / Drill entries (state.practiceScores),
+  // not Preboard & Exam entries (state.scores), which have no notes field at all.
+  const notesCount = (state.practiceScores || []).filter(sc => sc.notes && sc.notes.trim()).length;
+  // Practice Set / Drill performance — these are the day-to-day reps leading up to
+  // the big exam, so they get their own count + average-score achievements,
+  // separate from the 6-subject board-average used for Preboards & Exams.
+  const practiceEntries = state.practiceScores || [];
+  const practiceCount = practiceEntries.length;
+  const practicePcts = practiceEntries
+    .map(p => (p.score!==null && p.max && Number.isFinite(Number(p.score)) && Number(p.max)>0)
+      ? Math.min(100, Math.max(0, Number(p.score)/Number(p.max)*100)) : null)
+    .filter(v => v !== null);
+  const practiceRatedCount = practicePcts.length;
+  const practiceAvgPct = practiceRatedCount ? practicePcts.reduce((a,b)=>a+b,0)/practiceRatedCount : null;
+  const practiceMaxPct = practiceRatedCount ? Math.max(...practicePcts) : null;
   // Total calendar sessions logged, and how many distinct "activity types" (First View,
   // Review, Recall, Retrieval, Synthesis, Drill, Mock) have been used at least once.
   let calSessionsCount = 0;
@@ -8576,7 +8596,7 @@ function getAchievementProgressStats() {
     pct: stats.pct,
     total: stats.total,
     streak: streak.current,
-    scores: (state.scores || []).length,
+    scores: (state.scores || []).length + (state.practiceScores || []).length,
     highConf,
     earlyBird,
     weekendStreak,
@@ -8593,6 +8613,10 @@ function getAchievementProgressStats() {
     activityTypesUsed: activityTypesSeen.size,
     masteryPct: overallMastery.pct,
     masteryRated: overallMastery.rated,
+    practiceCount,
+    practiceRatedCount,
+    practiceAvgPct,
+    practiceMaxPct,
   };
 }
 
@@ -8677,6 +8701,15 @@ function checkAchievements() {
   if (s.notesCount >= 10) unlockAchievement('notes_10');
   if (s.calSessionsCount >= 25) unlockAchievement('cal_sessions_25');
   if (s.activityTypesUsed >= 7) unlockAchievement('activity_variety');
+
+  // Practice Set / Drill — the day-to-day reps leading up to Preboards & Exams
+  if (s.practiceCount >= 5)  unlockAchievement('practice_5');
+  if (s.practiceCount >= 15) unlockAchievement('practice_15');
+  if (s.practiceCount >= 30) unlockAchievement('practice_30');
+  if (s.practiceCount >= 60) unlockAchievement('practice_60');
+  if (s.practiceMaxPct !== null && s.practiceMaxPct >= 90) unlockAchievement('practice_single90');
+  if (s.practiceRatedCount >= 5 && s.practiceAvgPct !== null && s.practiceAvgPct >= 75) unlockAchievement('practice_avg75');
+  if (s.practiceRatedCount >= 10 && s.practiceAvgPct !== null && s.practiceAvgPct >= 85) unlockAchievement('practice_avg85');
 
   // Streak
   if (streak.current >= 3)   unlockAchievement('streak_3');
