@@ -27,7 +27,7 @@
 <link rel="manifest" href="manifest.json">
 <!-- ===== END PWA META TAGS ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&family=Raleway:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Lexend:wght@300;400;500;600;700&family=Figtree:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&family=Raleway:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Lexend:wght@300;400;500;600;700&family=Figtree:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Quicksand:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Comfortaa:wght@400;500;600;700&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================ CSS VARIABLES ============================================================ */
 :root {
@@ -3836,15 +3836,29 @@ renderDashboard(); }, 400);
             <option value="DM Sans">DM Sans</option>
             <option value="Space Grotesk">Space Grotesk</option>
           </optgroup>
-          <optgroup label="Clearly different look">
+          <optgroup label="Serif — elegant, classic">
             <option value="Lora">Lora — Serif</option>
             <option value="Merriweather">Merriweather — Serif, book-style</option>
+            <option value="Playfair Display">Playfair Display — Serif, elegant & dramatic</option>
             <option value="Fraunces">Fraunces — Serif, expressive</option>
+            <option value="Bitter">Bitter — Slab serif, bold & sturdy</option>
+          </optgroup>
+          <optgroup label="Rounded — soft, friendly">
             <option value="Quicksand">Quicksand — Rounded</option>
+            <option value="Comfortaa">Comfortaa — Rounded, geometric</option>
+          </optgroup>
+          <optgroup label="Condensed & Display — bold statement">
+            <option value="Oswald">Oswald — Condensed</option>
+            <option value="Bebas Neue">Bebas Neue — Bold caps display</option>
+          </optgroup>
+          <optgroup label="Monospace — code-style">
             <option value="JetBrains Mono">JetBrains Mono — Monospace</option>
           </optgroup>
+          <optgroup label="Handwritten — casual">
+            <option value="Caveat">Caveat — Handwritten</option>
+          </optgroup>
         </select>
-        <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Tip: the top group are all similar modern sans-serif fonts, so switching between them can look subtle. Pick one from "Clearly different look" if you want a change that's obvious at a glance.</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Tip: the top group are all similar modern sans-serif fonts, so switching between them can look subtle. Pick one from the other groups if you want a change that's obvious at a glance.</div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <label style="margin:0">Appearance Mode</label>
@@ -4938,16 +4952,14 @@ function updateCustomPreview() {
   document.documentElement.style.setProperty('--accent3', c3);
   
   if (state.darkMode) {
-    // Preset dark themes never tint the background — they keep the same
-    // neutral dark canvas and let the accent color do all the work, which is
-    // why they look crisp. Tinting the background here (even lightly) made
-    // the accent compete with a colored backdrop instead of popping against
-    // it, so it read as duller/muddier than the presets. Match the presets:
-    // leave --bg/--surface/--card/--border at their neutral defaults.
-    document.documentElement.style.removeProperty('--bg');
-    document.documentElement.style.removeProperty('--surface');
-    document.documentElement.style.removeProperty('--card');
-    document.documentElement.style.removeProperty('--border');
+    // Give the custom dark background the same subtle hue-tinted near-black
+    // treatment the preset dark themes use (see BG_TINTS) — a fixed neutral
+    // canvas made every custom color look identical in dark mode and was the
+    // only place background didn't respond to the chosen color.
+    document.documentElement.style.setProperty('--bg', tints.bg);
+    document.documentElement.style.setProperty('--surface', tints.surface);
+    document.documentElement.style.setProperty('--card', tints.card);
+    document.documentElement.style.setProperty('--border', tints.border);
   } else {
     document.body.classList.add('light-mode');
     /* The background used to be picked from a fixed 5-color table keyed only
@@ -4998,15 +5010,13 @@ function applyCustomColors() {
   document.documentElement.style.setProperty('--accent2', c2);
   document.documentElement.style.setProperty('--accent3', c3);
   if (state.darkMode) {
-    // Match preset dark themes: no background tint, just the accent colors.
-    // Without this, "Apply My Theme" could leave a stale --bg/--surface/
-    // --card/--border tint (e.g. from an earlier light-mode preview) sitting
-    // on the page, making dark mode look washed out instead of the clean
-    // neutral canvas the presets use.
-    document.documentElement.style.removeProperty('--bg');
-    document.documentElement.style.removeProperty('--surface');
-    document.documentElement.style.removeProperty('--card');
-    document.documentElement.style.removeProperty('--border');
+    // Match the preset dark themes: a subtle hue-tinted near-black background
+    // (see BG_TINTS / generateBgTints), not a flat neutral one — so the
+    // custom theme's color is visible in the background too, not just text.
+    document.documentElement.style.setProperty('--bg', tints.bg);
+    document.documentElement.style.setProperty('--surface', tints.surface);
+    document.documentElement.style.setProperty('--card', tints.card);
+    document.documentElement.style.setProperty('--border', tints.border);
   } else {
     document.body.classList.add('light-mode');
     document.documentElement.style.setProperty('--bg', `color-mix(in srgb, ${c1} 7%, #f8f9fc)`);
@@ -5062,7 +5072,10 @@ const FONT_FALLBACKS = {
   'Lora': 'serif',
   'Merriweather': 'serif',
   'Fraunces': 'serif',
+  'Playfair Display': 'serif',
+  'Bitter': 'serif',
   'JetBrains Mono': 'monospace',
+  'Caveat': 'cursive',
 };
 
 function applyFont(font) {
@@ -5076,12 +5089,35 @@ function applyFont(font) {
 // ============================================================
 // SUBJECT COLORS (user-customizable per subject)
 // ============================================================
+function previewSubjectColor(key, color) {
+  // Live-updates the swatch while the native color picker is open (fires
+  // continuously while dragging). Deliberately does NOT touch save() or
+  // re-render the picker's DOM — rebuilding the <input type="color"> mid-drag
+  // is what was closing the picker on every drag.
+  if (!SUBJECTS_META[key] || !color) return;
+  SUBJECTS_META[key].color = color;
+  const swatch = document.getElementById('subj-color-swatch-' + key);
+  if (swatch) swatch.style.background = color;
+  const label = document.getElementById('subj-color-label-' + key);
+  if (label) label.style.color = color;
+}
+
 function setSubjectColor(key, color) {
+  // Fires on 'change'. IMPORTANT: this must never touch the color <input>'s
+  // own DOM node or its container's innerHTML — a single click (not just a
+  // drag) fires 'change' right away in most browsers, and rebuilding that
+  // element while the native picker popup is still open is exactly what was
+  // closing the picker on click. Update everything else in place instead.
   if (!SUBJECTS_META[key] || !color) return;
   SUBJECTS_META[key].color = color;
   state.subjectColors[key] = color;
   save();
-  renderSubjectColorPicker();
+  const swatch = document.getElementById('subj-color-swatch-' + key);
+  if (swatch) swatch.style.background = color;
+  const label = document.getElementById('subj-color-label-' + key);
+  if (label) label.style.color = color;
+  const resetBtn = document.getElementById('subj-color-reset-' + key);
+  if (resetBtn) resetBtn.style.display = '';
 }
 
 function resetSubjectColor(key) {
@@ -5110,17 +5146,18 @@ function renderSubjectColorPicker() {
     const isCustom = !!state.subjectColors[k];
     return `<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
       <label for="subj-color-${k}" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0">
-        <span style="width:30px;height:30px;border-radius:8px;background:${meta.color};border:1px solid var(--border);flex-shrink:0"></span>
+        <span id="subj-color-swatch-${k}" style="width:30px;height:30px;border-radius:8px;background:${meta.color};border:1px solid var(--border);flex-shrink:0"></span>
         <span style="min-width:0">
-          <span style="display:block;font-size:11px;font-weight:800;color:${meta.color}">${k}</span>
+          <span id="subj-color-label-${k}" style="display:block;font-size:11px;font-weight:800;color:${meta.color}">${k}</span>
           <span style="display:block;font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${meta.fullName}</span>
         </span>
       </label>
-      <input type="color" id="subj-color-${k}" value="${meta.color}" oninput="setSubjectColor('${k}', this.value)" style="width:36px;height:32px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;flex-shrink:0">
-      ${isCustom ? `<button class="btn btn-ghost btn-sm" title="Reset ${k} to default color" onclick="resetSubjectColor('${k}')" style="flex-shrink:0">↺</button>` : ''}
+      <input type="color" id="subj-color-${k}" value="${meta.color}" oninput="previewSubjectColor('${k}', this.value)" onchange="setSubjectColor('${k}', this.value)" style="width:36px;height:32px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;flex-shrink:0">
+      <button id="subj-color-reset-${k}" class="btn btn-ghost btn-sm" title="Reset ${k} to default color" onclick="resetSubjectColor('${k}')" style="flex-shrink:0;${isCustom ? '' : 'display:none'}">↺</button>
     </div>`;
   }).join('');
 }
+
 
 function toggleDarkMode() {
   state.darkMode = !state.darkMode;
@@ -5131,18 +5168,20 @@ function toggleDarkMode() {
 
   // Reapply custom colors without letting them erase the calibrated light palette.
   if (state.accentScheme === -1 && state.customColors) {
-    const { c1, c2, c3, tints } = state.customColors;
+    const { c1, c2, c3 } = state.customColors;
+    const tints = state.customColors.tints || generateBgTints(c1);
     customMood = (state.customColors && state.customColors.mood && CUSTOM_MOODS[state.customColors.mood]) ? state.customColors.mood : 'soft';
     applyCustomMoodAtmosphere(customMood);
     document.documentElement.style.setProperty('--accent', state.darkMode ? c1 : c1);
     document.documentElement.style.setProperty('--accent2', state.darkMode ? c2 : c2);
     document.documentElement.style.setProperty('--accent3', state.darkMode ? c3 : c3);
     if (state.darkMode) {
-      // Match preset dark themes: no background tint, just the accent colors.
-      document.documentElement.style.removeProperty('--bg');
-      document.documentElement.style.removeProperty('--surface');
-      document.documentElement.style.removeProperty('--card');
-      document.documentElement.style.removeProperty('--border');
+      // Match the preset dark themes: a subtle hue-tinted near-black
+      // background, not a flat neutral one.
+      document.documentElement.style.setProperty('--bg', tints.bg);
+      document.documentElement.style.setProperty('--surface', tints.surface);
+      document.documentElement.style.setProperty('--card', tints.card);
+      document.documentElement.style.setProperty('--border', tints.border);
     } else {
       document.documentElement.style.setProperty('--bg', `color-mix(in srgb, ${c1} 7%, #f8f9fc)`);
       document.documentElement.style.setProperty('--surface', `color-mix(in srgb, ${c1} 10%, #ffffff)`);
@@ -8403,7 +8442,8 @@ function init() {
   if (state.accentScheme === -1 && state.customColors) {
     document.body.classList.remove('theme-violet','theme-cyan','theme-green','theme-rose','theme-amber','theme-indigo','theme-teal','theme-orchid');
     document.body.classList.add('theme-custom');
-    const { c1, c2, c3, tints } = state.customColors;
+    const { c1, c2, c3 } = state.customColors;
+    const tints = state.customColors.tints || generateBgTints(c1);
     customMood = (state.customColors && state.customColors.mood && CUSTOM_MOODS[state.customColors.mood]) ? state.customColors.mood : 'soft';
     applyCustomMoodAtmosphere(customMood);
     document.getElementById('custom-color-1').value = c1;
@@ -8413,11 +8453,12 @@ function init() {
     document.documentElement.style.setProperty('--accent2', c2);
     document.documentElement.style.setProperty('--accent3', c3);
     if (state.darkMode) {
-      // Match preset dark themes: no background tint, just the accent colors.
-      document.documentElement.style.removeProperty('--bg');
-      document.documentElement.style.removeProperty('--surface');
-      document.documentElement.style.removeProperty('--card');
-      document.documentElement.style.removeProperty('--border');
+      // Match the preset dark themes: a subtle hue-tinted near-black
+      // background, not a flat neutral one.
+      document.documentElement.style.setProperty('--bg', tints.bg);
+      document.documentElement.style.setProperty('--surface', tints.surface);
+      document.documentElement.style.setProperty('--card', tints.card);
+      document.documentElement.style.setProperty('--border', tints.border);
     } else {
       document.documentElement.style.setProperty('--bg', `color-mix(in srgb, ${c1} 7%, #f8f9fc)`);
       document.documentElement.style.setProperty('--surface', `color-mix(in srgb, ${c1} 10%, #ffffff)`);
