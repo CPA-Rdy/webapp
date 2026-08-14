@@ -27,7 +27,7 @@
 <link rel="manifest" href="manifest.json">
 <!-- ===== END PWA META TAGS ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&family=Raleway:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Lexend:wght@300;400;500;600;700&family=Figtree:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&family=Raleway:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Lexend:wght@300;400;500;600;700&family=Figtree:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================ CSS VARIABLES ============================================================ */
 :root {
@@ -3808,24 +3808,43 @@ renderDashboard(); }, 400);
 
       <hr class="divider">
 
+      <div style="margin-bottom:20px">
+        <label style="margin-bottom:4px;display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">Subject Colors</label>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">Set your own color for each subject — used across the tracker, dashboard rings, and scoresheet.</div>
+        <div id="subject-color-picker" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
+        <button class="btn btn-ghost btn-sm" onclick="resetAllSubjectColors()">↺ Reset All to Default</button>
+      </div>
+
+      <hr class="divider">
+
       <div class="form-row">
         <label>Font Style</label>
         <select id="set-font" onchange="applyFont(this.value)">
-          <option value="Sora">Sora (Default)</option>
-          <option value="Outfit">Outfit</option>
-          <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-          <option value="Nunito">Nunito</option>
-          <option value="Raleway">Raleway</option>
-          <option value="Poppins">Poppins</option>
-          <option value="Manrope">Manrope</option>
-          <option value="Lexend">Lexend</option>
-          <option value="Figtree">Figtree</option>
-          <option value="Montserrat">Montserrat</option>
-          <option value="Inter">Inter</option>
-          <option value="Lato">Lato</option>
-          <option value="DM Sans">DM Sans</option>
-          <option value="Space Grotesk">Space Grotesk</option>
+          <optgroup label="Default & similar sans-serif">
+            <option value="Sora">Sora (Default)</option>
+            <option value="Outfit">Outfit</option>
+            <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+            <option value="Nunito">Nunito</option>
+            <option value="Raleway">Raleway</option>
+            <option value="Poppins">Poppins</option>
+            <option value="Manrope">Manrope</option>
+            <option value="Lexend">Lexend</option>
+            <option value="Figtree">Figtree</option>
+            <option value="Montserrat">Montserrat</option>
+            <option value="Inter">Inter</option>
+            <option value="Lato">Lato</option>
+            <option value="DM Sans">DM Sans</option>
+            <option value="Space Grotesk">Space Grotesk</option>
+          </optgroup>
+          <optgroup label="Clearly different look">
+            <option value="Lora">Lora — Serif</option>
+            <option value="Merriweather">Merriweather — Serif, book-style</option>
+            <option value="Fraunces">Fraunces — Serif, expressive</option>
+            <option value="Quicksand">Quicksand — Rounded</option>
+            <option value="JetBrains Mono">JetBrains Mono — Monospace</option>
+          </optgroup>
         </select>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Tip: the top group are all similar modern sans-serif fonts, so switching between them can look subtle. Pick one from "Clearly different look" if you want a change that's obvious at a glance.</div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <label style="margin:0">Appearance Mode</label>
@@ -4520,6 +4539,10 @@ const SUBJECTS_META = {
   RFBT: { name:'RFBT', fullName:'Regulatory Framework for Business Transactions', color:'#06b6d4', subs:['OBLICON','PARCORCOOP','SPEC_LAWS'] }
 };
 const MAIN_SUBJECTS = ['FAR','AFAR','MAS','AUDIT','TAX','RFBT'];
+// Original factory colors, kept aside so a subject's color can always be reset
+// back to default even after the user has customized it.
+const DEFAULT_SUBJECT_COLORS = {};
+MAIN_SUBJECTS.forEach(k => { DEFAULT_SUBJECT_COLORS[k] = SUBJECTS_META[k].color; });
 
 // What you intend to DO with a topic in a study session — common active-learning /
 // spaced-repetition modes, distinct from the topic's own status/confidence.
@@ -4616,6 +4639,7 @@ let state = {
   activityArchive: [], // compact daily summaries for older history
   videoSubjectNames: {}, // user-editable display names for built-in video libraries
   subjectNames: {}, // user-editable display names for all other subjects
+  subjectColors: {}, // user-customized colors for FAR/AFAR/MAS/AUDIT/TAX/RFBT
 };
 
 // Paste your bug report Google Form link here once it's ready.
@@ -4658,6 +4682,7 @@ function load() {
   if (!Array.isArray(state.activityArchive)) state.activityArchive = [];
   if (!state.videoSubjectNames || typeof state.videoSubjectNames !== 'object') state.videoSubjectNames = {};
   if (!state.subjectNames || typeof state.subjectNames !== 'object') state.subjectNames = {};
+  if (!state.subjectColors || typeof state.subjectColors !== 'object') state.subjectColors = {};
   compactActivityLog();
   if (typeof state.geminiApiKey !== 'string') state.geminiApiKey = '';
 }
@@ -5031,11 +5056,70 @@ function renderColorSchemePicker() {
   }).join('');
 }
 
+// Generic fallback family per font, so the correct kind of font (serif / mono /
+// sans) is used even for a split second before the webfont finishes loading.
+const FONT_FALLBACKS = {
+  'Lora': 'serif',
+  'Merriweather': 'serif',
+  'Fraunces': 'serif',
+  'JetBrains Mono': 'monospace',
+};
+
 function applyFont(font) {
   state.font = font;
-  document.documentElement.style.setProperty('--font-body', `'${font}', sans-serif`);
-  document.body.style.fontFamily = `'${font}', sans-serif`;
+  const fallback = FONT_FALLBACKS[font] || 'sans-serif';
+  document.documentElement.style.setProperty('--font-body', `'${font}', ${fallback}`);
+  document.body.style.fontFamily = `'${font}', ${fallback}`;
   save();
+}
+
+// ============================================================
+// SUBJECT COLORS (user-customizable per subject)
+// ============================================================
+function setSubjectColor(key, color) {
+  if (!SUBJECTS_META[key] || !color) return;
+  SUBJECTS_META[key].color = color;
+  state.subjectColors[key] = color;
+  save();
+  renderSubjectColorPicker();
+}
+
+function resetSubjectColor(key) {
+  if (!SUBJECTS_META[key]) return;
+  const def = DEFAULT_SUBJECT_COLORS[key];
+  SUBJECTS_META[key].color = def;
+  delete state.subjectColors[key];
+  save();
+  renderSubjectColorPicker();
+  toast(`${key} color reset to default.`);
+}
+
+function resetAllSubjectColors() {
+  MAIN_SUBJECTS.forEach(k => { SUBJECTS_META[k].color = DEFAULT_SUBJECT_COLORS[k]; });
+  state.subjectColors = {};
+  save();
+  renderSubjectColorPicker();
+  toast('All subject colors reset to default.');
+}
+
+function renderSubjectColorPicker() {
+  const el = document.getElementById('subject-color-picker');
+  if (!el) return;
+  el.innerHTML = MAIN_SUBJECTS.map(k => {
+    const meta = SUBJECTS_META[k];
+    const isCustom = !!state.subjectColors[k];
+    return `<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
+      <label for="subj-color-${k}" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0">
+        <span style="width:30px;height:30px;border-radius:8px;background:${meta.color};border:1px solid var(--border);flex-shrink:0"></span>
+        <span style="min-width:0">
+          <span style="display:block;font-size:11px;font-weight:800;color:${meta.color}">${k}</span>
+          <span style="display:block;font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${meta.fullName}</span>
+        </span>
+      </label>
+      <input type="color" id="subj-color-${k}" value="${meta.color}" oninput="setSubjectColor('${k}', this.value)" style="width:36px;height:32px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;flex-shrink:0">
+      ${isCustom ? `<button class="btn btn-ghost btn-sm" title="Reset ${k} to default color" onclick="resetSubjectColor('${k}')" style="flex-shrink:0">↺</button>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function toggleDarkMode() {
@@ -7855,6 +7939,7 @@ function renderSettings() {
   document.getElementById('set-font').value = state.font || 'Sora';
   document.getElementById('dark-mode-toggle').classList.toggle('on', !!state.darkMode);
   renderColorSchemePicker();
+  renderSubjectColorPicker();
   refreshAllAvatars();
   renderAvatarPicker();
   renderRestDayPicker();
@@ -8308,6 +8393,9 @@ function init() {
   ensureBuiltInVideoLibraries();
   Object.entries(state.subjectNames || {}).forEach(([key, name]) => {
     if (DEFAULT_TOPICS[key] && typeof name === 'string' && name.trim()) DEFAULT_TOPICS[key].name = name.trim();
+  });
+  Object.entries(state.subjectColors || {}).forEach(([key, color]) => {
+    if (SUBJECTS_META[key] && typeof color === 'string' && color.trim()) SUBJECTS_META[key].color = color.trim();
   });
   save();
 
