@@ -819,12 +819,23 @@ body.light-mode.theme-custom select.status-select.status-2 {
   display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
 }
 .tracker-subtab-group.video-group {
+  flex-direction: column; align-items: flex-start; gap: 6px;
   padding-top: 6px; border-top: 1px dashed var(--border);
 }
+.tracker-subtab-group-items {
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+.tracker-subtab-group.video-group.collapsed .tracker-subtab-group-items { display: none; }
 .tracker-subtab-group-label {
   font-size: 10px; font-weight: 700; color: var(--muted);
   white-space: nowrap; margin-right: 2px; letter-spacing: 0.02em;
+  cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;
 }
+.tracker-subtab-group-label:hover { color: var(--accent2); }
+.tracker-subtab-group-chevron {
+  display: inline-block; font-size: 9px; transition: transform 0.15s;
+}
+.tracker-subtab-group.video-group.collapsed .tracker-subtab-group-chevron { transform: rotate(-90deg); }
 .tracker-subtab {
   padding: 5px 12px; border-radius: 6px; cursor: pointer;
   font-size: 11px; font-weight: 500; color: var(--muted);
@@ -1226,8 +1237,10 @@ body.light-mode.theme-custom select.status-select.status-2 {
   /* ── Tracker tabs ── */
   #tracker-main-tabs { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   #tracker-main-tabs::-webkit-scrollbar { display: none; }
-  .tracker-subtab-group { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .tracker-subtab-group::-webkit-scrollbar { display: none; }
+  .tracker-subtab-group:not(.video-group) { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tracker-subtab-group:not(.video-group)::-webkit-scrollbar { display: none; }
+  .tracker-subtab-group-items { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; width: 100%; }
+  .tracker-subtab-group-items::-webkit-scrollbar { display: none; }
 
   /* ── Tabs ── */
   .tabs { overflow-x: auto; max-width: 100%; scrollbar-width: none; -webkit-overflow-scrolling: touch; white-space: nowrap; }
@@ -4671,6 +4684,7 @@ const BUG_REPORT_FORM_URL = 'https://forms.gle/KAJDvSpFK5VwhCEm6';
 
 let currentTrackerMain = 'FAR';
 let currentTrackerSub = 'FOA';
+let trackerVideoGroupCollapsed = localStorage.getItem('trackerVideoGroupCollapsed') === '1';
 let calViewDate = new Date();
 let calView = 'month';
 let selectedCalDay = null;
@@ -7260,6 +7274,12 @@ function deleteScoreEntry() {
 // ============================================================
 // TOPIC TRACKER
 // ============================================================
+function toggleTrackerVideoGroup() {
+  trackerVideoGroupCollapsed = !trackerVideoGroupCollapsed;
+  localStorage.setItem('trackerVideoGroupCollapsed', trackerVideoGroupCollapsed ? '1' : '0');
+  renderTracker();
+}
+
 function renderTracker() {
   // Main subject tabs
   const mainTabsEl = document.getElementById('tracker-main-tabs');
@@ -7288,9 +7308,11 @@ function renderTracker() {
   };
   let subTabsHTML = `<div class="tracker-subtab-group">${topicSubs.map(k => tabHTML(k, false)).join('')}</div>`;
   if (videoSubs.length) {
-    subTabsHTML += `<div class="tracker-subtab-group video-group">
-      <div class="tracker-subtab-group-label">🎥 Video Lectures</div>
-      ${videoSubs.map(k => tabHTML(k, true)).join('')}
+    subTabsHTML += `<div class="tracker-subtab-group video-group${trackerVideoGroupCollapsed ? ' collapsed' : ''}">
+      <div class="tracker-subtab-group-label" onclick="toggleTrackerVideoGroup()">
+        <span class="tracker-subtab-group-chevron">▾</span> 🎥 Video Lectures${trackerVideoGroupCollapsed ? ` <span style="font-weight:400;opacity:0.7">(${videoSubs.length})</span>` : ''}
+      </div>
+      <div class="tracker-subtab-group-items">${videoSubs.map(k => tabHTML(k, true)).join('')}</div>
     </div>`;
   }
   subTabsEl.innerHTML = subTabsHTML;
