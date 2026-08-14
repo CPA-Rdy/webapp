@@ -813,7 +813,17 @@ body.light-mode.theme-custom select.status-select.status-2 {
 
 /* ---- TRACKER SUBTABS ---- */
 .tracker-subtabs {
-  display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
+}
+.tracker-subtab-group {
+  display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+}
+.tracker-subtab-group.video-group {
+  padding-top: 6px; border-top: 1px dashed var(--border);
+}
+.tracker-subtab-group-label {
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  white-space: nowrap; margin-right: 2px; letter-spacing: 0.02em;
 }
 .tracker-subtab {
   padding: 5px 12px; border-radius: 6px; cursor: pointer;
@@ -1216,8 +1226,8 @@ body.light-mode.theme-custom select.status-select.status-2 {
   /* ── Tracker tabs ── */
   #tracker-main-tabs { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   #tracker-main-tabs::-webkit-scrollbar { display: none; }
-  .tracker-subtabs { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .tracker-subtabs::-webkit-scrollbar { display: none; }
+  .tracker-subtab-group { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tracker-subtab-group::-webkit-scrollbar { display: none; }
 
   /* ── Tabs ── */
   .tabs { overflow-x: auto; max-width: 100%; scrollbar-width: none; -webkit-overflow-scrolling: touch; white-space: nowrap; }
@@ -7261,15 +7271,29 @@ function renderTracker() {
     </div>`;
   }).join('');
 
-  // Sub-subject tabs
+  // Sub-subject tabs — split into "Topics" and "🎥 Video Lectures" groups so the
+  // row doesn't turn into one long wrapping wall of chips as video sub-subjects
+  // get added (they tend to have longer names like "... - VID LEC").
   const subs = SUBJECTS_META[currentTrackerMain].subs;
+  const topicSubs = subs.filter(k => !DEFAULT_TOPICS[k] || DEFAULT_TOPICS[k].kind !== 'video');
+  const videoSubs = subs.filter(k => DEFAULT_TOPICS[k] && DEFAULT_TOPICS[k].kind === 'video');
   const subTabsEl = document.getElementById('tracker-sub-tabs');
-  subTabsEl.innerHTML = subs.map(k => {
+  const tabHTML = (k, stripVideoSuffix) => {
     const ss = getSubjectStats(k);
+    let label = DEFAULT_TOPICS[k].name;
+    if (stripVideoSuffix) label = label.replace(/\s*-?\s*VID(?:EO)?\s*LEC(?:TURE)?S?\s*$/i, '').trim() || label;
     return `<div class="tracker-subtab${k===currentTrackerSub?' active':''}" onclick="setTrackerSub('${k}')">
-      ${DEFAULT_TOPICS[k].name} <span style="font-size:10px;opacity:0.7">${ss.pct.toFixed(0)}%</span>
+      ${label} <span style="font-size:10px;opacity:0.7">${ss.pct.toFixed(0)}%</span>
     </div>`;
-  }).join('');
+  };
+  let subTabsHTML = `<div class="tracker-subtab-group">${topicSubs.map(k => tabHTML(k, false)).join('')}</div>`;
+  if (videoSubs.length) {
+    subTabsHTML += `<div class="tracker-subtab-group video-group">
+      <div class="tracker-subtab-group-label">🎥 Video Lectures</div>
+      ${videoSubs.map(k => tabHTML(k, true)).join('')}
+    </div>`;
+  }
+  subTabsEl.innerHTML = subTabsHTML;
 
   // Subject info
   const sInfo = DEFAULT_TOPICS[currentTrackerSub];
