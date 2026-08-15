@@ -3417,6 +3417,7 @@ renderDashboard(); }, 400);
       </thead>
       <tbody id="score-tbody"></tbody>
     </table>
+    <div id="score-pagination"></div>
   </div>
   <div id="scoresheet-exam-stats">
   <div class="card" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
@@ -3461,9 +3462,10 @@ renderDashboard(); }, 400);
     </div>
     <div class="card tracker-table-wrap" style="overflow:auto;margin-bottom:16px">
       <table id="practice-scores-table">
-        <thead><tr><th>#</th><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Date</th><th>Score</th><th>%</th><th>Result</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
+        <thead><tr><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Score</th><th>%</th><th>Result</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
         <tbody id="practice-score-tbody"></tbody>
       </table>
+      <div id="practice-pagination"></div>
     </div>
     <div class="card" id="practice-analytics" style="margin-bottom:16px">
       <div class="section-title" style="margin-bottom:12px">Practice Performance</div>
@@ -4706,8 +4708,24 @@ let selectedCalDay = null;
 // ============================================================
 // PERSISTENCE
 // ============================================================
+let _storageWarningShown = false;
 function save() {
-  localStorage.setItem('cpale_v2_state', JSON.stringify(state));
+  try {
+    localStorage.setItem('cpale_v2_state', JSON.stringify(state));
+  } catch (e) {
+    // Most likely a QuotaExceededError once years of history pile up in
+    // localStorage (~5–10MB browser limit). Data already entered stays safe
+    // in memory for this session, but won't survive a reload unless the
+    // person exports/saves a backup — surface that clearly instead of
+    // failing silently.
+    console.error('Save to localStorage failed:', e);
+    if (!_storageWarningShown) {
+      _storageWarningShown = true;
+      toast('⚠️ Storage is full — export a backup now (Settings → Backup) so nothing is lost.');
+      const indicator = document.getElementById('autosave-indicator');
+      if (indicator) { indicator.textContent = '⚠'; indicator.style.color = 'var(--danger)'; indicator.title = 'Storage full — export a backup!'; }
+    }
+  }
   scheduleAutoSave();
 }
 function load() {
@@ -6918,6 +6936,13 @@ function renderCustomWidgets() { renderDashboardWidgets(); }
 let scoresheetTab='exams';
 let practiceFilterMain='all';
 let practiceFilterSub='all';
+let practiceSortNewestFirst=true;
+let practiceDatePreset='all'; // all | today | week | month | custom
+let practiceDateFrom='';
+let practiceDateTo='';
+let practiceCollapsedMonths={}; // monthKey -> true if collapsed
+let practiceCollapsedDates={}; // dateKey -> true if collapsed
+let practiceAllCollapsed=true; // default state for months/dates not yet toggled individually
 
 function openScoreEntryForCurrentTab(){
   if(scoresheetTab==='practice') openPracticeScoreModal(-1);
@@ -6987,7 +7012,7 @@ function updatePracticeScorePreview() {
   box.style.display = 'flex';
   box.innerHTML = `
     <span style="font-family:var(--font-mono);font-size:15px;font-weight:800;color:${color}">${pct.toFixed(1)}%</span>
-    <span class="badge ${PRACTICE_REMARK_BADGE[remark]}">${remark}</span>
+    <span class="badge ${PRACTICE_REMARK_BADGE[remark]}">${PRACTICE_REMARK_LABEL[remark]}</span>
   `;
 }
 function savePracticeScore(){
@@ -7014,6 +7039,50 @@ function getPracticeRemark(pct) {
   return 'WEAK';
 }
 const PRACTICE_REMARK_BADGE = { PASSED:'badge-pass', BORDERLINE:'badge-cond', WEAK:'badge-fail' };
+// Display text shown on the badges — kept separate from the internal PASSED/
+// BORDERLINE/WEAK keys (used for lookups/logic) so the words on screen match
+// the "Pass / Conditional / Needs Work" legend below the table exactly.
+const PRACTICE_REMARK_LABEL = { PASSED:'Pass', BORDERLINE:'Conditional', WEAK:'Needs Work' };
+
+function practiceDateBounds(){
+  // Returns [fromStr, toStr] (inclusive, 'YYYY-MM-DD' strings) or null for no bound.
+  const todayStr = new Date().toISOString().slice(0,10);
+  if (practiceDatePreset==='today') return [todayStr, todayStr];
+  if (practiceDatePreset==='week') {
+    const d = new Date(); d.setDate(d.getDate()-6);
+    return [d.toISOString().slice(0,10), todayStr];
+  }
+  if (practiceDatePreset==='month') {
+    const d = new Date(); d.setDate(d.getDate()-29);
+    return [d.toISOString().slice(0,10), todayStr];
+  }
+  if (practiceDatePreset==='custom') return [practiceDateFrom||null, practiceDateTo||null];
+  return [null,null];
+}
+
+function setPracticeDatePreset(p){
+  practiceDatePreset=p;
+  renderPracticeScores();
+}
+
+function toggleAllPracticeGroups(collapse){
+  practiceAllCollapsed=collapse;
+  practiceCollapsedMonths={};
+  practiceCollapsedDates={};
+  renderPracticeScores();
+}
+
+function togglePracticeMonth(monthKey){
+  const currentlyCollapsed = monthKey in practiceCollapsedMonths ? practiceCollapsedMonths[monthKey] : practiceAllCollapsed;
+  practiceCollapsedMonths[monthKey] = !currentlyCollapsed;
+  renderPracticeScores();
+}
+
+function togglePracticeGroup(dateKey){
+  const currentlyCollapsed = dateKey in practiceCollapsedDates ? practiceCollapsedDates[dateKey] : practiceAllCollapsed;
+  practiceCollapsedDates[dateKey] = !currentlyCollapsed;
+  renderPracticeScores();
+}
 
 function renderPracticeScores(){
   const tbody=document.getElementById('practice-score-tbody'); if(!tbody)return;
@@ -7021,14 +7090,148 @@ function renderPracticeScores(){
   const mainOptions=['all',...MAIN_SUBJECTS];
   filters.innerHTML=mainOptions.map(k=>`<button class="btn btn-sm ${practiceFilterMain===k?'btn-primary':'btn-ghost'}" onclick="practiceFilterMain='${k}';practiceFilterSub='all';renderPracticeScores()">${k==='all'?'All Subjects':SUBJECTS_META[k].name}</button>`).join('');
   if(practiceFilterMain!=='all'){
-    const subs=SUBJECTS_META[practiceFilterMain]?.subs||[];
+    // Video-lecture "sub-subjects" (e.g. Audit Lectures) track watching videos,
+    // not scorable practice sets — exclude them here the same way the Topic
+    // Tracker separates topicSubs/videoSubs, so this filter row never offers
+    // a tab that can never have any entries under it.
+    const subs=(SUBJECTS_META[practiceFilterMain]?.subs||[]).filter(sk => !DEFAULT_TOPICS[sk] || DEFAULT_TOPICS[sk].kind !== 'video');
     filters.innerHTML += '<div style="flex-basis:100%;height:0"></div>' + ['all',...subs].map(k=>`<button class="btn btn-sm ${practiceFilterSub===k?'btn-primary':'btn-ghost'}" onclick="practiceFilterSub='${k}';renderPracticeScores()">${k==='all'?'All Sub-subjects':(DEFAULT_TOPICS[k]?.name||k)}</button>`).join('');
   }
-  const filtered=(state.practiceScores||[]).map((p,i)=>({p,i})).filter(({p})=>practiceFilterMain==='all'||p.mainSubject===practiceFilterMain).filter(({p})=>practiceFilterSub==='all'||p.subjectKey===practiceFilterSub);
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px">No practice scores yet. Add a drill, exercise, or practice set.</td></tr>'; renderPracticeAnalytics(); return;}
-  tbody.innerHTML=filtered.map(({p,i})=>{const pct=p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null;const color=pct===null?'var(--muted)':pct>=75?'var(--pass)':pct>=65?'var(--warn)':'var(--danger)';const remark=getPracticeRemark(pct);const remarkCell=remark?`<span class="badge ${PRACTICE_REMARK_BADGE[remark]}">${remark}</span>`:'<span class="badge badge-none">—</span>';const noteText=(p.notes||'').trim();const noteEsc=noteText.replace(/"/g,'&quot;');const noteCell=noteText?`<span title="${noteEsc}" style="display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;cursor:help">📝 ${noteEsc}</span>`:'<span style="color:var(--muted)">—</span>';return `<tr><td>${i+1}</td><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.date||'—'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td>${remarkCell}</td><td style="max-width:160px">${noteCell}</td><td class="tracker-actions-col" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`}).join('');
+
+  // Date range row — quick presets plus a custom from/to pair.
+  const datePresets=[['all','All time'],['today','Today'],['week','Last 7 days'],['month','Last 30 days'],['custom','Custom range']];
+  filters.innerHTML += '<div style="flex-basis:100%;height:0"></div>' + `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">` +
+    datePresets.map(([k,label])=>`<button class="btn btn-sm ${practiceDatePreset===k?'btn-primary':'btn-ghost'}" onclick="setPracticeDatePreset('${k}')">${label}</button>`).join('') +
+    (practiceDatePreset==='custom' ? `
+      <input type="date" value="${practiceDateFrom}" onchange="practiceDateFrom=this.value;renderPracticeScores()" style="font-size:11px;padding:3px 5px">
+      <span style="font-size:11px;color:var(--muted)">to</span>
+      <input type="date" value="${practiceDateTo}" onchange="practiceDateTo=this.value;renderPracticeScores()" style="font-size:11px;padding:3px 5px">` : '') +
+    `</div>`;
+
+  const [dFrom,dTo]=practiceDateBounds();
+  const filtered=(state.practiceScores||[]).map((p,i)=>({p,i}))
+    .filter(({p})=>practiceFilterMain==='all'||p.mainSubject===practiceFilterMain)
+    .filter(({p})=>practiceFilterSub==='all'||p.subjectKey===practiceFilterSub)
+    .filter(({p})=>!dFrom || (p.date && p.date>=dFrom))
+    .filter(({p})=>!dTo || (p.date && p.date<=dTo));
+
+  if(!filtered.length){
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">No practice scores in this selection yet.</td></tr>';
+    document.getElementById('practice-pagination').innerHTML='';
+    renderPracticeAnalytics();
+    return;
+  }
+
+  // Group by month, then by day within each month, so the list stays compact
+  // even across years of data — collapsed by default, you drill Month → Day →
+  // Entries instead of scrolling past hundreds of individual day headers.
+  const monthGroups=new Map(); // monthKey -> Map(dateKey -> items[])
+  filtered.forEach(item=>{
+    const dateKey=item.p.date||'No date';
+    const monthKey=dateKey==='No date' ? 'No date' : dateKey.slice(0,7); // 'YYYY-MM'
+    if(!monthGroups.has(monthKey)) monthGroups.set(monthKey,new Map());
+    const dayMap=monthGroups.get(monthKey);
+    if(!dayMap.has(dateKey)) dayMap.set(dateKey,[]);
+    dayMap.get(dateKey).push(item);
+  });
+  let monthKeys=[...monthGroups.keys()];
+  monthKeys.sort((a,b)=>{
+    if(a==='No date') return 1;
+    if(b==='No date') return -1;
+    return practiceSortNewestFirst ? (a<b?1:-1) : (a<b?-1:1);
+  });
+
+  const fmtMonth = k => {
+    if(k==='No date') return 'No date';
+    const dt=new Date(k+'-01T00:00:00');
+    if(isNaN(dt)) return k;
+    return dt.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  };
+  const fmtDate = k => {
+    if(k==='No date') return 'No date';
+    const dt=new Date(k+'T00:00:00');
+    if(isNaN(dt)) return k;
+    return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  };
+  const avgOf = items => {
+    const pcts=items.map(({p})=>p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null).filter(v=>v!==null);
+    return pcts.length ? pcts.reduce((a,b)=>a+b,0)/pcts.length : null;
+  };
+  const colorFor = avg => avg===null?'var(--muted)':avg>=75?'var(--pass)':avg>=65?'var(--warn)':'var(--danger)';
+
+  const rowsHTML = ({p,i}) => {
+    const pct=p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null;
+    const color=pct===null?'var(--muted)':pct>=75?'var(--pass)':pct>=65?'var(--warn)':'var(--danger)';
+    const remark=getPracticeRemark(pct);
+    const remarkCell=remark?`<span class="badge ${PRACTICE_REMARK_BADGE[remark]}">${PRACTICE_REMARK_LABEL[remark]}</span>`:'<span class="badge badge-none">—</span>';
+    const noteText=(p.notes||'').trim();
+    const noteEsc=noteText.replace(/"/g,'&quot;');
+    const noteCell=noteText?`<span title="${noteEsc}" style="display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;cursor:help">📝 ${noteEsc}</span>`:'<span style="color:var(--muted)">—</span>';
+    return `<tr><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td>${remarkCell}</td><td style="max-width:160px">${noteCell}</td><td class="tracker-actions-col" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`;
+  };
+
+  tbody.innerHTML = monthKeys.map(monthKey=>{
+    const dayMap=monthGroups.get(monthKey);
+    const monthItems=[...dayMap.values()].flat();
+    const monthCollapsed = monthKey in practiceCollapsedMonths ? practiceCollapsedMonths[monthKey] : practiceAllCollapsed;
+    const monthAvg=avgOf(monthItems);
+    let dateKeys=[...dayMap.keys()];
+    dateKeys.sort((a,b)=>{
+      if(a==='No date') return 1;
+      if(b==='No date') return -1;
+      return practiceSortNewestFirst ? (a<b?1:-1) : (a<b?-1:1);
+    });
+
+    const monthHeaderRow = `<tr class="practice-month-header" onclick="togglePracticeMonth('${monthKey.replace(/'/g,"\\'")}')" style="cursor:pointer;background:var(--surface2,var(--surface))">
+      <td colspan="10" style="padding:9px 10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="display:inline-block;transition:transform 0.15s;transform:rotate(${monthCollapsed?'-90':'0'}deg);font-size:10px">▾</span>
+            <span style="font-weight:800;font-size:13px">${fmtMonth(monthKey)}</span>
+            <span style="font-size:11px;color:var(--muted)">${monthItems.length} entr${monthItems.length===1?'y':'ies'} · ${dateKeys.length} day${dateKeys.length===1?'':'s'}</span>
+          </div>
+          ${monthAvg!==null ? `<span style="font-family:var(--font-mono);font-size:11px;color:${colorFor(monthAvg)}">avg ${monthAvg.toFixed(1)}%</span>` : ''}
+        </div>
+      </td>
+    </tr>`;
+
+    if(monthCollapsed) return monthHeaderRow;
+
+    const dayRows = dateKeys.map(dateKey=>{
+      const items=dayMap.get(dateKey);
+      const dayCollapsed = dateKey in practiceCollapsedDates ? practiceCollapsedDates[dateKey] : practiceAllCollapsed;
+      const dayAvg=avgOf(items);
+      const dayHeaderRow = `<tr class="practice-date-header" onclick="togglePracticeGroup('${dateKey.replace(/'/g,"\\'")}')" style="cursor:pointer;background:var(--surface)">
+        <td colspan="10" style="padding:7px 10px 7px 26px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="display:inline-block;transition:transform 0.15s;transform:rotate(${dayCollapsed?'-90':'0'}deg);font-size:10px">▾</span>
+              <span style="font-weight:600;font-size:11.5px">${fmtDate(dateKey)}</span>
+              <span style="font-size:10.5px;color:var(--muted)">${items.length} entr${items.length===1?'y':'ies'}</span>
+            </div>
+            ${dayAvg!==null ? `<span style="font-family:var(--font-mono);font-size:10.5px;color:${colorFor(dayAvg)}">avg ${dayAvg.toFixed(1)}%</span>` : ''}
+          </div>
+        </td>
+      </tr>`;
+      const entryRows = dayCollapsed ? '' : items.map(rowsHTML).join('');
+      return dayHeaderRow + entryRows;
+    }).join('');
+
+    return monthHeaderRow + dayRows;
+  }).join('');
+
+  const pag=document.getElementById('practice-pagination');
+  if(pag){
+    pag.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 0;font-size:11px;color:var(--muted);flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="practiceSortNewestFirst=!practiceSortNewestFirst;renderPracticeScores()">${practiceSortNewestFirst?'⬇ Newest first':'⬆ Oldest first'}</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAllPracticeGroups(true)">Collapse all</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAllPracticeGroups(false)">Expand all</button>
+      <span>${dateKeys.length} day${dateKeys.length===1?'':'s'} · ${filtered.length} entr${filtered.length===1?'y':'ies'}</span>
+    </div>`;
+  }
   renderPracticeAnalytics();
 }
+
 
 function renderPracticeAnalytics(){
   const subjectEl=document.getElementById('practice-subject-chart');
@@ -7112,6 +7315,10 @@ function renderPracticeAnalytics(){
 }
 
 
+let scoresheetSortNewestFirst=true;
+let scoresheetPage=1;
+const SCORESHEET_PAGE_SIZE=20;
+
 function renderScoresheet() {
   const tbody = document.getElementById('score-tbody');
   const TYPE_COLORS = {
@@ -7123,14 +7330,33 @@ function renderScoresheet() {
   const fmtScore = (v, max) => v !== null ? `${v}<span style="font-size:9px;color:var(--muted)">/${max}</span>` : '—';
   const remarkBadge = r => r ? `<span class="badge badge-${r==='PASSED'?'pass':r==='FAILED'?'fail':'cond'}">${r}</span>` : '—';
 
-  if (!state.scores.length) {
+  // Preboards/quizzes/mock exams accumulate far slower than daily drills, so a
+  // simple newest-first sort + fixed page size is enough to keep this from
+  // growing into an endless scroll across exam cycles/years, without the
+  // heavier month/day grouping the Practice Sets table needed.
+  const indexed = state.scores.map((s,i)=>({s,i}));
+  indexed.sort((a,b) => {
+    const da=a.s.date||'', db=b.s.date||'';
+    if (da !== db) return scoresheetSortNewestFirst ? (da<db?1:-1) : (da<db?-1:1);
+    return scoresheetSortNewestFirst ? b.i-a.i : a.i-b.i;
+  });
+
+  if (!indexed.length) {
     tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:var(--muted);padding:32px">No entries yet. Click "+ Add Entry" to start.</td></tr>';
+    const pagEmpty = document.getElementById('score-pagination');
+    if (pagEmpty) pagEmpty.innerHTML = '';
   } else {
-    tbody.innerHTML = state.scores.map((s,i) => {
+    const totalPages = Math.max(1, Math.ceil(indexed.length / SCORESHEET_PAGE_SIZE));
+    if (scoresheetPage > totalPages) scoresheetPage = totalPages;
+    if (scoresheetPage < 1) scoresheetPage = 1;
+    const pageStart = (scoresheetPage - 1) * SCORESHEET_PAGE_SIZE;
+    const pageItems = indexed.slice(pageStart, pageStart + SCORESHEET_PAGE_SIZE);
+    tbody.innerHTML = pageItems.map(({s,i},rowIdx) => {
+      const displayNum = pageStart + rowIdx + 1;
       const c = calcEntry(s);
       const typeColor = TYPE_COLORS[s.type] || 'var(--muted)';
       return `<tr>
-        <td style="color:var(--muted);font-size:11px;font-family:var(--font-mono)">${i+1}</td>
+        <td style="color:var(--muted);font-size:11px;font-family:var(--font-mono)">${displayNum}</td>
         <td style="font-weight:600;font-size:13px">${s.label||'—'}</td>
         <td><span style="font-size:10px;color:${typeColor};border:1px solid ${typeColor};padding:2px 7px;border-radius:99px;white-space:nowrap">${s.type||'—'}</span></td>
         <td style="font-size:12px;color:var(--muted)">${s.date||'—'}</td>
@@ -7148,6 +7374,21 @@ function renderScoresheet() {
         </td>
       </tr>`;
     }).join('');
+
+    const pag = document.getElementById('score-pagination');
+    if (pag) {
+      const controls = `<div style="display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 0;font-size:11px;color:var(--muted);flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="scoresheetSortNewestFirst=!scoresheetSortNewestFirst;scoresheetPage=1;renderScoresheet()">${scoresheetSortNewestFirst?'⬇ Newest first':'⬆ Oldest first'}</button>
+      </div>`;
+      if (totalPages <= 1) { pag.innerHTML = controls; }
+      else {
+        pag.innerHTML = controls + `<div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:0 0 12px;font-size:12px;color:var(--muted)">
+          <button class="btn btn-ghost btn-sm" ${scoresheetPage<=1?'disabled':''} onclick="scoresheetPage--;renderScoresheet()">‹ Prev</button>
+          <span>Page ${scoresheetPage} of ${totalPages} · ${indexed.length} entr${indexed.length===1?'y':'ies'}</span>
+          <button class="btn btn-ghost btn-sm" ${scoresheetPage>=totalPages?'disabled':''} onclick="scoresheetPage++;renderScoresheet()">Next ›</button>
+        </div>`;
+      }
+    }
   }
 
   const allCalc = state.scores.map(s=>calcEntry(s));
@@ -8198,6 +8439,7 @@ function renderSettings() {
           <div style="display:flex;gap:6px">
             <button class="btn btn-ghost btn-sm" onclick="setTrackerMain('${mk}');setTrackerSub('${sk}');showPage('tracker')" title="Go to tracker">↗ Tracker</button>
             <button class="btn btn-ghost btn-sm" onclick="promptEditSubjectName('${sk}')" title="Edit subject name">✎ Name</button>
+            ${isCustom ? `<button class="btn btn-ghost btn-sm" onclick="toggleSubSubjectKind('${mk}','${sk}')" title="${isVideo ? 'Convert to a regular topics sub-subject' : 'Convert to a video-lecture set'}">${isVideo ? '📋 Make Topics' : '🎥 Make Video'}</button>` : ''}
             <button class="btn btn-primary btn-sm" onclick="promptAddTopicInline('${sk}')" title="Add topic">+ Topic</button>
             ${isCustom ? `<button class="btn btn-danger btn-sm" onclick="deleteSubSubject('${mk}','${sk}')" title="Remove this sub-subject">🗑</button>` : ''}
           </div>
@@ -8290,6 +8532,26 @@ function saveSubSubjectFromModal() {
   // Reload tracker tabs
   if (document.getElementById('page-tracker').classList.contains('active')) renderTracker();
   toast(`${kind === 'video' ? '🎥 Video lecture set' : 'Sub-subject'} "${name}" added to ${mainKey}!`);
+}
+
+function toggleSubSubjectKind(mainKey, sk) {
+  const item = DEFAULT_TOPICS[sk];
+  if (!item) return;
+  const newKind = item.kind === 'video' ? 'topics' : 'video';
+  if (newKind === 'video' && (state.topics[sk] || []).length) {
+    if (!confirm(`"${item.name}" has ${state.topics[sk].length} topic(s) recorded. Switching it to a Video Lecture set won't delete them, but they'll stop counting toward this subject's topic completion. Continue?`)) return;
+  }
+  item.kind = newKind;
+  if (!state.customSubSubjects) state.customSubSubjects = {};
+  if (!state.customSubSubjects[mainKey]) state.customSubSubjects[mainKey] = [];
+  const rec = state.customSubSubjects[mainKey].find(s => s.key === sk);
+  if (rec) rec.kind = newKind;
+  else state.customSubSubjects[mainKey].push({ key: sk, name: item.name, kind: newKind });
+  save();
+  renderSettings();
+  if (document.getElementById('page-tracker').classList.contains('active')) renderTracker();
+  if (document.getElementById('practice-score-tbody')) renderPracticeScores();
+  toast(`"${item.name}" is now ${newKind === 'video' ? 'a 🎥 Video Lecture set' : 'a regular Topics sub-subject'}.`);
 }
 
 function promptEditSubjectName(sk) {
@@ -9671,9 +9933,10 @@ function getCoachIntroMessage() {
   const d = coachGetData();
   const noData = d.stats.completed === 0 && d.stats.inprog === 0;
   const hr = { morning:'Good morning', afternoon:'Good afternoon', evening:'Good evening' }[d.timeOfDay];
-  if (noData) return `${hr}, <strong>${d.name}</strong>! 👋 I'm your Study Coach — I know your topics, scores, streak, and exam date. You haven't started yet. Ask me where to begin, or just type what's on your mind.`;
+  const apiNote = state.geminiApiKey ? '' : `<br><br>💡 <em>Heads up — you haven't added an AI key yet, so I'm answering with a built-in rule-based system rather than a full free-form AI. I can still handle a lot (try the suggestions below), but for open-ended questions in your own words, add a free Gemini API key in <strong>Settings → 🤖 AI Coach</strong>.</em>`;
+  if (noData) return `${hr}, <strong>${d.name}</strong>! 👋 I'm your Study Coach — I know your topics, scores, streak, and exam date. You haven't started yet. Ask me where to begin, or just type what's on your mind.${apiNote}`;
   const pct = Math.round(d.stats.pct);
-  return `${hr}, <strong>${d.name}</strong>! 👋 You're at <strong>${pct}%</strong> overall with a <strong>${d.streak.current}-day streak</strong>${d.daysLeft !== null ? ` and <strong>${d.daysLeft} days</strong> to go` : ''}. What do you want to know?`;
+  return `${hr}, <strong>${d.name}</strong>! 👋 You're at <strong>${pct}%</strong> overall with a <strong>${d.streak.current}-day streak</strong>${d.daysLeft !== null ? ` and <strong>${d.daysLeft} days</strong> to go` : ''}. What do you want to know?${apiNote}`;
 }
 
 // ── SMART SUGGESTIONS (context-aware) ────────────────────────
@@ -9920,9 +10183,13 @@ function getCoachReply(input) {
   const hints = [
     `I didn't catch that. Try asking: <em>"What should I study?"</em>, <em>"Am I on track?"</em>, or <em>"How is my ${d.weakest}?"</em>`,
     `Not sure what you mean. I can talk about your progress, scores, streak, pace, or any CPALE subject.`,
-    `Hmm — try rephrasing! I understand things like: subject names (FAR, TAX...), "study tip", "how am I doing", or "motivate me".`
+    `Hmm — try rephrasing! I understand things like: subject names (FAR, TAX...), "study tip", "how am I doing?", or "motivate me".`
   ];
-  return hints[Math.floor(Math.random() * hints.length)];
+  let fallback = hints[Math.floor(Math.random() * hints.length)];
+  if (!state.geminiApiKey) {
+    fallback += `<br><br><span style="opacity:.7;font-size:10.5px">💡 This is the built-in rule-based coach — it only understands specific phrasings like the ones above. For genuinely free-form questions in your own words, add a free Gemini API key in <strong>Settings → 🤖 AI Coach</strong>.</span>`;
+  }
+  return fallback;
 }
 
 // ── HELPERS ──────────────────────────────────────────────────
