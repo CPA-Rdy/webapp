@@ -3786,6 +3786,22 @@ renderDashboard(); }, 400);
     </div>
 
     <div class="card" style="max-width:560px;margin-top:16px;">
+      <div class="section-title">🎭 Coach Personality</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
+        Choose how the coach talks to you. This only affects AI-powered replies (Groq/Gemini) — the built-in rule-based replies used when no key is set always use fixed wording.
+      </div>
+      <div id="coach-persona-picker" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
+      <div class="form-row" style="margin-bottom:0">
+        <label>Custom instructions <span style="font-weight:400;color:var(--muted)">(optional — add your own on top of the preset above)</span></label>
+        <textarea id="set-coach-persona-custom" rows="2" placeholder="e.g. Call me 'boss', use Taglish sometimes, keep celebration emoji to a minimum..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-primary btn-sm" onclick="saveCoachPersonaCustom()">Save</button>
+      </div>
+      <div id="coach-persona-status" style="font-size:10px;color:var(--muted);margin-top:8px;"></div>
+    </div>
+
+    <div class="card" style="max-width:560px;margin-top:16px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <div class="coach-avatar" style="width:30px;height:30px;flex-shrink:0;">✦</div>
         <div>
@@ -4775,6 +4791,8 @@ function load() {
   compactActivityLog();
   if (typeof state.geminiApiKey !== 'string') state.geminiApiKey = '';
   if (typeof state.groqApiKey !== 'string') state.groqApiKey = '';
+  if (typeof state.coachPersona !== 'string') state.coachPersona = 'balanced';
+  if (typeof state.coachPersonaCustom !== 'string') state.coachPersonaCustom = '';
 }
 
 // ============================================================
@@ -8428,6 +8446,7 @@ function renderSettings() {
   renderRestDayPicker();
   renderGeminiKeyStatus();
   renderGroqKeyStatus();
+  renderCoachPersonaPicker();
 
   // Subject management with add/remove topics
   if (!currentSubjectManageTab) currentSubjectManageTab = MAIN_SUBJECTS[0];
@@ -8700,6 +8719,36 @@ function clearGroqKey() {
   save();
   renderGroqKeyStatus();
   toast('Groq API key cleared.');
+}
+
+function renderCoachPersonaPicker() {
+  const el = document.getElementById('coach-persona-picker');
+  const customEl = document.getElementById('set-coach-persona-custom');
+  if (!el) return;
+  el.innerHTML = Object.entries(COACH_PERSONAS).map(([key, p]) => `
+    <div onclick="selectCoachPersona('${key}')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid ${state.coachPersona===key?'var(--accent)':'var(--border)'};background:${state.coachPersona===key?'rgba(124,106,247,0.1)':'transparent'};cursor:pointer;transition:all 0.15s;">
+      <div style="width:15px;height:15px;border-radius:50%;border:2px solid ${state.coachPersona===key?'var(--accent2)':'var(--border)'};flex-shrink:0;display:flex;align-items:center;justify-content:center;">${state.coachPersona===key?'<div style="width:7px;height:7px;border-radius:50%;background:var(--accent2)"></div>':''}</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:${state.coachPersona===key?'var(--accent2)':'var(--text)'}">${p.label}</div>
+        <div style="font-size:10.5px;color:var(--muted)">${p.desc}</div>
+      </div>
+    </div>`).join('');
+  if (customEl) customEl.value = state.coachPersonaCustom || '';
+  const statusEl = document.getElementById('coach-persona-status');
+  if (statusEl) statusEl.textContent = state.coachPersonaCustom ? 'Custom instructions saved.' : '';
+}
+function selectCoachPersona(key) {
+  state.coachPersona = key;
+  save();
+  renderCoachPersonaPicker();
+  toast(`Coach personality set to "${COACH_PERSONAS[key].label}"!`);
+}
+function saveCoachPersonaCustom() {
+  const val = document.getElementById('set-coach-persona-custom').value.trim();
+  state.coachPersonaCustom = val;
+  save();
+  renderCoachPersonaPicker();
+  toast(val ? 'Custom coach instructions saved!' : 'Custom instructions cleared.');
 }
 
 function renderRestDayPicker() {
@@ -9815,6 +9864,15 @@ function stripCoachHtml(html) {
   return (tmp.textContent || tmp.innerText || '').trim();
 }
 
+const COACH_PERSONAS = {
+  balanced:  { label: 'Balanced (default)',     desc: 'Encouraging but direct — the original tone.',            prompt: 'You are an encouraging but direct study coach.' },
+  direct:    { label: 'Direct & Concise',        desc: 'Short, no-fluff answers. Gets straight to the point.',   prompt: 'You are a direct, no-nonsense study coach. Keep replies short and to the point — skip pleasantries, hedging, and encouragement unless specifically asked for it. Lead with the answer, not context.' },
+  warm:      { label: 'Warm & Supportive',       desc: 'Gentle, patient, lots of encouragement.',                prompt: 'You are a warm, patient, and deeply encouraging study coach. Acknowledge effort and feelings before giving advice. Use a gentle, supportive tone, and celebrate small wins.' },
+  drill:     { label: 'Tough Love / Drill Sgt.', desc: 'Blunt, high-intensity, pushes you hard.',                 prompt: 'You are a blunt, high-intensity "tough love" coach — like a drill sergeant who genuinely wants the candidate to pass. Be firm and push back on excuses or complacency, but never insulting or demeaning. No sugarcoating; call out slacking directly.' },
+  witty:     { label: 'Witty & Casual',          desc: 'Light banter, casual phrasing, still useful.',           prompt: 'You are a witty, casual study coach who talks like a sharp, funny friend. Light humor and banter are welcome, but every reply still needs to be genuinely useful and accurate — don\'t let jokes get in the way of the actual answer.' },
+  formal:    { label: 'Formal & Professional',   desc: 'Polished, structured, no slang.',                       prompt: 'You are a formal, professional study coach. Use polished, structured language, avoid slang and casual contractions, and present information in a clear, organized manner — as a professional academic advisor would.' }
+};
+
 function buildCoachPrompt(userText) {
   const d = coachGetData();
   const context = coachContextForAI(d);
@@ -9822,7 +9880,12 @@ function buildCoachPrompt(userText) {
     .map(m => `${m.role === 'coach' ? 'Coach' : 'Candidate'}: ${stripCoachHtml(m.text)}`)
     .join('\n');
 
-  return `You are an encouraging but direct study coach chatbot inside "CPALE Ready", a tracker app for the Philippine CPA Licensure Exam (CPALE). Answer the candidate's latest message using ONLY the real data given below — never invent numbers. You can be as thorough as the question needs — a quick question deserves a short answer, but if the candidate asks for a detailed study plan, breakdown, or explanation, give a complete, well-organized answer (use <strong>, <br>, and simple bullet-style lines with — for structure; no markdown asterisks).
+  const persona = COACH_PERSONAS[state.coachPersona] || COACH_PERSONAS.balanced;
+  const customLine = (state.coachPersonaCustom || '').trim();
+
+  return `${persona.prompt} You are inside "CPALE Ready", a tracker app for the Philippine CPA Licensure Exam (CPALE).${customLine ? ` Additional personality/style instructions from the candidate: "${customLine}"` : ''}
+
+Answer the candidate's latest message using ONLY the real data given below — never invent numbers. Match your length to the question — a quick question deserves a short answer, but if the candidate asks for a detailed study plan, breakdown, or explanation, give a complete, well-organized answer regardless of your personality/tone (use <strong>, <br>, and simple bullet-style lines with — for structure; no markdown asterisks).
 
 CANDIDATE DATA:
 ${context}
