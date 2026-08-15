@@ -9777,26 +9777,36 @@ Candidate's new message: "${userText}"
 
 Reply as the Coach:`;
 
-  const models = ['gemini-2.5-flash', 'gemini-flash-latest'];
+  // Ordered by reliability, not raw quality: 2.5-flash is a solid stable model,
+  // 2.5-flash-lite is the cheap/high-availability tier Google keeps very
+  // over-provisioned (rarely 503s), and flash-latest is EXPERIMENTAL with
+  // tighter rate limits — kept last as a last-resort, not a real fallback.
+  const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest'];
+  const PER_MODEL_TIMEOUT_MS = 12000;
   let lastErr = 'unknown error';
   for (const model of models) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': state.geminiApiKey },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 2048 } })
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 2048 } }),
+        signal: controller.signal
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => null);
         lastErr = errBody?.error?.message || `HTTP ${res.status}`;
-        continue;
+        continue; // try the next model — a 503/overload on one doesn't mean the others are down
       }
       const json = await res.json();
       const text = (json.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
       if (text) return text;
       lastErr = 'empty response';
     } catch (e) {
-      lastErr = e.message || 'network error';
+      lastErr = e.name === 'AbortError' ? `${model} took too long to respond (>${PER_MODEL_TIMEOUT_MS/1000}s)` : (e.message || 'network error');
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw new Error(lastErr);
