@@ -3461,7 +3461,7 @@ renderDashboard(); }, 400);
     </div>
     <div class="card tracker-table-wrap" style="overflow:auto;margin-bottom:16px">
       <table id="practice-scores-table">
-        <thead><tr><th>#</th><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Date</th><th>Score</th><th>%</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
+        <thead><tr><th>#</th><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Date</th><th>Score</th><th>%</th><th>Result</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
         <tbody id="practice-score-tbody"></tbody>
       </table>
     </div>
@@ -3474,25 +3474,42 @@ renderDashboard(); }, 400);
 </div>
 
 <div class="modal-overlay" id="modal-practice-score">
-  <div class="modal" style="width:600px;max-height:90vh;overflow-y:auto">
-    <h3 id="practice-score-modal-title">Add Practice Score</h3>
-    <input type="hidden" id="practice-score-modal-idx">
-    <div class="form-row"><label>Practice Set / Drill Name</label><input type="text" id="ps-label" placeholder="e.g. VAT Drill Set 1"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-row"><label>Type</label><select id="ps-type"><option>Practice Set</option><option>Drill</option><option>Exercise</option><option>Quiz</option><option>Comprehensive</option></select></div>
-      <div class="form-row"><label>Date</label><input type="date" id="ps-date"></div>
+  <div class="modal" style="width:600px;max-height:90vh;overflow-y:auto;padding:0;overflow-x:hidden">
+    <div style="background:linear-gradient(135deg, var(--accent), var(--accent2));padding:22px 28px;color:#fff;">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">✍️</div>
+        <div>
+          <h3 id="practice-score-modal-title" style="margin:0;color:#fff;font-size:17px">Add Practice Score</h3>
+          <div style="font-size:11px;opacity:.85;margin-top:2px">Log a drill, exercise, or practice set</div>
+        </div>
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-row"><label>Subject</label><select id="ps-main-subject" onchange="updatePracticeSubsubjects()"></select></div>
-      <div class="form-row"><label>Sub-subject</label><select id="ps-subject" onchange="updatePracticeTopics()"></select></div>
+    <div style="padding:24px 28px 28px">
+      <input type="hidden" id="practice-score-modal-idx">
+      <div class="form-row"><label>Practice Set / Drill Name</label><input type="text" id="ps-label" placeholder="e.g. VAT Drill Set 1"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-row"><label>Type</label><select id="ps-type"><option>Practice Set</option><option>Drill</option><option>Exercise</option><option>Quiz</option><option>Comprehensive</option></select></div>
+        <div class="form-row"><label>Date</label><input type="date" id="ps-date"></div>
+      </div>
+      <div style="background:color-mix(in srgb, var(--accent) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent) 16%, var(--border));border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);font-weight:700;margin-bottom:10px">📚 Where does this belong?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row" style="margin-bottom:0"><label>Subject</label><select id="ps-main-subject" onchange="updatePracticeSubsubjects()"></select></div>
+          <div class="form-row" style="margin-bottom:0"><label>Sub-subject</label><select id="ps-subject" onchange="updatePracticeTopics()"></select></div>
+        </div>
+        <div class="form-row" style="margin-top:12px;margin-bottom:0"><label>Topic <span style="font-weight:400;color:var(--muted)">(optional — leave blank for comprehensive/multi-topic sets)</span></label><select id="ps-topic"></select></div>
+      </div>
+      <div style="background:color-mix(in srgb, var(--pass) 6%, transparent);border:1px solid color-mix(in srgb, var(--pass) 18%, var(--border));border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--pass);font-weight:700;margin-bottom:10px">🎯 How did it go?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row" style="margin-bottom:0"><label>Score</label><input type="number" id="ps-score" min="0" step="1" placeholder="e.g. 42" oninput="updatePracticeScorePreview()"></div>
+          <div class="form-row" style="margin-bottom:0"><label>Max Items</label><input type="number" id="ps-max" min="1" step="1" value="50" oninput="updatePracticeScorePreview()"></div>
+        </div>
+        <div id="ps-score-preview" style="display:none;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)"></div>
+      </div>
+      <div class="form-row"><label>Notes (optional)</label><textarea id="ps-notes" rows="2" placeholder="What did this set cover or reveal?"></textarea></div>
+      <div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-primary" onclick="savePracticeScore()">Save</button><button class="btn btn-danger btn-sm" id="ps-delete-btn" onclick="deletePracticeScore()" style="display:none">Delete</button><button class="btn btn-ghost" onclick="closeModal('modal-practice-score')">Cancel</button></div>
     </div>
-    <div class="form-row"><label>Topic <span style="font-weight:400;color:var(--muted)">(optional — leave blank for comprehensive/multi-topic sets)</span></label><select id="ps-topic"></select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-row"><label>Score</label><input type="number" id="ps-score" min="0" step="0.01" placeholder="e.g. 42"></div>
-      <div class="form-row"><label>Max Items</label><input type="number" id="ps-max" min="1" step="1" value="50"></div>
-    </div>
-    <div class="form-row"><label>Notes (optional)</label><textarea id="ps-notes" rows="2" placeholder="What did this set cover or reveal?"></textarea></div>
-    <div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-primary" onclick="savePracticeScore()">Save</button><button class="btn btn-danger btn-sm" id="ps-delete-btn" onclick="deletePracticeScore()" style="display:none">Delete</button><button class="btn btn-ghost" onclick="closeModal('modal-practice-score')">Cancel</button></div>
   </div>
 </div>
 
@@ -3968,11 +3985,6 @@ renderDashboard(); }, 400);
         <div class="aw-icon">◉</div>
         <div class="aw-name">Video Progress Rings</div>
         <div class="aw-desc">Visual lecture completion</div>
-      </div>
-      <div class="add-widget-card" onclick="addWidget('rank_legend')">
-        <div class="aw-icon">🏆</div>
-        <div class="aw-name">Rank Legends</div>
-        <div class="aw-desc">Score & completion tiers</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('streak')">
         <div class="aw-icon">🔥</div>
@@ -5243,28 +5255,26 @@ function calcEntry(entry) {
   const pcts = [far,afar,mas,audit,tax,rfbt].filter(v => v !== null);
   const avg = pcts.length ? pcts.reduce((a,b)=>a+b,0)/pcts.length : null;
 
+  // Passing rule (as configured by the user — note this is a deliberate
+  // deviation from the strict RA 9298 Sec. 16 rule, which normally fails
+  // any attempt with a subject below 65% regardless of the other scores):
+  //  - PASSED: GWA >= 75% AND no subject below 65%.
+  //  - CONDITIONAL: as long as at least 4 of 6 subjects are >= 75%, the
+  //    remaining (at most 2) subjects are fine even if they're below 65% —
+  //    they no longer force an automatic fail.
+  //  - FAILED: fewer than 4 of 6 subjects at 75%+, and not a full PASS.
   let remark = null;
   if (pcts.length === 6) {
     const hasBelow65 = pcts.some(p => p < 65);
-    if (hasBelow65) {
+    const above75Count = pcts.filter(p => p >= 75).length;
+    if (above75Count >= 4) {
+      remark = (avg >= 75 && !hasBelow65) ? 'PASSED' : 'CONDITIONAL';
+    } else if (hasBelow65) {
       remark = 'FAILED';
     } else if (avg >= 75) {
-      const below75 = pcts.filter(p => p < 75).length;
-      const above75 = pcts.filter(p => p >= 75).length;
-      if (below75 === 0) {
-        remark = 'PASSED';
-      } else if (above75 >= 4 && avg >= 75) {
-        remark = 'CONDITIONAL';
-      } else {
-        remark = 'PASSED';
-      }
+      remark = 'PASSED';
     } else {
-      const above75 = pcts.filter(p => p >= 75).length;
-      if (above75 >= 4 && avg >= 0.65) {
-        remark = 'CONDITIONAL';
-      } else {
-        remark = 'FAILED';
-      }
+      remark = 'FAILED';
     }
   }
   return { far, afar, mas, audit, tax, rfbt, avg, remark };
@@ -5278,6 +5288,30 @@ function getRankTier(avgPct) {
   if (avgPct >= 75)   return { tier: 'Certified Passer',     label: '75–79%' };
   if (avgPct >= 65)   return { tier: 'Conditional Zone',     label: '65–74%' };
   return                     { tier: 'Below Passing',        label: '<65%' };
+}
+
+// The Rank Tier must always agree with the actual PASSED/CONDITIONAL/FAILED
+// remark shown right next to it — never a separately-computed "no pass yet"
+// bucket that isn't even one of the legend's tiers. A CONDITIONAL remark can
+// happen on a GWA well above 75% (the 4-of-6-subjects rule, not the raw
+// average, is what drives it), so it must still show as "Conditional Zone",
+// not get miscategorized just because the number looks high.
+// scoreData is an array of calcEntry() results (each with .avg and .remark).
+function getPassingRankTier(scoreData, fallbackHighAvg) {
+  const valid = (scoreData||[]).filter(s => s.avg !== null && s.remark);
+  if (!valid.length) return { tier: '—', label: 'no scores yet' };
+
+  const passed = valid.filter(s => s.remark === 'PASSED');
+  if (passed.length) return getRankTier(Math.max(...passed.map(s => s.avg)));
+
+  const conditional = valid.filter(s => s.remark === 'CONDITIONAL');
+  if (conditional.length) {
+    const bestAvg = Math.max(...conditional.map(s => s.avg));
+    return { tier: 'Conditional Zone', label: `best GWA ${bestAvg.toFixed(1)}% — subject(s) below 65%` };
+  }
+
+  const bestAvg = Math.max(...valid.map(s => s.avg));
+  return { tier: 'Below Passing', label: `best GWA ${bestAvg.toFixed(1)}%` };
 }
 
 function getCompletionRank(pct) {
@@ -5539,13 +5573,19 @@ function migrateHistoryTimestamps() {
 // Stats") were removed as duplicates of 'countdown' and 'score_stat_cards'
 // respectively. Rename any already-placed widgets so they keep working
 // instead of silently disappearing from the dashboard.
+// 'rank_legend' was also removed — its two legends are now embedded (behind
+// an ⓘ toggle) directly in 'completion_card' and 'score_stat_cards', where
+// they're actually relevant, instead of floating as a separate widget.
 function migrateWidgetTypes() {
-  const widgets = getWidgets();
+  let widgets = getWidgets();
   let changed = false;
   const rename = { countdown_card: 'countdown', stats: 'score_stat_cards' };
   widgets.forEach(w => {
     if (rename[w.type]) { w.type = rename[w.type]; changed = true; }
   });
+  const before = widgets.length;
+  widgets = widgets.filter(w => w.type !== 'rank_legend');
+  if (widgets.length !== before) changed = true;
   if (changed) { state.dashWidgets = widgets; save(); }
 }
 
@@ -5799,8 +5839,8 @@ function renderDashboard() {
     ? `<span class="badge ${remarkMap[latestRemark]}">${latestRemark}</span>`
     : '<span class="badge badge-none">No scores yet</span>';
 
-  // Rank
-  const tier = getRankTier(highAvg);
+  // Rank — only counts if an attempt actually PASSED (see getPassingRankTier)
+  const tier = getPassingRankTier(scoreData, highAvg);
   document.getElementById('dash-rank').textContent = tier.tier;
   document.getElementById('dash-rank-score').textContent = tier.label || 'no scores yet';
 
@@ -5875,7 +5915,6 @@ const DEFAULT_WIDGETS = [
   { id:'w_countdown2', type:'countdown',       cols:2,  rows:12 },
   { id:'w_completion', type:'completion_card', cols:10, rows:12 },
   { id:'w_scorecards', type:'score_stat_cards',cols:12, rows:10 },
-  { id:'w_ranklegend', type:'rank_legend',     cols:12, rows:14 },
   { id:'w_subjbars',   type:'subject_bars',    cols:12, rows:50 },
   { id:'w_weeklyfoot', type:'weekly_footprint', cols:12, rows:28 },
 ];
@@ -5928,7 +5967,6 @@ function addWidget(type) {
   if (type==='subject_bars')    { d.cols=12; d.rows=30; }
   if (type==='video_bars')      { d.cols=12; d.rows=30; }
   if (type==='video_progress_rings') { d.cols=12; d.rows=18; }
-  if (type==='rank_legend')     { d.cols=12; d.rows=14; }
   if (type==='mastery')         { d.cols=12; d.rows=32; }
   if (type==='activity')         { d.cols=6;  d.rows=18; }
   if (type==='weekly_footprint') { d.cols=12; d.rows=28; }
@@ -5989,6 +6027,15 @@ let sizingWidgetId=null, _sizeModalCols=6, _sizeModalH=180;
 const SIZE_PRESETS=[];
 
 // ── Layout edit toggle ───────────────────────────────────────────────────────
+// Toggles one of the inline legend popovers embedded in the completion/score
+// widgets (e.g. "legend-w_completion-comp"). Grid display is used when shown
+// since these legends are laid out as a mini grid of label/value pairs.
+function toggleWidgetLegend(id) {
+  const el = document.getElementById('legend-'+id);
+  if (!el) return;
+  el.style.display = (el.style.display === 'none' || !el.style.display) ? 'grid' : 'none';
+}
+
 function toggleLayoutEdit() {
   layoutEditMode = !layoutEditMode;
   const grid    = document.getElementById('dash-custom-grid');
@@ -6371,9 +6418,20 @@ function renderWidgetHTML(w, i) {
       <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:flex-end;">
         <div>
           <div class="section-title" style="margin-bottom:2px;">Overall Completion</div>
-          <div style="font-size:12px;font-weight:600;color:var(--accent3)">${getCompletionRank(stats.pct)}</div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:12px;font-weight:600;color:var(--accent3)">${getCompletionRank(stats.pct)}</span>
+            <button onclick="toggleWidgetLegend('${w.id}-comp')" title="What do these ranks mean?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
+          </div>
         </div>
         <span style="font-family:var(--font-mono);font-size:16px;color:var(--text)">${stats.pct.toFixed(1)}%</span>
+      </div>
+      <div id="legend-${w.id}-comp" style="display:none;background:color-mix(in srgb, var(--accent3) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent3) 16%, var(--border));border-radius:8px;padding:8px 10px;margin-bottom:10px;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:10px;">
+        <div style="display:flex;justify-content:space-between;"><span>CPALE Master</span><strong style="color:var(--accent3)">100%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Peak Ready</span><strong style="color:var(--accent2)">80–99%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Advanced</span><strong style="color:var(--pass)">60–79%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Intermediate</span><strong style="color:var(--warn)">40–59%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Novice</span><strong style="color:var(--cond)">20–39%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Beginner</span><strong style="color:var(--muted)">0–19%</strong></div>
       </div>
       <div class="progress-bar" style="height:8px;margin-bottom:10px;"><div class="progress-fill" style="width:${stats.pct}%"></div></div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center;">
@@ -6392,13 +6450,26 @@ function renderWidgetHTML(w, i) {
     const latest = [...state.scores].reverse().find(s=>calcEntry(s).remark);
     const latestRemark = latest ? calcEntry(latest).remark : null;
     const remarkMap = { PASSED:'badge-pass', FAILED:'badge-fail', CONDITIONAL:'badge-cond' };
-    const tier = getRankTier(highAvg);
+    const tier = getPassingRankTier(scoreData, highAvg);
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:center;">
       ${b.editBar}
       <div><div class="stat-label">Avg Score</div><div class="stat-value" style="color:var(--accent2)">${overallAvg ? overallAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">all exams</div></div>
       <div><div class="stat-label">Highest Score</div><div class="stat-value" style="color:var(--pass)">${highAvg ? highAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">best avg</div></div>
       <div><div class="stat-label">Latest Remark</div><div style="margin-top:6px">${latestRemark?`<span class="badge ${remarkMap[latestRemark]}">${latestRemark}</span>`:'<span class="badge badge-none">No scores yet</span>'}</div></div>
-      <div style="border-left:1px solid var(--border);padding-left:12px;"><div class="stat-label">Rank Tier 🏆</div><div class="rank-potential">${tier.tier}</div><div class="stat-sub">${tier.label||'no scores'}</div></div>
+      <div style="border-left:1px solid var(--border);padding-left:12px;">
+        <div class="stat-label" style="display:flex;align-items:center;gap:4px">Rank Tier 🏆
+          <button onclick="toggleWidgetLegend('${w.id}-rank')" title="What do these ranks mean?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
+        </div>
+        <div class="rank-potential">${tier.tier}</div><div class="stat-sub">${tier.label||'no scores'}</div>
+      </div>
+      <div id="legend-${w.id}-rank" style="display:none;grid-column:1/-1;background:color-mix(in srgb, var(--accent) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent) 16%, var(--border));border-radius:8px;padding:8px 10px;grid-template-columns:1fr 1fr 1fr;gap:4px 12px;font-size:10px;">
+        <div style="display:flex;justify-content:space-between;"><span>Topnotcher</span><strong style="color:var(--accent3)">90%+</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Elite Passer</span><strong style="color:var(--accent2)">85–89%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Star Passer</span><strong style="color:var(--pass)">80–84%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Certified</span><strong style="color:var(--pass)">75–79%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Conditional</span><strong style="color:var(--cond)">65–74%</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span>Below Pass</span><strong style="color:var(--danger)">&lt;65%</strong></div>
+      </div>
     </div>`;
   }
 
@@ -6540,33 +6611,8 @@ function renderWidgetHTML(w, i) {
     </div>`;
   }
 
-  if (w.type === 'rank_legend') {
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      ${b.editBar}
-      <div>
-        <div class="section-title" style="margin-bottom:10px;">🏆 Score Rank Legend</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
-          <div style="display:flex;justify-content:space-between;"><span>Topnotcher</span><strong style="color:var(--accent3)">90%+</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Elite Passer</span><strong style="color:var(--accent2)">85–89%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Star Passer</span><strong style="color:var(--pass)">80–84%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Certified</span><strong style="color:var(--pass)">75–79%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Conditional</span><strong style="color:var(--cond)">65–74%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Below Pass</span><strong style="color:var(--danger)">&lt;65%</strong></div>
-        </div>
-      </div>
-      <div>
-        <div class="section-title" style="margin-bottom:10px;">🎯 Completion Legend</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
-          <div style="display:flex;justify-content:space-between;"><span>CPALE Master</span><strong style="color:var(--accent3)">100%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Peak Ready</span><strong style="color:var(--accent2)">80–99%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Advanced</span><strong style="color:var(--pass)">60–79%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Intermediate</span><strong style="color:var(--warn)">40–59%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Novice</span><strong style="color:var(--cond)">20–39%</strong></div>
-          <div style="display:flex;justify-content:space-between;"><span>Beginner</span><strong style="color:var(--muted)">0–19%</strong></div>
-        </div>
-      </div>
-    </div>`;
-  }
+  // rank_legend widget removed — its two legends are now embedded directly
+  // in completion_card and score_stat_cards below (behind an ⓘ toggle).
 
   return '';
 }
@@ -6899,7 +6945,7 @@ function updatePracticeSubsubjects(selected) {
 function updatePracticeTopics(selected) {
   const sKey=document.getElementById('ps-subject').value;
   const topics=state.topics[sKey]||[];
-  document.getElementById('ps-topic').innerHTML='<option value="">— Comprehensive / Multiple Topics —</option>'+topics.map((t,i)=>`<option value="${i}">${t.name}</option>`).join('');
+  document.getElementById('ps-topic').innerHTML='<option value="">— Comprehensive / Multiple Topics —</option>'+topics.map((t,i)=>`<option value="${i}">${i+1}. ${t.name}</option>`).join('');
   if(selected!==undefined) document.getElementById('ps-topic').value=selected==null?'':String(selected);
 }
 function openPracticeScoreModal(idx) {
@@ -6923,7 +6969,26 @@ function openPracticeScoreModal(idx) {
     document.getElementById('ps-score').value=p.score??''; document.getElementById('ps-max').value=p.max??50; document.getElementById('ps-notes').value=p.notes||'';
     del.style.display='inline-flex';
   }
+  updatePracticeScorePreview();
   openModal('modal-practice-score');
+}
+// Live-updates the score % + Passed/Borderline/Weak badge as the user types
+// into the Score / Max Items fields, mirroring the Result column in the
+// Practice/Drills table so there's instant feedback right in the modal.
+function updatePracticeScorePreview() {
+  const box = document.getElementById('ps-score-preview');
+  if (!box) return;
+  const score = parseFloat(document.getElementById('ps-score').value);
+  const max = parseFloat(document.getElementById('ps-max').value);
+  if (isNaN(score) || isNaN(max) || max <= 0) { box.style.display = 'none'; return; }
+  const pct = Math.min(100, (score / max) * 100);
+  const remark = getPracticeRemark(pct);
+  const color = pct >= 75 ? 'var(--pass)' : pct >= 65 ? 'var(--warn)' : 'var(--danger)';
+  box.style.display = 'flex';
+  box.innerHTML = `
+    <span style="font-family:var(--font-mono);font-size:15px;font-weight:800;color:${color}">${pct.toFixed(1)}%</span>
+    <span class="badge ${PRACTICE_REMARK_BADGE[remark]}">${remark}</span>
+  `;
 }
 function savePracticeScore(){
   const idx=parseInt(document.getElementById('practice-score-modal-idx').value);
@@ -6938,6 +7003,18 @@ function savePracticeScore(){
 }
 function deletePracticeScore(){const idx=parseInt(document.getElementById('practice-score-modal-idx').value);if(idx>=0&&confirm('Delete this practice score?')){state.practiceScores.splice(idx,1);save();closeModal('modal-practice-score');renderPracticeScores();toast('Practice score deleted.');}}
 function deletePracticeScoreByIdx(idx){if(confirm('Delete this practice score?')){state.practiceScores.splice(idx,1);save();renderPracticeScores();toast('Practice score deleted.');}}
+// Practice/drill scores are individual, standalone attempts for a single
+// subject — unlike a preboard's 6-subject GWA, there's nothing to average
+// or apply a "4 of 6" majority to. Each score is judged on its own against
+// the same 75% / 65% bands used everywhere else in the app.
+function getPracticeRemark(pct) {
+  if (pct === null || pct === undefined) return null;
+  if (pct >= 75) return 'PASSED';
+  if (pct >= 65) return 'BORDERLINE';
+  return 'WEAK';
+}
+const PRACTICE_REMARK_BADGE = { PASSED:'badge-pass', BORDERLINE:'badge-cond', WEAK:'badge-fail' };
+
 function renderPracticeScores(){
   const tbody=document.getElementById('practice-score-tbody'); if(!tbody)return;
   const filters=document.getElementById('practice-score-filters');
@@ -6948,8 +7025,8 @@ function renderPracticeScores(){
     filters.innerHTML += '<div style="flex-basis:100%;height:0"></div>' + ['all',...subs].map(k=>`<button class="btn btn-sm ${practiceFilterSub===k?'btn-primary':'btn-ghost'}" onclick="practiceFilterSub='${k}';renderPracticeScores()">${k==='all'?'All Sub-subjects':(DEFAULT_TOPICS[k]?.name||k)}</button>`).join('');
   }
   const filtered=(state.practiceScores||[]).map((p,i)=>({p,i})).filter(({p})=>practiceFilterMain==='all'||p.mainSubject===practiceFilterMain).filter(({p})=>practiceFilterSub==='all'||p.subjectKey===practiceFilterSub);
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">No practice scores yet. Add a drill, exercise, or practice set.</td></tr>'; renderPracticeAnalytics(); return;}
-  tbody.innerHTML=filtered.map(({p,i})=>{const pct=p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null;const color=pct===null?'var(--muted)':pct>=75?'var(--pass)':pct>=65?'var(--warn)':'var(--danger)';const noteText=(p.notes||'').trim();const noteEsc=noteText.replace(/"/g,'&quot;');const noteCell=noteText?`<span title="${noteEsc}" style="display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;cursor:help">📝 ${noteEsc}</span>`:'<span style="color:var(--muted)">—</span>';return `<tr><td>${i+1}</td><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.date||'—'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td style="max-width:160px">${noteCell}</td><td class="tracker-actions-col" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`}).join('');
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px">No practice scores yet. Add a drill, exercise, or practice set.</td></tr>'; renderPracticeAnalytics(); return;}
+  tbody.innerHTML=filtered.map(({p,i})=>{const pct=p.score!==null&&p.max?Math.min(100,p.score/p.max*100):null;const color=pct===null?'var(--muted)':pct>=75?'var(--pass)':pct>=65?'var(--warn)':'var(--danger)';const remark=getPracticeRemark(pct);const remarkCell=remark?`<span class="badge ${PRACTICE_REMARK_BADGE[remark]}">${remark}</span>`:'<span class="badge badge-none">—</span>';const noteText=(p.notes||'').trim();const noteEsc=noteText.replace(/"/g,'&quot;');const noteCell=noteText?`<span title="${noteEsc}" style="display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;cursor:help">📝 ${noteEsc}</span>`:'<span style="color:var(--muted)">—</span>';return `<tr><td>${i+1}</td><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.date||'—'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td>${remarkCell}</td><td style="max-width:160px">${noteCell}</td><td class="tracker-actions-col" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`}).join('');
   renderPracticeAnalytics();
 }
 
@@ -7686,7 +7763,7 @@ function renderCalView() {
 function updateCalTopics() {
   const sKey = document.getElementById('cal-subject-sel').value;
   const topics = state.topics[sKey] || [];
-  document.getElementById('cal-topic-sel').innerHTML = topics.map((t,i)=>`<option value="${i}">${t.name}</option>`).join('');
+  document.getElementById('cal-topic-sel').innerHTML = topics.map((t,i)=>`<option value="${i}">${i+1}. ${t.name}</option>`).join('');
 }
 
 function calNav(dir) {
