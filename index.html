@@ -7170,12 +7170,14 @@ function renderPracticeScores(){
     return `<tr><td style="font-weight:600">${p.label||'—'}</td><td>${p.type||'—'}</td><td><strong style="color:${SUBJECTS_META[p.mainSubject]?.color||'var(--accent)'}">${p.mainSubject||'—'}</strong></td><td>${DEFAULT_TOPICS[p.subjectKey]?.name||p.subjectKey||'—'}</td><td>${p.topicName||'<span style="color:var(--muted)">Comprehensive</span>'}</td><td>${p.score!==null?`${p.score}/${p.max}`:'—'}</td><td style="font-family:var(--font-mono);color:${color}">${pct===null?'—':pct.toFixed(1)+'%'}</td><td>${remarkCell}</td><td style="max-width:160px">${noteCell}</td><td class="tracker-actions-col" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openPracticeScoreModal(${i})">✏</button><button class="btn btn-danger btn-sm" onclick="deletePracticeScoreByIdx(${i})">✕</button></td></tr>`;
   };
 
+  let totalDayCount=0;
   tbody.innerHTML = monthKeys.map(monthKey=>{
     const dayMap=monthGroups.get(monthKey);
     const monthItems=[...dayMap.values()].flat();
     const monthCollapsed = monthKey in practiceCollapsedMonths ? practiceCollapsedMonths[monthKey] : practiceAllCollapsed;
     const monthAvg=avgOf(monthItems);
     let dateKeys=[...dayMap.keys()];
+    totalDayCount += dateKeys.length;
     dateKeys.sort((a,b)=>{
       if(a==='No date') return 1;
       if(b==='No date') return -1;
@@ -7226,7 +7228,7 @@ function renderPracticeScores(){
       <button class="btn btn-ghost btn-sm" onclick="practiceSortNewestFirst=!practiceSortNewestFirst;renderPracticeScores()">${practiceSortNewestFirst?'⬇ Newest first':'⬆ Oldest first'}</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleAllPracticeGroups(true)">Collapse all</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleAllPracticeGroups(false)">Expand all</button>
-      <span>${dateKeys.length} day${dateKeys.length===1?'':'s'} · ${filtered.length} entr${filtered.length===1?'y':'ies'}</span>
+      <span>${totalDayCount} day${totalDayCount===1?'':'s'} · ${filtered.length} entr${filtered.length===1?'y':'ies'}</span>
     </div>`;
   }
   renderPracticeAnalytics();
