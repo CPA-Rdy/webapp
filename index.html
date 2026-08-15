@@ -3750,20 +3750,39 @@ renderDashboard(); }, 400);
 
   <div id="settings-tab-ai" class="settings-tab-panel">
     <div class="card" style="max-width:560px">
-      <div class="section-title">🤖 AI Study Coach (Gemini)</div>
+      <div class="section-title">🤖 AI Study Coach</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
-        Paste your own Gemini API key to let the Study Coach chat give richer, more flexible answers. Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent2)">aistudio.google.com/apikey</a>.
-        The key is stored <strong>only in this browser</strong> (never written into the app file) and is sent directly from your browser to Google when you chat with the coach. Without a key, the coach still works using its built-in rule-based logic.
+        Paste a free API key to let the Study Coach chat give richer, more flexible answers. Keys are stored <strong>only in this browser</strong> (never written into the app file) and sent directly from your browser to the provider when you chat. Without any key, the coach still works using its built-in rule-based logic.
+      </div>
+      <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:6px;">Groq (recommended — fast, generous free tier)</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+        Get a free key (no credit card) at <a href="https://console.groq.com/keys" target="_blank" rel="noopener" style="color:var(--accent2)">console.groq.com/keys</a>. Tried first if set — Google's free Gemini tier has been getting "model overloaded" errors lately, so Groq is used as the primary and Gemini as a fallback.
       </div>
       <div class="form-row">
-        <label>Gemini API Key</label>
-        <input type="password" id="set-gemini-key" placeholder="AIza..." autocomplete="off">
+        <label>Groq API Key</label>
+        <input type="password" id="set-groq-key" placeholder="gsk_..." autocomplete="off">
       </div>
       <div style="display:flex;gap:8px;margin-top:6px;">
-        <button class="btn btn-primary btn-sm" onclick="saveGeminiKey()">Save Key</button>
-        <button class="btn btn-danger btn-sm" onclick="clearGeminiKey()">Clear Key</button>
+        <button class="btn btn-primary btn-sm" onclick="saveGroqKey()">Save Key</button>
+        <button class="btn btn-danger btn-sm" onclick="clearGroqKey()">Clear Key</button>
       </div>
-      <div id="gemini-key-status" style="font-size:10px;color:var(--muted);margin-top:8px;"></div>
+      <div id="groq-key-status" style="font-size:10px;color:var(--muted);margin-top:8px;margin-bottom:18px;"></div>
+
+      <div style="border-top:1px dashed var(--border);padding-top:14px;">
+        <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:6px;">Gemini (fallback)</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+          Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent2)">aistudio.google.com/apikey</a>. Used if Groq isn't set, or if Groq's request fails.
+        </div>
+        <div class="form-row">
+          <label>Gemini API Key</label>
+          <input type="password" id="set-gemini-key" placeholder="AIza..." autocomplete="off">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button class="btn btn-primary btn-sm" onclick="saveGeminiKey()">Save Key</button>
+          <button class="btn btn-danger btn-sm" onclick="clearGeminiKey()">Clear Key</button>
+        </div>
+        <div id="gemini-key-status" style="font-size:10px;color:var(--muted);margin-top:8px;"></div>
+      </div>
     </div>
 
     <div class="card" style="max-width:560px;margin-top:16px;">
@@ -4755,6 +4774,7 @@ function load() {
   if (!state.subjectColors || typeof state.subjectColors !== 'object') state.subjectColors = {};
   compactActivityLog();
   if (typeof state.geminiApiKey !== 'string') state.geminiApiKey = '';
+  if (typeof state.groqApiKey !== 'string') state.groqApiKey = '';
 }
 
 // ============================================================
@@ -8407,6 +8427,7 @@ function renderSettings() {
   renderAvatarPicker();
   renderRestDayPicker();
   renderGeminiKeyStatus();
+  renderGroqKeyStatus();
 
   // Subject management with add/remove topics
   if (!currentSubjectManageTab) currentSubjectManageTab = MAIN_SUBJECTS[0];
@@ -8652,6 +8673,33 @@ function clearGeminiKey() {
   save();
   renderGeminiKeyStatus();
   toast('Gemini API key cleared.');
+}
+function renderGroqKeyStatus() {
+  const statusEl = document.getElementById('groq-key-status');
+  const inputEl = document.getElementById('set-groq-key');
+  if (!statusEl || !inputEl) return;
+  inputEl.value = '';
+  if (state.groqApiKey) {
+    const tail = state.groqApiKey.slice(-4);
+    statusEl.innerHTML = `✓ Key saved (ends in <span style="font-family:var(--font-mono)">${tail}</span>). Leave the field blank and hit Save to keep it, or paste a new one to replace it.`;
+    statusEl.style.color = 'var(--pass)';
+  } else {
+    statusEl.textContent = 'No key saved.';
+    statusEl.style.color = 'var(--muted)';
+  }
+}
+function saveGroqKey() {
+  const val = document.getElementById('set-groq-key').value.trim();
+  if (val) state.groqApiKey = val;
+  save();
+  renderGroqKeyStatus();
+  toast(val ? 'Groq API key saved!' : 'No change made.');
+}
+function clearGroqKey() {
+  state.groqApiKey = '';
+  save();
+  renderGroqKeyStatus();
+  toast('Groq API key cleared.');
 }
 
 function renderRestDayPicker() {
@@ -9699,11 +9747,19 @@ async function respondToCoach(text) {
   coachChatHistory.pop(); // don't let the placeholder pollute history
 
   let reply;
-  if (state.geminiApiKey) {
-    try {
-      reply = await generateCoachReplyAI(text);
-    } catch (e) {
-      reply = getCoachReply(text) + `<br><span style="opacity:.5;font-size:10px">(AI coach unavailable — showing built-in reply. ${e.message})</span>`;
+  if (state.groqApiKey || state.geminiApiKey) {
+    const errs = [];
+    reply = null;
+    if (state.groqApiKey) {
+      try { reply = await generateCoachReplyGroq(text); }
+      catch (e) { errs.push(`Groq: ${e.message}`); }
+    }
+    if (reply === null && state.geminiApiKey) {
+      try { reply = await generateCoachReplyAI(text); }
+      catch (e) { errs.push(`Gemini: ${e.message}`); }
+    }
+    if (reply === null) {
+      reply = getCoachReply(text) + `<br><span style="opacity:.5;font-size:10px">(AI coach unavailable — showing built-in reply. ${errs.join(' · ')})</span>`;
     }
   } else {
     await new Promise(r => setTimeout(r, 280));
@@ -9748,7 +9804,8 @@ function coachContextForAI(d) {
     `Completed topics with low confidence: ${d.lowConfTopics.length}`,
     d.topicsPerDay !== null ? `Topics/day needed to finish before exam: ${d.topicsPerDay}` : '',
     d.upcomingSessions.length ? `Upcoming Calendar sessions: ${d.upcomingSessions.map(s => `${s.day}${s.time?' '+s.time:''} — ${s.topicName}${s.activity?' ('+s.activity+')':''}`).join('; ')}` : 'No upcoming sessions scheduled on the Calendar',
-    d.recentActivity.length ? `Recent activity (Study History tab): ${d.recentActivity.join('; ')}` : ''
+    d.recentActivity.length ? `Recent activity (Study History tab): ${d.recentActivity.join('; ')}` : '',
+    d.videoStats.total > 0 ? `Video lectures watched: ${d.videoStats.completed}/${d.videoStats.total} (${Math.round(d.videoStats.pct)}%)${Object.keys(d.videoBySubject).length ? ' — by subject: '+Object.entries(d.videoBySubject).map(([mk,v])=>`${mk} ${v.completed}/${v.total}`).join(', ') : ''}` : 'No video lecture sets added yet (note: video lectures are tracked separately from regular topics and are NOT part of the "Overall completion" figure above)'
   ].filter(Boolean).join('\n');
 }
 
@@ -9758,14 +9815,14 @@ function stripCoachHtml(html) {
   return (tmp.textContent || tmp.innerText || '').trim();
 }
 
-async function generateCoachReplyAI(userText) {
+function buildCoachPrompt(userText) {
   const d = coachGetData();
   const context = coachContextForAI(d);
   const historyText = coachChatHistory.slice(-8)
     .map(m => `${m.role === 'coach' ? 'Coach' : 'Candidate'}: ${stripCoachHtml(m.text)}`)
     .join('\n');
 
-  const prompt = `You are an encouraging but direct study coach chatbot inside "CPALE Ready", a tracker app for the Philippine CPA Licensure Exam (CPALE). Answer the candidate's latest message using ONLY the real data given below — never invent numbers. You can be as thorough as the question needs — a quick question deserves a short answer, but if the candidate asks for a detailed study plan, breakdown, or explanation, give a complete, well-organized answer (use <strong>, <br>, and simple bullet-style lines with — for structure; no markdown asterisks).
+  return `You are an encouraging but direct study coach chatbot inside "CPALE Ready", a tracker app for the Philippine CPA Licensure Exam (CPALE). Answer the candidate's latest message using ONLY the real data given below — never invent numbers. You can be as thorough as the question needs — a quick question deserves a short answer, but if the candidate asks for a detailed study plan, breakdown, or explanation, give a complete, well-organized answer (use <strong>, <br>, and simple bullet-style lines with — for structure; no markdown asterisks).
 
 CANDIDATE DATA:
 ${context}
@@ -9776,7 +9833,48 @@ ${historyText}
 Candidate's new message: "${userText}"
 
 Reply as the Coach:`;
+}
 
+// ── GROQ-POWERED REPLIES (tried first if a key is saved — fast, free, and
+// not currently overloaded the way Google's free Gemini tier has been) ──
+async function generateCoachReplyGroq(userText) {
+  const prompt = buildCoachPrompt(userText);
+  // Ordered fastest/most-capable-available first; if the first is down or
+  // decommissioned, the others are still solid free-tier Groq models.
+  const models = ['llama-3.3-70b-versatile', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];
+  const PER_MODEL_TIMEOUT_MS = 10000;
+  let lastErr = 'unknown error';
+  for (const model of models) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.groqApiKey}` },
+        body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 2048 }),
+        signal: controller.signal
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null);
+        lastErr = errBody?.error?.message || `HTTP ${res.status}`;
+        continue;
+      }
+      const json = await res.json();
+      const text = (json.choices?.[0]?.message?.content || '').trim();
+      if (text) return text;
+      lastErr = 'empty response';
+    } catch (e) {
+      lastErr = e.name === 'AbortError' ? `${model} took too long to respond (>${PER_MODEL_TIMEOUT_MS/1000}s)` : (e.message || 'network error');
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new Error(lastErr);
+}
+
+// ── GEMINI-POWERED REPLIES (used as fallback, or primary if no Groq key) ──
+async function generateCoachReplyAI(userText) {
+  const prompt = buildCoachPrompt(userText);
   // Ordered by reliability, not raw quality: 2.5-flash is a solid stable model,
   // 2.5-flash-lite is the cheap/high-availability tier Google keeps very
   // over-provisioned (rarely 503s), and flash-latest is EXPERIMENTAL with
@@ -9932,11 +10030,20 @@ function coachGetData() {
   // Recent Study History activity (last 5 entries) — study/progress/score/milestone
   const recentActivity = (state.activityLog || []).slice(0, 5).map(e => `${e.type}: ${e.title}${e.day ? ' ('+e.day+')' : ''}`);
 
+  const videoStats = getAllVideoStats();
+  const videoBySubject = {};
+  MAIN_SUBJECTS.forEach(mk => {
+    const subs = (SUBJECTS_META[mk]?.subs || []).filter(sk => DEFAULT_TOPICS[sk] && DEFAULT_TOPICS[sk].kind === 'video');
+    let total=0, completed=0;
+    subs.forEach(sk => (state.topics[sk]||[]).forEach(t => { total++; if (t.status===2) completed++; }));
+    if (total > 0) videoBySubject[mk] = { total, completed, pct: Math.round(completed/total*100) };
+  });
+
   return {
     stats, streak, daysLeft, subjPcts, subjStats, sorted, weakest, strongest, allSame,
     latestPreboardAvg, preboardTrend, preboards, lowConfTopics, notStarted,
     topicsPerDay, subjectScores, practiceValid, practiceBySubject, practiceSubjectAvg, practiceWeakest, name, scores, timeOfDay,
-    overallMastery, subjMastery, upcomingSessions, restDays, recentActivity
+    overallMastery, subjMastery, upcomingSessions, restDays, recentActivity, videoStats, videoBySubject
   };
 }
 
@@ -9945,7 +10052,7 @@ function getCoachIntroMessage() {
   const d = coachGetData();
   const noData = d.stats.completed === 0 && d.stats.inprog === 0;
   const hr = { morning:'Good morning', afternoon:'Good afternoon', evening:'Good evening' }[d.timeOfDay];
-  const apiNote = state.geminiApiKey ? '' : `<br><br>💡 <em>Heads up — you haven't added an AI key yet, so I'm answering with a built-in rule-based system rather than a full free-form AI. I can still handle a lot (try the suggestions below), but for open-ended questions in your own words, add a free Gemini API key in <strong>Settings → 🤖 AI Coach</strong>.</em>`;
+  const apiNote = (state.groqApiKey || state.geminiApiKey) ? '' : `<br><br>💡 <em>Heads up — you haven't added an AI key yet, so I'm answering with a built-in rule-based system rather than a full free-form AI. I can still handle a lot (try the suggestions below), but for open-ended questions in your own words, add a free Groq or Gemini API key in <strong>Settings → 🤖 AI Coach</strong>.</em>`;
   if (noData) return `${hr}, <strong>${d.name}</strong>! 👋 I'm your Study Coach — I know your topics, scores, streak, and exam date. You haven't started yet. Ask me where to begin, or just type what's on your mind.${apiNote}`;
   const pct = Math.round(d.stats.pct);
   return `${hr}, <strong>${d.name}</strong>! 👋 You're at <strong>${pct}%</strong> overall with a <strong>${d.streak.current}-day streak</strong>${d.daysLeft !== null ? ` and <strong>${d.daysLeft} days</strong> to go` : ''}. What do you want to know?${apiNote}`;
@@ -10018,6 +10125,18 @@ function getCoachReply(input) {
       coachLastTopic = subj; coachLastIntent = 'info';
       return `<strong>${subj}</strong> stands for <em>${SUBJECT_FULL[subj]}</em>. It's one of the 6 CPALE subjects. You're currently at <strong>${d.subjPcts[subj]}%</strong> completion in this subject.`;
     }
+  }
+
+  // ── VIDEO LECTURES ──────────────────────────────────────────
+  if (/video|lecture/.test(q)) {
+    const vs = d.videoStats;
+    coachLastIntent = 'video';
+    if (vs.total === 0) return `You don't have any video lecture sets added yet. You can add one from the Topic Tracker — pick a subject, then use the 🎥 Video Lectures dropdown to add a collection.`;
+    const subjEntries = Object.entries(d.videoBySubject);
+    const bySubjLine = subjEntries.length
+      ? subjEntries.map(([mk, v]) => `${mk} ${v.completed}/${v.total} (${v.pct}%)`).join(', ')
+      : '';
+    return `<strong>Video Lectures: ${vs.completed}/${vs.total} watched (${Math.round(vs.pct)}%)</strong>${bySubjLine ? `<br>By subject: ${bySubjLine}` : ''}${vs.pct < 100 ? `<br><br>${vs.total - vs.completed} lecture${vs.total-vs.completed===1?'':'s'} left to watch.` : `<br><br>🎉 You've finished every video lecture in your tracker!`}`;
   }
 
   // ── SUBJECT-SPECIFIC QUERY ─────────────────────────────────
@@ -10198,8 +10317,8 @@ function getCoachReply(input) {
     `Hmm — try rephrasing! I understand things like: subject names (FAR, TAX...), "study tip", "how am I doing?", or "motivate me".`
   ];
   let fallback = hints[Math.floor(Math.random() * hints.length)];
-  if (!state.geminiApiKey) {
-    fallback += `<br><br><span style="opacity:.7;font-size:10.5px">💡 This is the built-in rule-based coach — it only understands specific phrasings like the ones above. For genuinely free-form questions in your own words, add a free Gemini API key in <strong>Settings → 🤖 AI Coach</strong>.</span>`;
+  if (!state.groqApiKey && !state.geminiApiKey) {
+    fallback += `<br><br><span style="opacity:.7;font-size:10.5px">💡 This is the built-in rule-based coach — it only understands specific phrasings like the ones above. For genuinely free-form questions in your own words, add a free Groq or Gemini API key in <strong>Settings → 🤖 AI Coach</strong>.</span>`;
   }
   return fallback;
 }
