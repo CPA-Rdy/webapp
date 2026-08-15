@@ -2608,64 +2608,6 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
 
 </style>
 
-
-<style id="targeted-appearance-fix">
-  /* Keep tracker buttons from inheriting the browser's default white button fill. */
-  .tracker-subtab {
-    background: transparent;
-  }
-
-  /* Slightly soften light mode without changing layout, spacing, or component structure. */
-  body.light-mode.theme-violet {
-    --bg:#efedf5 !important;
-    --surface:#e5e2ee !important;
-    --card:#f4f2f7 !important;
-    --border:#d2ccd9 !important;
-  }
-  body.light-mode.theme-cyan {
-    --bg:#eaf5f7 !important;
-    --surface:#deecef !important;
-    --card:#f4f9fa !important;
-    --border:#c8dde1 !important;
-  }
-  body.light-mode.theme-green {
-    --bg:#ebf5ee !important;
-    --surface:#deece2 !important;
-    --card:#f4f9f5 !important;
-    --border:#cbded1 !important;
-  }
-  body.light-mode.theme-rose {
-    --bg:#f8edf1 !important;
-    --surface:#eedee5 !important;
-    --card:#faf4f7 !important;
-    --border:#dfc6d0 !important;
-  }
-  body.light-mode.theme-amber {
-    --bg:#f8f1e5 !important;
-    --surface:#eee3d1 !important;
-    --card:#fbf7ef !important;
-    --border:#e1cfb0 !important;
-  }
-  body.light-mode.theme-indigo {
-    --bg:#edefF8 !important;
-    --surface:#e1e3f2 !important;
-    --card:#f5f5fa !important;
-    --border:#cfd3e6 !important;
-  }
-  body.light-mode.theme-teal {
-    --bg:#e9f4f2 !important;
-    --surface:#dcecea !important;
-    --card:#f4faf8 !important;
-    --border:#c7ddd8 !important;
-  }
-  body.light-mode.theme-orchid {
-    --bg:#f3ecf8 !important;
-    --surface:#e8ddf0 !important;
-    --card:#f8f3fb !important;
-    --border:#d9c8e5 !important;
-  }
-</style>
-
 </head>
 <body>
 
@@ -6949,7 +6891,7 @@ function setScoresheetTab(tab) {
 
 function updatePracticeSubsubjects(selected) {
   const main=document.getElementById('ps-main-subject').value;
-  const subs=SUBJECTS_META[main]?.subs||[];
+  const subs=(SUBJECTS_META[main]?.subs||[]).filter(k => !DEFAULT_TOPICS[k] || DEFAULT_TOPICS[k].kind !== 'video');
   document.getElementById('ps-subject').innerHTML=subs.map(k=>`<option value="${k}">${DEFAULT_TOPICS[k]?.name||k}</option>`).join('');
   if(selected && subs.includes(selected)) document.getElementById('ps-subject').value=selected;
   updatePracticeTopics();
