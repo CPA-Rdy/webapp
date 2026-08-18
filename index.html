@@ -386,12 +386,12 @@ tr:hover td { background: rgba(124,106,247,0.03); }
 /* ---- MOBILE TABLE COLUMNS ---- */
 @media (max-width: 600px) {
   /* Hide non-essential tracker columns on phones */
-  #page-tracker th:nth-child(5),  /* Date Started */
-  #page-tracker td:nth-child(5),
-  #page-tracker th:nth-child(6),  /* Date Ended */
-  #page-tracker td:nth-child(6) { display: none !important; }
+  #page-tracker th:nth-child(6),  /* Date Started */
+  #page-tracker td:nth-child(6),
+  #page-tracker th:nth-child(7),  /* Date Ended */
+  #page-tracker td:nth-child(7) { display: none !important; }
   /* Make topic col wider since we have more room */
-  #page-tracker th:nth-child(2), #page-tracker td:nth-child(2) { min-width: 140px; }
+  #page-tracker th:nth-child(3), #page-tracker td:nth-child(3) { min-width: 140px; }
 }
 
 /* ---- STATUS ---- */
@@ -3522,6 +3522,7 @@ renderDashboard(); }, 400);
       <p>Track your study progress across all CPALE subjects</p>
     </div>
     <div style="display:flex;gap:8px">
+      <button class="btn btn-danger btn-sm" id="tracker-bulk-delete-btn" onclick="bulkDeleteSelectedTopics()" style="display:none">🗑 Delete Selected</button>
       <button class="btn btn-ghost btn-sm" onclick="openAddTopicModal()">+ Add Topic</button>
     </div>
   </div>
@@ -3541,6 +3542,7 @@ renderDashboard(); }, 400);
     <table>
       <thead>
         <tr>
+          <th style="width:26px"><input type="checkbox" id="tracker-select-all" onchange="toggleSelectAllTopics(this.checked)" title="Select all"></th>
           <th>#</th>
           <th>Topic</th>
           <th>Status</th>
@@ -5488,6 +5490,16 @@ function getMasteryLabel(pct) {
   return MASTERY_TIERS[0].label;
 }
 
+// Progress-ring arc color: red while just getting started, gold/yellow once
+// past the halfway mark, green once nearly done. Used for the *arc* only —
+// each subject's own brand color stays on its label/border so rings are
+// still identifiable at a glance without the two signals competing.
+function progressTierColor(pct) {
+  if (pct >= 80) return 'var(--pass)';
+  if (pct >= 50) return 'var(--warn)';
+  return 'var(--danger)';
+}
+
 // Builds the indented sub-subject bars for a main subject, splitting
 // regular topic sub-subjects from video-lecture sub-subjects (which get
 // their own mini progress bar and are excluded from the main % above).
@@ -6415,12 +6427,12 @@ function renderWidgetHTML(w, i) {
   }
 
   if (w.type === 'progress') {
-    const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectStats(subj),color=SUBJECTS_META[subj].color,r=30,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='subRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px"><svg width="74" height="74" viewBox="0 0 74 74"><defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs><circle cx="37" cy="37" r="${r}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="7"/><circle cx="37" cy="37" r="${r}" fill="none" stroke="url(#${g})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 37 37)"/><text x="37" y="35" text-anchor="middle" font-size="12" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="37" y="47" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:10px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
+    const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectStats(subj),color=SUBJECTS_META[subj].color,tier=progressTierColor(st.pct),r=30,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='subRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px"><svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="${r}" fill="none" stroke="${color}" stroke-opacity="0.22" stroke-width="7"/><circle cx="37" cy="37" r="${r}" fill="none" stroke="${tier}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 37 37)"/><text x="37" y="35" text-anchor="middle" font-size="12" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="37" y="47" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:10px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="section-title">📚 Subject Progress</div><div style="font-size:9px;color:var(--muted)">Completed topics</div></div><div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">${rings}</div></div>`;
   }
 
   if (w.type === 'video_progress_rings') {
-    const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectVideoStats(subj);if(!st.total)return '';const color=SUBJECTS_META[subj].color,r=27,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='vidRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:70px"><svg width="68" height="68" viewBox="0 0 68 68"><defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs><circle cx="34" cy="34" r="${r}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="7"/><circle cx="34" cy="34" r="${r}" fill="none" stroke="url(#${g})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 34 34)"/><text x="34" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="34" y="43" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:9px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
+    const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectVideoStats(subj);if(!st.total)return '';const color=SUBJECTS_META[subj].color,tier=progressTierColor(st.pct),r=27,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='vidRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:70px"><svg width="68" height="68" viewBox="0 0 68 68"><circle cx="34" cy="34" r="${r}" fill="none" stroke="${color}" stroke-opacity="0.22" stroke-width="7"/><circle cx="34" cy="34" r="${r}" fill="none" stroke="${tier}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 34 34)"/><text x="34" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="34" y="43" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:9px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
     const has=MAIN_SUBJECTS.some(x=>getMainSubjectVideoStats(x).total>0);
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="section-title">🎥 Video Progress</div><div style="font-size:9px;color:var(--muted)">Lectures watched</div></div>${has?`<div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">${rings}</div>`:'<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">No video lectures added yet.</div>'}</div>`;
   }
@@ -6554,17 +6566,16 @@ function renderWidgetHTML(w, i) {
   if (w.type === 'mastery') {
     const overall = getOverallMastery();
     const r = 34, circ = 2*Math.PI*r, off = circ - (overall.pct/100)*circ;
-    const gid = 'masteryRing_'+w.id;
+    const overallTier = progressTierColor(overall.pct);
     const subRings = MAIN_SUBJECTS.map(subj => {
       const m = getMainSubjectMastery(subj);
       const color = SUBJECTS_META[subj].color;
+      const tier = progressTierColor(m.pct);
       const r2=27, circ2=2*Math.PI*r2, off2=circ2-(m.pct/100)*circ2;
-      const g2 = 'masterySub_'+w.id+'_'+subj;
       return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:70px">
         <svg width="68" height="68" viewBox="0 0 68 68">
-          <defs><linearGradient id="${g2}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs>
-          <circle cx="34" cy="34" r="${r2}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="7"/>
-          <circle cx="34" cy="34" r="${r2}" fill="none" stroke="url(#${g2})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ2.toFixed(1)}" stroke-dashoffset="${off2.toFixed(1)}" transform="rotate(-90 34 34)"/>
+          <circle cx="34" cy="34" r="${r2}" fill="none" stroke="${color}" stroke-opacity="0.22" stroke-width="7"/>
+          <circle cx="34" cy="34" r="${r2}" fill="none" stroke="${tier}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ2.toFixed(1)}" stroke-dashoffset="${off2.toFixed(1)}" transform="rotate(-90 34 34)"/>
           <text x="34" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)" font-family="monospace">${m.rated?m.pct.toFixed(0)+'%':'—'}</text>
           <text x="34" y="43" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${m.rated}/${m.total} rated</text>
         </svg>
@@ -6578,9 +6589,8 @@ function renderWidgetHTML(w, i) {
       </div>
       <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
         <svg width="82" height="82" viewBox="0 0 82 82">
-          <defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent3)"/></linearGradient></defs>
           <circle cx="41" cy="41" r="${r}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="8"/>
-          <circle cx="41" cy="41" r="${r}" fill="none" stroke="url(#${gid})" stroke-width="8" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 41 41)"/>
+          <circle cx="41" cy="41" r="${r}" fill="none" stroke="${overallTier}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 41 41)"/>
           <text x="41" y="38" text-anchor="middle" font-size="14" font-weight="800" fill="var(--text)" font-family="monospace">${overall.rated?overall.pct.toFixed(0)+'%':'—'}</text>
           <text x="41" y="51" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="monospace">${overall.rated}/${overall.total}</text>
         </svg>
@@ -6615,9 +6625,9 @@ function renderWidgetHTML(w, i) {
     const cards = subjectsWithVideo.map(subj => {
       const st = getMainSubjectVideoStats(subj);
       const color = SUBJECTS_META[subj].color;
+      const tier = progressTierColor(st.pct);
       const r = 25, circ = 2 * Math.PI * r;
       const offset = circ - (st.pct / 100) * circ;
-      const gid = 'videoRing_' + w.id + '_' + subj;
 
       const videoSubKeys = SUBJECTS_META[subj].subs.filter(sk =>
         DEFAULT_TOPICS[sk] && DEFAULT_TOPICS[sk].kind === 'video'
@@ -6634,14 +6644,8 @@ function renderWidgetHTML(w, i) {
 
       return `<div style="min-width:100px;flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;border:1px solid var(--border);border-radius:10px;background:var(--surface);">
         <svg width="70" height="70" viewBox="0 0 70 70" aria-label="${subj} video progress">
-          <defs>
-            <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="${color}"/>
-              <stop offset="100%" stop-color="var(--accent3)"/>
-            </linearGradient>
-          </defs>
-          <circle cx="35" cy="35" r="${r}" fill="none" stroke="var(--muted)" stroke-opacity="0.28" stroke-width="7"/>
-          <circle cx="35" cy="35" r="${r}" fill="none" stroke="url(#${gid})" stroke-width="7"
+          <circle cx="35" cy="35" r="${r}" fill="none" stroke="${color}" stroke-opacity="0.22" stroke-width="7"/>
+          <circle cx="35" cy="35" r="${r}" fill="none" stroke="${tier}" stroke-width="7"
             stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}"
             stroke-dashoffset="${offset.toFixed(1)}"
             transform="rotate(-90 35 35)"/>
@@ -7799,6 +7803,7 @@ function renderTracker() {
     }).join('');
     const doneRow = t.status===2 ? 'opacity:0.6' : '';
     return `<tr style="${doneRow}">
+      <td><input type="checkbox" class="tracker-row-check" ${selectedTopicIndices.has(i)?'checked':''} onchange="toggleTopicSelect(${i},this.checked)"></td>
       <td style="color:var(--muted);font-size:11px;font-family:var(--font-mono)">${i+1}</td>
       <td style="font-size:13px;max-width:260px">${t.name}</td>
       <td>
@@ -7816,7 +7821,8 @@ function renderTracker() {
         <button class="btn btn-danger btn-sm" onclick="deleteTopic('${currentTrackerSub}',${i})" title="Delete">✕</button>
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">No topics. Add one!</td></tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px">No topics. Add one!</td></tr>';
+  updateTrackerBulkBar();
 
   // Populate modal subjects
   document.getElementById('modal-topic-subject').innerHTML = ALL_SUBJECT_KEYS.map(k =>
@@ -7827,11 +7833,13 @@ function renderTracker() {
 function setTrackerMain(key) {
   currentTrackerMain = key;
   currentTrackerSub = SUBJECTS_META[key].subs[0];
+  selectedTopicIndices = new Set();
   renderTracker();
 }
 
 function setTrackerSub(key) {
   currentTrackerSub = key;
+  selectedTopicIndices = new Set();
   renderTracker();
 }
 
@@ -7880,9 +7888,53 @@ function editTopicName(sKey, idx) {
 
 function deleteTopic(sKey, idx) {
   if (confirm('Delete this topic?')) {
-    state.topics[sKey].splice(idx,1); save(); renderTracker();
+    state.topics[sKey].splice(idx,1);
+    selectedTopicIndices = new Set();
+    save(); renderTracker();
     toast('Topic deleted.');
   }
+}
+
+// ============================================================
+// TRACKER BULK SELECT / DELETE
+// ============================================================
+let selectedTopicIndices = new Set();
+
+function toggleTopicSelect(idx, checked) {
+  if (checked) selectedTopicIndices.add(idx); else selectedTopicIndices.delete(idx);
+  updateTrackerBulkBar();
+}
+
+function toggleSelectAllTopics(checked) {
+  const topics = state.topics[currentTrackerSub] || [];
+  selectedTopicIndices = checked ? new Set(topics.map((_,i)=>i)) : new Set();
+  renderTracker();
+}
+
+function updateTrackerBulkBar() {
+  const btn = document.getElementById('tracker-bulk-delete-btn');
+  const selectAllCb = document.getElementById('tracker-select-all');
+  const topics = state.topics[currentTrackerSub] || [];
+  const n = selectedTopicIndices.size;
+  if (btn) {
+    btn.style.display = n ? 'inline-flex' : 'none';
+    btn.textContent = `🗑 Delete Selected (${n})`;
+  }
+  if (selectAllCb) {
+    selectAllCb.checked = topics.length > 0 && n === topics.length;
+    selectAllCb.indeterminate = n > 0 && n < topics.length;
+  }
+}
+
+function bulkDeleteSelectedTopics() {
+  const n = selectedTopicIndices.size;
+  if (!n) return;
+  if (!confirm(`Delete ${n} selected topic${n>1?'s':''} from ${DEFAULT_TOPICS[currentTrackerSub]?.name||currentTrackerSub}? This can't be undone.`)) return;
+  const idxs = Array.from(selectedTopicIndices).sort((a,b)=>b-a);
+  idxs.forEach(i => state.topics[currentTrackerSub].splice(i,1));
+  selectedTopicIndices = new Set();
+  save(); renderTracker(); renderDashboard(); renderCoach();
+  toast(`${n} topic${n>1?'s':''} deleted.`);
 }
 
 function openAddTopicModal() {
