@@ -3622,7 +3622,7 @@ renderDashboard(); }, 400);
         <select id="cal-main-subject-sel" onchange="updateCalSubsubjects();toggleCalGeneralEvent()"></select>
       </div>
       <div class="form-row" id="cal-subsubject-cell">
-        <label>Sub-subject</label>
+        <label>Sub-subject <span style="font-weight:400;color:var(--muted)">(optional — leave blank for an exam day or subject-wide session)</span></label>
         <select id="cal-subject-sel" onchange="updateCalTopics()"></select>
       </div>
     </div>
@@ -4648,6 +4648,7 @@ MAIN_SUBJECTS.forEach(k => { DEFAULT_SUBJECT_COLORS[k] = SUBJECTS_META[k].color;
 // spaced-repetition modes, distinct from the topic's own status/confidence.
 const CAL_ACTIVITY_TYPES = [
   { id:'firstview',  icon:'👀', label:'First View',        desc:'Seeing this topic for the first time' },
+  { id:'continuation', icon:'➡️', label:'Continuation',    desc:'Picking up where a previous session left off' },
   { id:'review',     icon:'🔁', label:'Review',            desc:'Re-reading or re-watching to refresh it' },
   { id:'recall',     icon:'🧠', label:'Active Recall',     desc:'Recalling it from memory, no notes' },
   { id:'retrieval',  icon:'📝', label:'Retrieval Practice',desc:'Quizzing / testing yourself on it' },
@@ -5967,8 +5968,8 @@ function renderUpcomingSessions() {
     const dStr = localDateStr(d);
     const evts = (state.calEvents[dStr] || []);
     evts.forEach(e => {
-      const mainKey = e.subjectKey ? Object.keys(SUBJECTS_META).find(mk => SUBJECTS_META[mk].subs.includes(e.subjectKey)) : null;
-      const color = mainKey ? SUBJECTS_META[mainKey].color : 'var(--muted)';
+      const mainKey = calEventMainKey(e);
+      const color = calEventColor(e);
       upcoming.push({ dStr, d, e, color, mainKey });
     });
   }
@@ -5980,7 +5981,7 @@ function renderUpcomingSessions() {
     const isToday = dStr === localDateStr();
     const isTomorrow = dStr === (() => { const t = new Date(); t.setDate(t.getDate()+1); return localDateStr(t); })();
     const dayLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : d.toLocaleDateString('default', { weekday:'short', month:'short', day:'numeric' });
-    const subjectName = e.subjectKey ? (DEFAULT_TOPICS[e.subjectKey]?.name || e.subjectKey) : 'General';
+    const subjectName = calEventSubjectLabel(e);
     return `<div class="reminder-item">
       <div class="reminder-dot" style="background:${color}"></div>
       <div style="flex:1;min-width:0">
@@ -8086,7 +8087,7 @@ function renderCalendar() {
 function updateCalSubsubjects(selected, selectedTopicIdx) {
   const main = document.getElementById('cal-main-subject-sel').value;
   const subs = SUBJECTS_META[main]?.subs || [];
-  document.getElementById('cal-subject-sel').innerHTML = subs.map(k=>`<option value="${k}">${DEFAULT_TOPICS[k]?.name||k}</option>`).join('');
+  document.getElementById('cal-subject-sel').innerHTML = '<option value="">— No specific sub-subject (e.g. exam day) —</option>'+subs.map(k=>`<option value="${k}">${DEFAULT_TOPICS[k]?.name||k}</option>`).join('');
   if (selected && subs.includes(selected)) document.getElementById('cal-subject-sel').value = selected;
   updateCalTopics(selectedTopicIdx);
 }
@@ -8140,10 +8141,37 @@ function updateCalTopics(selectedIdx) {
   if (selectedIdx !== undefined && selectedIdx !== null && topics[selectedIdx]) document.getElementById('cal-topic-sel').value = selectedIdx;
 }
 
+// Resolves an event's main subject (e.g. FAR), whether it was stored directly
+// (mainKey — used when no sub-subject was picked) or has to be derived from
+// its sub-subject (subjectKey), for events saved before mainKey existed.
+function calEventMainKey(e) {
+  if (e.mainKey) return e.mainKey;
+  return e.subjectKey ? (Object.keys(SUBJECTS_META).find(mk => SUBJECTS_META[mk].subs.includes(e.subjectKey)) || null) : null;
+}
+
+// Subject text to show for an event: sub-subject name if one was picked,
+// else the main subject name (e.g. "FAR" for an exam-day entry with no
+// specific sub-subject), else "General" for subject-less events.
+function calEventSubjectLabel(e) {
+  if (e.subjectKey) return DEFAULT_TOPICS[e.subjectKey]?.name || e.subjectKey;
+  const mk = calEventMainKey(e);
+  return mk ? (SUBJECTS_META[mk]?.name || mk) : 'General';
+}
+
+// Color to use for an event's pills/borders, based on its main subject.
+function calEventColor(e) {
+  const mk = calEventMainKey(e);
+  return mk ? (SUBJECTS_META[mk]?.color || 'var(--accent)') : 'var(--muted)';
+}
+
 // Best label to show for a calendar session: custom label, then topic name,
-// then a fallback for comprehensive/multi-topic or exam-style sessions with neither.
+// then a fallback for comprehensive/multi-topic or exam-style sessions with
+// neither — using the main subject name when one was set (e.g. exam days).
 function calEventDisplayName(e) {
-  return e.label || e.topicName || 'Comprehensive / Multiple Topics';
+  if (e.label) return e.label;
+  if (e.topicName) return e.topicName;
+  const mk = calEventMainKey(e);
+  return mk ? `${SUBJECTS_META[mk]?.name || mk} — Comprehensive` : 'Comprehensive / Multiple Topics';
 }
 
 // ============================================================
@@ -8264,9 +8292,7 @@ function renderCalGrid() {
     const isWeekend = colIdx===0||colIdx===6;
 
     const eventPills = events.slice(0,3).map((e,i)=>{
-      const sKey=e.subjectKey;
-      const mainKey=sKey?Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(sKey)):null;
-      const color=mainKey?SUBJECTS_META[mainKey].color:'var(--muted)';
+      const color=calEventColor(e);
       const actIcon = e.activityType ? (calActivityById(e.activityType)?.icon||'') + ' ' : '';
       return `<div draggable="true" ondragstart="calDragStart(event,'${dStr}',${i})" ondragend="calDragEnd()" style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;max-width:100%;cursor:grab;">${actIcon}${calEventDisplayName(e)}</div>`;
     }).join('');
@@ -8336,11 +8362,10 @@ function renderCalWeek() {
         .map((e,idx)=>({e,idx}))
         .filter(({e}) => e.time && parseInt(e.time.split(':')[0]) === hour);
       const evContent = events.map(({e,idx}) => {
-        const mainKey = e.subjectKey ? Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(e.subjectKey)) : null;
-        const color = mainKey ? SUBJECTS_META[mainKey].color : 'var(--muted)';
+        const color = calEventColor(e);
         const durH = Math.max(1, Math.round((e.duration||60)/52));
         const actIcon = e.activityType ? (calActivityById(e.activityType)?.icon||'') + ' ' : '';
-        const subjLabel = e.subjectKey ? (DEFAULT_TOPICS[e.subjectKey]?.name||'') : 'General';
+        const subjLabel = calEventSubjectLabel(e);
         return `<div draggable="true" ondragstart="calDragStart(event,'${dStr}',${idx})" ondragend="calDragEnd()" style="background:${color}25;border-left:3px solid ${color};padding:2px 5px;font-size:9px;border-radius:3px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;color:${color};font-weight:700;cursor:grab;">${actIcon}${subjLabel} · ${calEventDisplayName(e)}</div>`;
       }).join('');
       html += `<div class="cal-week-cell" style="background:${isToday?'rgba(124,106,247,0.03)':'var(--card)'};min-width:0;overflow:hidden;border-bottom:1px solid var(--border);border-left:1px solid var(--border);position:relative;cursor:pointer;padding:2px;transition:background 0.15s;" onclick="selectCalDay('${dStr}')" ondragover="calAllowDrop(event);this.style.outline='2px dashed var(--accent)'" ondragleave="this.style.outline='none'" ondrop="calDropOnSlot(event,'${dStr}',${hour})" onmouseenter="this.style.background='rgba(124,106,247,0.06)'" onmouseleave="this.style.background='${isToday?'rgba(124,106,247,0.03)':'var(--card)'}'">
@@ -8379,8 +8404,7 @@ function renderCalDay() {
     html += `<div class="cal-timeline-cell" ondragover="calAllowDrop(event);this.style.outline='2px dashed var(--accent)'" ondragleave="this.style.outline='none'" ondrop="calDropOnSlot(event,'${selectedCalDay}',${hour})">`;
     if (eventsThisHour.length) {
       eventsThisHour.forEach(({e, idx}) => {
-        const mainKey = e.subjectKey ? Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(e.subjectKey)) : null;
-        const color = mainKey ? SUBJECTS_META[mainKey].color : 'var(--muted)';
+        const color = calEventColor(e);
         const durationPx = Math.max(Math.round((e.duration||60)/60*44), 20);
         const act = e.activityType ? calActivityById(e.activityType) : null;
         html += `<div class="cal-timeline-event" draggable="true" ondragstart="calDragStart(event,'${selectedCalDay}',${idx})" ondragend="calDragEnd()" style="background:${color}25;border-left:3px solid ${color};color:${color};top:2px;height:${durationPx}px;cursor:grab;" title="${act?act.label+' · ':''}${calEventDisplayName(e)}${e.duration ? ' · '+e.duration+'min' : ''}">
@@ -8397,8 +8421,7 @@ function renderCalDay() {
     html += `<div class="cal-timeline-hour" style="color:var(--accent2)">Any</div>`;
     html += `<div class="cal-timeline-cell" style="height:auto;padding:4px" ondragover="calAllowDrop(event);this.style.outline='2px dashed var(--accent)'" ondragleave="this.style.outline='none'" ondrop="calDropOnSlot(event,'${selectedCalDay}',null)">`;
     unscheduled.forEach(({e, idx}) => {
-      const mainKey = e.subjectKey ? Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(e.subjectKey)) : null;
-      const color = mainKey ? SUBJECTS_META[mainKey].color : 'var(--muted)';
+      const color = calEventColor(e);
       html += `<div class="cal-timeline-event" draggable="true" ondragstart="calDragStart(event,'${selectedCalDay}',${idx})" ondragend="calDragEnd()" style="position:relative;background:${color}25;border-left:3px solid ${color};color:${color};margin-bottom:2px;height:auto;white-space:normal;cursor:grab;">
         ${calEventDisplayName(e)} ${e.duration ? '<span style="font-weight:400;opacity:0.7">· '+e.duration+'min</span>' : ''}
       </div>`;
@@ -8487,14 +8510,13 @@ function renderCalDayEvents() {
     document.getElementById('cal-day-events').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">No sessions. Add one below.</div>';
     return;
   }
-  const mainKeyOf = sKey => sKey ? Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(sKey)) : null;
   document.getElementById('cal-day-events').innerHTML = events.map((e,i) => {
-    const color = e.subjectKey ? (SUBJECTS_META[mainKeyOf(e.subjectKey)]?.color||'var(--accent)') : 'var(--muted)';
+    const color = calEventColor(e);
     const act = e.activityType ? calActivityById(e.activityType) : null;
     return `<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:8px;padding:10px;margin-bottom:7px;cursor:pointer;transition:background 0.15s" onclick="openEditCalEvent('${selectedCalDay}',${i})" onmouseenter="this.style.background='rgba(124,106,247,0.08)'" onmouseleave="this.style.background='var(--surface)'" title="Click to edit">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div style="font-size:12px;font-weight:600;color:${color}">${e.subjectKey ? (DEFAULT_TOPICS[e.subjectKey]?.name||'') : 'General'}</div>
+          <div style="font-size:12px;font-weight:600;color:${color}">${calEventSubjectLabel(e)}</div>
           <div style="font-size:12px;color:var(--text)">${calEventDisplayName(e)}</div>
           ${act?`<div style="display:inline-block;margin-top:3px;font-size:9px;font-weight:700;color:${color};background:${color}18;border-radius:99px;padding:2px 8px">${act.icon} ${act.label}</div>`:''}
           <div style="font-size:10px;color:var(--muted);margin-top:3px">${e.time ? e.time : 'Any time'}${e.duration ? ' · '+e.duration+'min' : ''}${e.notes?' · '+e.notes:''}</div>
@@ -8549,7 +8571,7 @@ function openEditCalEvent(dateStr, idx) {
   const saveBtn=document.getElementById('cal-session-modal-save-btn');
   if(saveBtn) saveBtn.textContent='Save Changes';
 
-  const mainKey = ev.subjectKey ? (Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(ev.subjectKey)) || MAIN_SUBJECTS[0]) : '';
+  const mainKey = ev.mainKey || (ev.subjectKey ? (Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(ev.subjectKey)) || MAIN_SUBJECTS[0]) : '');
   const mainSel=document.getElementById('cal-main-subject-sel');
   mainSel.innerHTML='<option value="">— General Event (no subject) —</option>'+MAIN_SUBJECTS.map(k=>`<option value="${k}">${SUBJECTS_META[k].name} — ${SUBJECTS_META[k].fullName}</option>`).join('');
   mainSel.value = mainKey;
@@ -8579,15 +8601,18 @@ function saveCalEvent() {
     if (!labelVal) { toast('Enter a title for this event'); return; }
   } else {
     sKey=document.getElementById('cal-subject-sel').value;
-    if(!sKey){toast('Select a sub-subject');return;}
-    const topicRaw=document.getElementById('cal-topic-sel').value;
-    const topics=state.topics[sKey]||[];
-    topicIdx=topicRaw===''?null:parseInt(topicRaw);
-    topic=topicIdx!==null?topics[topicIdx]:null;
+    // Sub-subject is optional — a session can be tied to just a main subject
+    // (e.g. "FAR") with no specific sub-subject, for things like exam days.
+    if (sKey) {
+      const topicRaw=document.getElementById('cal-topic-sel').value;
+      const topics=state.topics[sKey]||[];
+      topicIdx=topicRaw===''?null:parseInt(topicRaw);
+      topic=topicIdx!==null?topics[topicIdx]:null;
+    }
   }
   const durationValue=document.getElementById('cal-duration').value.trim();
   const eventData = {
-    subjectKey:sKey, topicIdx, topicName:topic?topic.name:'',
+    mainKey:isGeneral?'':mainKey, subjectKey:sKey, topicIdx, topicName:topic?topic.name:'',
     label:document.getElementById('cal-label').value,
     activityType:document.getElementById('cal-activity-type').value||'',
     time:document.getElementById('cal-time').value,
