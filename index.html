@@ -2590,10 +2590,17 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
 
 
 .history-subject-area{flex:1 1 260px;min-width:220px}
-.history-day-select{width:100%;border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px 6px;font:800 10px var(--font-body);text-transform:uppercase;letter-spacing:1.5px;text-align:left}
-.history-day-select span:last-child{font-size:9px;letter-spacing:.3px;text-transform:none;font-weight:600;opacity:0;transition:opacity .15s}
-.history-day-select:hover span:last-child,.history-day-select.selected span:last-child{opacity:1}
-.history-day-select:hover span:first-child,.history-day-select.selected span:first-child{color:var(--accent)}
+.history-day-select{width:100%;border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px 6px;font:800 10px var(--font-body);text-transform:uppercase;letter-spacing:1.5px;text-align:left;list-style:none}
+.history-day-select::-webkit-details-marker{display:none}
+.history-day-select::marker{display:none;content:''}
+.history-day-select-right{display:flex;align-items:center;gap:10px}
+.history-day-showonly{font-size:9px;letter-spacing:.3px;text-transform:none;font-weight:600;opacity:0;transition:opacity .15s;cursor:pointer}
+.history-day-select:hover .history-day-showonly,.history-day-select.selected .history-day-showonly{opacity:1}
+.history-day-select:hover .history-day-label,.history-day-select.selected .history-day-label{color:var(--accent)}
+.history-day-count{font-weight:600;opacity:.6;letter-spacing:.3px;text-transform:none;margin-left:6px}
+.history-day-caret{font-size:11px;color:var(--muted);opacity:.6;transition:transform .15s;display:inline-block}
+.history-day-group{margin-bottom:18px}
+.history-day-group[open]>.history-day-select .history-day-caret{transform:rotate(180deg)}
 .history-selected-day{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));border-radius:8px;background:color-mix(in srgb,var(--accent) 5%,var(--surface));color:var(--muted);font-size:10px}
 
 
@@ -3681,6 +3688,10 @@ renderDashboard(); }, 400);
         <input id="history-date-picker" class="history-date-picker" type="date" onchange="selectHistoryDate(this.value)" aria-label="Select a history date">
       </div>
     </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px">
+    <button class="btn btn-ghost btn-sm" onclick="toggleAllHistoryDays(false)">⌃ Collapse All</button>
+    <button class="btn btn-ghost btn-sm" onclick="toggleAllHistoryDays(true)">⌄ Expand All</button>
   </div>
   <div id="history-list"></div>
 </div>
@@ -5393,7 +5404,7 @@ function getAllTopicStats() {
       else notstarted++;
     });
   });
-  return { total, completed, inprog, notstarted, pct: total ? (completed+inprog*0.5)/total*100 : 0 };
+  return { total, completed, inprog, notstarted, pct: total ? completed/total*100 : 0 };
 }
 
 function getAllVideoStats() {
@@ -5407,49 +5418,39 @@ function getAllVideoStats() {
       else notstarted++;
     });
   });
-  return { total, completed, inprog, notstarted, pct: total ? (completed+inprog*0.5)/total*100 : 0 };
+  return { total, completed, inprog, notstarted, pct: total ? completed/total*100 : 0 };
 }
 
-// Completion % gives full credit for a "Completed" topic and half credit for
-// one that's "In Progress" — so starting something moves the bar/ring a bit
-// instead of leaving it flat at 0% until the moment it's finished. The raw
-// `completed` count (used for "X/Y done" labels) is untouched by this — only
-// `pct` (used for rings/bars) reflects the partial credit.
 function getSubjectStats(sKey) {
   const arr = state.topics[sKey] || [];
   const total = arr.length;
   const completed = arr.filter(t=>t.status===2).length;
   const inprog = arr.filter(t=>t.status===1).length;
-  const weighted = completed + inprog*0.5;
-  return { total, completed, inprog, pct: total ? weighted/total*100 : 0 };
+  return { total, completed, inprog, pct: total ? completed/total*100 : 0 };
 }
 
 function getMainSubjectStats(mainKey) {
   const subs = SUBJECTS_META[mainKey].subs;
-  let total=0, completed=0, inprog=0;
+  let total=0, completed=0;
   subs.forEach(k => {
     if (DEFAULT_TOPICS[k] && DEFAULT_TOPICS[k].kind === 'video') return; // video lectures don't count toward subject completion
     const arr = state.topics[k]||[];
     total += arr.length;
     completed += arr.filter(t=>t.status===2).length;
-    inprog += arr.filter(t=>t.status===1).length;
   });
-  const weighted = completed + inprog*0.5;
-  return { total, completed, inprog, pct: total ? weighted/total*100 : 0 };
+  return { total, completed, pct: total ? completed/total*100 : 0 };
 }
 
 function getMainSubjectVideoStats(mainKey) {
   const subs = SUBJECTS_META[mainKey].subs;
-  let total=0, completed=0, inprog=0;
+  let total=0, completed=0;
   subs.forEach(k => {
     if (!DEFAULT_TOPICS[k] || DEFAULT_TOPICS[k].kind !== 'video') return;
     const arr = state.topics[k]||[];
     total += arr.length;
     completed += arr.filter(t=>t.status===2).length;
-    inprog += arr.filter(t=>t.status===1).length;
   });
-  const weighted = completed + inprog*0.5;
-  return { total, completed, inprog, pct: total ? weighted/total*100 : 0 };
+  return { total, completed, pct: total ? completed/total*100 : 0 };
 }
 
 // Mastery = how well you actually KNOW the material, based on the 1–5 confidence
@@ -5788,6 +5789,10 @@ function historyArchiveMatches(a) {
   }
   return true;
 }
+function toggleAllHistoryDays(expand) {
+  document.querySelectorAll('#history-list .history-day-group').forEach(d => { d.open = expand; });
+}
+
 function renderHistoryPage() {
   const list=document.getElementById('history-list'); if(!list)return;
   renderHistorySubjectChips();
@@ -5806,12 +5811,21 @@ function renderHistoryPage() {
   const dayLabel=d=>d===today?'Today':d===yesterday?'Yesterday':new Date(d+'T00:00:00').toLocaleDateString('default',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
   const recentHTML=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(day=>{
     const rows=groups[day].map(e=>{const t=e.ts ? new Date(e.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}) : 'Time unavailable';const icon=e.type==='score'?'✎':e.type==='milestone'?'🎯':e.type==='progress'?'✓':'📚';const color=e.type==='score'?'var(--accent2)':e.type==='milestone'?'var(--accent3)':e.type==='progress'?'var(--pass)':'var(--accent)';return `<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);align-items:flex-start"><div style="width:30px;height:30px;border-radius:9px;background:${color}18;border:1px solid ${color}35;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${icon}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--text)">${e.title}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5">${e.detail||'Activity'}</div></div><div style="font:10px var(--font-mono);color:var(--muted);white-space:nowrap" title="${e.ts?'Recorded automatically':'This older record only contains a date'}">${t}</div></div>`}).join('');
-    return `<div data-history-day="${day}" style="margin-bottom:18px">
-      <button class="history-day-select ${historySelectedDay===day?'selected':''}" onclick="selectHistoryDay('${day}')" title="Show only this day">
-        <span>${dayLabel(day)}</span><span>Show only this day →</span>
-      </button>
-      <div class="card" style="padding:4px 14px">${rows}</div>
-    </div>`;
+    const count = groups[day].length;
+    // Today (and an explicitly-selected single day) start expanded; every
+    // other day starts collapsed so a long history doesn't turn into one
+    // huge scroll — each day is one click away via its own summary row.
+    const startOpen = day === today || historySelectedDay === day || historyDate === day;
+    return `<details class="history-day-group" data-history-day="${day}" ${startOpen?'open':''}>
+      <summary class="history-day-select ${historySelectedDay===day?'selected':''}">
+        <span class="history-day-label">${dayLabel(day)}<span class="history-day-count">${count} ${count===1?'entry':'entries'}</span></span>
+        <span class="history-day-select-right">
+          <span class="history-day-showonly" onclick="event.preventDefault();event.stopPropagation();selectHistoryDay('${day}')">Show only this day →</span>
+          <span class="history-day-caret">⌄</span>
+        </span>
+      </summary>
+      <div class="card" style="padding:4px 14px;margin-top:6px">${rows}</div>
+    </details>`;
   }).join('');
   const archiveHTML=archive.length ? (() => {
     const months={};
@@ -5870,7 +5884,7 @@ function renderWeeklyFootprintHTML() {
   const dayNames=days.map(d=>new Date(d+'T00:00:00').toLocaleDateString('default',{weekday:'short'}));
   const rows=MAIN_SUBJECTS.map(subj=>{
     const color=SUBJECTS_META[subj].color;
-    const cells=subjectData[subj].map((v,i)=>`<div title="${subj} · ${dayNames[i]}: ${v} ${v===1?'activity':'activities'}" style="height:18px;border-radius:5px;background:${v?color:'var(--border)'};opacity:${v?0.35+0.65*(v/max):0.45};box-shadow:${v?'inset 0 0 0 1px '+color+'35':'none'}"></div>`).join('');
+    const cells=subjectData[subj].map((v,i)=>`<div title="${subj} · ${dayNames[i]}: ${v} activity${v===1?'':'ies'}" style="height:18px;border-radius:5px;background:${v?color:'var(--border)'};opacity:${v?0.35+0.65*(v/max):0.45};box-shadow:${v?'inset 0 0 0 1px '+color+'35':'none'}"></div>`).join('');
     const total=subjectData[subj].reduce((a,b)=>a+b,0);
     return `<div style="display:grid;grid-template-columns:42px repeat(7,1fr) 32px;gap:5px;align-items:center;margin-bottom:6px"><div style="font-size:10px;font-weight:800;color:${color}">${subj}</div>${cells}<div style="font:9px var(--font-mono);text-align:right;color:var(--muted)">${total}</div></div>`;
   }).join('');
@@ -8694,43 +8708,27 @@ function renderSettings() {
       const topics = state.topics[sk] || [];
       const isCustom = state.customSubSubjects && state.customSubSubjects[mk] && state.customSubSubjects[mk].some(s => s.key === sk);
       const isVideo = DEFAULT_TOPICS[sk] && DEFAULT_TOPICS[sk].kind === 'video';
-      const sel = settingsSelectedTopics[sk] || new Set();
-      const selN = sel.size;
       return `<div style="margin-bottom:10px;padding:8px;background:var(--surface);border-radius:8px;border:1px solid var(--border)${isCustom?';border-color:'+meta.color+'55':''}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <div>
             ${isVideo ? '<span style="font-size:11px;margin-right:2px">🎥</span>' : ''}
             <span style="font-size:11px;font-weight:700;color:${meta.color}">${DEFAULT_TOPICS[sk].name}</span>
             ${isCustom ? `<span style="font-size:9px;color:${meta.color};opacity:0.7;margin-left:5px;border:1px solid ${meta.color}44;border-radius:4px;padding:1px 5px">${isVideo ? 'video lecture' : 'custom'}</span>` : ''}
             <span style="font-size:10px;color:var(--muted);margin-left:6px">${ss.completed}/${ss.total} done</span>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;gap:6px">
             <button class="btn btn-ghost btn-sm" onclick="setTrackerMain('${mk}');setTrackerSub('${sk}');showPage('tracker')" title="Go to tracker">↗ Tracker</button>
             <button class="btn btn-ghost btn-sm" onclick="promptEditSubjectName('${sk}')" title="Edit subject name">✎ Name</button>
             ${isCustom ? `<button class="btn btn-ghost btn-sm" onclick="toggleSubSubjectKind('${mk}','${sk}')" title="${isVideo ? 'Convert to a regular topics sub-subject' : 'Convert to a video-lecture set'}">${isVideo ? '📋 Make Topics' : '🎥 Make Video'}</button>` : ''}
-            ${isCustom ? `<select onchange="moveSubSubjectToMain('${mk}','${sk}',this.value)" title="Move this sub-subject to a different subject" style="font-size:10px;padding:3px 4px;border-radius:6px;background:var(--card);border:1px solid var(--border);color:var(--dim)">
-              ${MAIN_SUBJECTS.map(m2=>`<option value="${m2}" ${m2===mk?'selected':''}>↷ ${m2}</option>`).join('')}
-            </select>` : ''}
             <button class="btn btn-primary btn-sm" onclick="promptAddTopicInline('${sk}')" title="Add topic">+ Topic</button>
             ${isCustom ? `<button class="btn btn-danger btn-sm" onclick="deleteSubSubject('${mk}','${sk}')" title="Remove this sub-subject">🗑</button>` : ''}
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px${topics.length?'':';display:none'}">
-          <input type="checkbox" id="settings-select-all-${sk}" ${topics.length&&selN===topics.length?'checked':''} onchange="toggleSettingsSelectAll('${sk}',this.checked)" title="Select all">
-          <span style="font-size:9px;color:var(--muted)">Select all</span>
-          <button class="btn btn-danger btn-sm" id="settings-bulk-delete-${sk}" onclick="bulkDeleteSettingsTopics('${sk}')" style="display:${selN?'inline-flex':'none'};margin-left:auto;font-size:10px">🗑 Delete Selected (${selN})</button>
-        </div>
         <div id="manage-topics-${sk}" style="max-height:140px;overflow-y:auto">
           ${topics.map((t, i) => `
             <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border)">
-              <input type="checkbox" ${sel.has(i)?'checked':''} onchange="toggleSettingsTopicSelect('${sk}',${i},this.checked)">
               <span style="flex:1;font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.name}">${t.name}</span>
               <span style="font-size:10px;color:${t.status===2?'var(--pass)':t.status===1?'var(--warn)':'var(--muted)'}">${t.status===2?'✓':t.status===1?'◉':'○'}</span>
-              <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px" onclick="renameTopicFromSettings('${sk}',${i})" title="Rename topic">✎</button>
-              <select onchange="if(this.value){moveTopicToSub('${sk}',${i},this.value);}else{this.selectedIndex=0;}" style="font-size:9px;max-width:82px;padding:1px 2px;border-radius:5px;background:var(--card);border:1px solid var(--border);color:var(--muted)" title="Move to a different sub-subject">
-                <option value="">⇄ Move…</option>
-                ${subSubjectOptionsHtml(sk)}
-              </select>
               <button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px" onclick="deleteTopicFromSettings('${sk}',${i})" title="Remove">✕</button>
             </div>`).join('') || '<div style="font-size:11px;color:var(--muted);padding:4px 0">No topics yet.</div>'}
         </div>
@@ -8882,113 +8880,6 @@ function deleteSubSubject(mainKey, sk) {
   renderSettings();
   if (document.getElementById('page-tracker').classList.contains('active')) renderTracker();
   toast('Sub-subject removed.');
-}
-
-// ============================================================
-// SETTINGS: BULK SELECT / DELETE, RENAME, MOVE (per sub-subject)
-// ============================================================
-let settingsSelectedTopics = {}; // { [subSubjectKey]: Set<topicIdx> }
-
-function subSubjectOptionsHtml(excludeSk) {
-  return MAIN_SUBJECTS.map(m2 => {
-    const opts = (SUBJECTS_META[m2].subs||[]).filter(sk2=>sk2!==excludeSk)
-      .map(sk2=>`<option value="${sk2}">${DEFAULT_TOPICS[sk2]?.name||sk2}</option>`).join('');
-    return opts ? `<optgroup label="${m2}">${opts}</optgroup>` : '';
-  }).join('');
-}
-
-function toggleSettingsTopicSelect(sk, idx, checked) {
-  if (!settingsSelectedTopics[sk]) settingsSelectedTopics[sk] = new Set();
-  if (checked) settingsSelectedTopics[sk].add(idx); else settingsSelectedTopics[sk].delete(idx);
-  updateSettingsBulkBar(sk);
-}
-
-function toggleSettingsSelectAll(sk, checked) {
-  const topics = state.topics[sk] || [];
-  settingsSelectedTopics[sk] = checked ? new Set(topics.map((_,i)=>i)) : new Set();
-  renderSettings();
-}
-
-function updateSettingsBulkBar(sk) {
-  const topics = state.topics[sk] || [];
-  const sel = settingsSelectedTopics[sk] || new Set();
-  const n = sel.size;
-  const btn = document.getElementById('settings-bulk-delete-'+sk);
-  const selAll = document.getElementById('settings-select-all-'+sk);
-  if (btn) { btn.style.display = n ? 'inline-flex' : 'none'; btn.textContent = `🗑 Delete Selected (${n})`; }
-  if (selAll) { selAll.checked = topics.length > 0 && n === topics.length; selAll.indeterminate = n > 0 && n < topics.length; }
-}
-
-function bulkDeleteSettingsTopics(sk) {
-  const sel = settingsSelectedTopics[sk];
-  const n = sel ? sel.size : 0;
-  if (!n) return;
-  if (!confirm(`Delete ${n} selected topic${n>1?'s':''} from ${DEFAULT_TOPICS[sk]?.name||sk}? This can't be undone.`)) return;
-  const idxs = Array.from(sel).sort((a,b)=>b-a);
-  idxs.forEach(i => state.topics[sk].splice(i,1));
-  settingsSelectedTopics[sk] = new Set();
-  save(); renderSettings();
-  if (document.getElementById('page-tracker').classList.contains('active')) renderTracker();
-  toast(`${n} topic${n>1?'s':''} deleted.`);
-}
-
-function renameTopicFromSettings(sk, idx) {
-  const t = state.topics[sk]?.[idx];
-  if (!t) return;
-  const next = prompt('Rename topic:', t.name);
-  if (next === null) return;
-  const name = next.trim();
-  if (!name) { toast('Please enter a topic name.'); return; }
-  t.name = name;
-  save(); renderSettings();
-  if (document.getElementById('page-tracker').classList.contains('active')) renderTracker();
-  toast('Topic renamed.');
-}
-
-// Moves a single topic (with its status/confidence/dates intact) to a
-// different sub-subject — works across main subjects too, and for both
-// default and custom sub-subjects, since state.topics is keyed by
-// sub-subject regardless of where that key currently lives.
-function moveTopicToSub(sourceSk, idx, targetSk) {
-  const t = state.topics[sourceSk]?.[idx];
-  if (!t) { renderSettings(); return; }
-  if (!confirm(`Move "${t.name}" to "${DEFAULT_TOPICS[targetSk]?.name||targetSk}"?`)) { renderSettings(); return; }
-  state.topics[sourceSk].splice(idx,1);
-  if (!state.topics[targetSk]) state.topics[targetSk] = [];
-  state.topics[targetSk].push(t);
-  delete settingsSelectedTopics[sourceSk];
-  save(); renderSettings();
-  if (document.getElementById('page-tracker').classList.contains('active')) renderTracker();
-  toast('Topic moved.');
-}
-
-// Reassigns a CUSTOM sub-subject to a different main subject. Restricted to
-// custom sub-subjects because the built-in CPALE curriculum's sub-subject →
-// subject mapping isn't persisted per-item (it's rebuilt from the hardcoded
-// curriculum on every load) — only custom ones are tracked in
-// state.customSubSubjects, so only those can safely remember a move.
-function moveSubSubjectToMain(oldMainKey, sk, newMainKey) {
-  if (newMainKey === oldMainKey) return;
-  if (!confirm(`Move "${DEFAULT_TOPICS[sk]?.name||sk}" from ${oldMainKey} to ${newMainKey}? Its topics and progress stay intact.`)) {
-    renderSettings();
-    return;
-  }
-  SUBJECTS_META[oldMainKey].subs = SUBJECTS_META[oldMainKey].subs.filter(k => k !== sk);
-  SUBJECTS_META[newMainKey].subs.push(sk);
-  if (DEFAULT_TOPICS[sk]) DEFAULT_TOPICS[sk].subject = newMainKey;
-  if (state.customSubSubjects && state.customSubSubjects[oldMainKey]) {
-    const rec = state.customSubSubjects[oldMainKey].find(s => s.key === sk);
-    state.customSubSubjects[oldMainKey] = state.customSubSubjects[oldMainKey].filter(s => s.key !== sk);
-    if (rec) {
-      if (!state.customSubSubjects[newMainKey]) state.customSubSubjects[newMainKey] = [];
-      state.customSubSubjects[newMainKey].push(rec);
-    }
-  }
-  delete settingsSelectedTopics[sk];
-  currentSubjectManageTab = newMainKey;
-  save(); renderSettings();
-  if (document.getElementById('page-tracker').classList.contains('active')) renderTracker();
-  toast(`Moved to ${newMainKey}.`);
 }
 
 function promptAddTopicInline(sk) {
