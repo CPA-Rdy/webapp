@@ -2150,6 +2150,20 @@ body.light-mode.theme-orchid {
   background-image:radial-gradient(ellipse at 7% 0%,rgba(200,158,244,.16),transparent 35%),radial-gradient(ellipse at 93% 9%,rgba(255,190,222,.15),transparent 34%) !important;
 }
 
+/* Card/widget borders were nearly invisible against the light-mode canvas
+   (very low-alpha theme borders on a near-white card). Redraw them at
+   higher contrast, using --muted (already tuned per theme) so the edge
+   still reads as part of the theme rather than a flat gray line, plus a
+   touch more shadow so widgets separate from the page instead of blending. */
+body.light-mode .card,
+body.light-mode .stat-card,
+body.light-mode .dash-widget.card,
+body.light-mode .modal-content,
+body.light-mode .add-widget-card {
+  border-color: color-mix(in srgb, var(--muted) 42%, transparent);
+  box-shadow: 0 1px 2px rgba(30,35,60,0.06), 0 4px 14px rgba(30,35,60,0.06);
+}
+
 /* Soft ambient surfaces. White is no longer the dominant visual. */
 body.light-mode #sidebar {
   background:rgba(255,255,255,.48) !important;
@@ -5977,7 +5991,7 @@ function renderUpcomingSessions() {
     el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">No upcoming sessions in the next 7 days.<br><span style="font-size:11px">Add sessions in the Study Calendar.</span></div>';
     return;
   }
-  el.innerHTML = upcoming.slice(0, 6).map(({ dStr, d, e, color }) => {
+  el.innerHTML = upcoming.map(({ dStr, d, e, color }) => {
     const isToday = dStr === localDateStr();
     const isTomorrow = dStr === (() => { const t = new Date(); t.setDate(t.getDate()+1); return localDateStr(t); })();
     const dayLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : d.toLocaleDateString('default', { weekday:'short', month:'short', day:'numeric' });
@@ -6411,7 +6425,7 @@ function renderWidgetHTML(w, i) {
         <div class="section-title" style="margin:0">📅 Upcoming Sessions</div>
         <button class="btn btn-ghost btn-sm" onclick="showPage('calendar')">View</button>
       </div>
-      <div id="dash-upcoming-sessions" style="font-size:12px"></div>
+      <div id="dash-upcoming-sessions" style="font-size:12px;max-height:220px;overflow-y:auto;padding-right:4px;"></div>
     </div>`;
   }
 
@@ -6625,18 +6639,19 @@ function renderWidgetHTML(w, i) {
         </div>
       </div>
       <div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap;margin-bottom:12px">${subRings}</div>
-      <div style="border-top:1px solid var(--border);padding-top:10px">
-        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:7px">Mastery Ranks — where you currently stand</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${MASTERY_TIERS.map(t => {
-            const active = overall.rated && getMasteryLabel(overall.pct) === t.label;
-            return `<div style="display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:8px;background:${active?`color-mix(in srgb, ${t.color} 16%, transparent)`:'transparent'};border:1px solid ${active?`color-mix(in srgb, ${t.color} 45%, transparent)`:'var(--border)'}">
-              <span style="width:7px;height:7px;border-radius:50%;background:${t.color};flex-shrink:0"></span>
-              <span style="font-size:9px;font-weight:${active?800:600};color:${active?t.color:'var(--muted)'}">${t.label}</span>
-              <span style="font-size:8px;color:var(--muted);font-family:var(--font-mono)">${t.min}–${t.max}%</span>
-            </div>`;
-          }).join('')}
-        </div>
+      <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;align-items:center;gap:5px">
+        <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700">Mastery Ranks</span>
+        <button onclick="toggleWidgetLegend('${w.id}-mastery')" title="What do these ranks mean?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
+      </div>
+      <div id="legend-${w.id}-mastery" style="display:none;margin-top:7px;background:color-mix(in srgb, var(--accent2) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent2) 16%, var(--border));border-radius:8px;padding:8px 10px;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:9px;">
+        ${MASTERY_TIERS.map(t => {
+          const active = overall.rated && getMasteryLabel(overall.pct) === t.label;
+          return `<div style="display:flex;align-items:center;gap:5px">
+            <span style="width:7px;height:7px;border-radius:50%;background:${t.color};flex-shrink:0"></span>
+            <span style="font-weight:${active?800:600};color:${active?t.color:'var(--text)'}">${t.label}</span>
+            <span style="color:var(--muted);font-family:var(--font-mono);margin-left:auto">${t.min}–${t.max}%</span>
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
   }
