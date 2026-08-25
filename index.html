@@ -2911,6 +2911,173 @@ body.light-mode {
 }
 </style>
 
+
+<style id="widget-icon-consistency">
+/* Widget icon language — a single premium vector icon system shared by the picker and dashboard.
+   Visual-only: widget types, handlers, data, and rendering behavior remain unchanged. */
+.widget-title-icon,
+.add-widget-card .aw-icon{
+  width:42px;height:42px;flex:0 0 42px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:12px;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 13%,var(--surface)),color-mix(in srgb,var(--accent2) 7%,var(--card)));
+  border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 5px 16px rgba(0,0,0,.07);
+  color:var(--accent2);
+  line-height:1;vertical-align:middle;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,color .18s ease;
+}
+.widget-title-icon{width:28px;height:28px;flex:0 0 28px;border-radius:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 3px 9px rgba(0,0,0,.07);}
+.widget-title-icon svg,.add-widget-card .aw-icon svg{width:21px;height:21px;display:block;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
+.widget-title-icon svg{width:16px;height:16px;stroke-width:1.8;}
+.add-widget-card .aw-icon{margin:0 auto 8px !important;font-size:0 !important;}
+.add-widget-card:hover .aw-icon{transform:translateY(-2px) scale(1.03);border-color:color-mix(in srgb,var(--accent) 38%,var(--border));box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 9px 22px color-mix(in srgb,var(--accent) 12%,transparent);}
+.widget-title-row{display:inline-flex;align-items:center;gap:8px;}
+body.light-mode .widget-title-icon,body.light-mode .add-widget-card .aw-icon{box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 4px 12px rgba(30,35,60,.07)!important;}
+</style>
+<script>
+// Canonical visual identity for widgets. Visual-only: widget types and handlers remain unchanged.
+const WIDGET_BADGE = Object.freeze({
+  completion_card:['↗','violet','Completion'],
+  score_stat_cards:['◎','gold','Scores'],
+  subject_bars:['▤','green','Subjects'],
+  mastery:['✦','pink','Mastery'],
+  weak_topics:['✚','orange','Weak'],
+  video_bars:['▶','blue','Lectures'],
+  video_progress_rings:['◔','cyan','Progress'],
+  streak:['ϟ','fire','Streak'],
+  sessions:['▣','teal','Sessions'],
+  clock:['◷','slate','Clock'],
+  image:['▧','rose','Image'],
+  notes:['▤','amber','Notes'],
+  countdown:['⌛','red','Countdown'],
+  weekly_footprint:['◉','sky','Weekly'],
+  activity:['≋','indigo','Activity'],
+  progress:['◌','mint','Progress'],
+  quote:['❞','magenta','Quote']
+});
+const WIDGET_EMOJI = Object.freeze({
+  completion_card:'📈', score_stat_cards:'🎯', subject_bars:'📚', mastery:'🧠',
+  weak_topics:'🩹', video_bars:'🎥', video_progress_rings:'🎞️', streak:'🔥',
+  sessions:'📅', clock:'🕰️', image:'🖼️', notes:'📝', countdown:'⏰',
+  weekly_footprint:'🗓️', activity:'🧾', progress:'💫', quote:'💬'
+});
+function widgetIconSvg(type, sizeClass=''){
+  const emoji=WIDGET_EMOJI[type] || '◈';
+  return `<span class="widget-icon-emoji" data-widget-icon-type="${type}" aria-hidden="true">${emoji}</span>`;
+}
+function widgetTitleIcon(type){
+  const emoji=WIDGET_EMOJI[type] || '◈';
+  return `<span class="widget-title-icon" data-widget-icon-type="${type}" aria-hidden="true"><span class="widget-icon-emoji">${emoji}</span></span>`;
+}
+</script>
+
+<style id="premium-colorful-widget-icons">
+/* Colorful widget icon system: shared by picker + dashboard. Visual-only. */
+.widget-title-icon, .add-widget-card .aw-icon{
+  --wi-a:#7c6af7; --wi-b:#5b8cff;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:#fff;
+  background:linear-gradient(135deg,var(--wi-a),var(--wi-b));
+  border:1px solid rgba(255,255,255,.20);
+  box-shadow:0 7px 16px color-mix(in srgb,var(--wi-a) 22%,transparent), inset 0 1px 0 rgba(255,255,255,.28);
+  position:relative;overflow:hidden;
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.widget-title-icon{width:28px;height:28px;flex:0 0 28px;border-radius:9px;margin-right:0;font-size:15px;}
+.add-widget-card .aw-icon{width:42px;height:42px;flex:0 0 42px;margin:0 auto 8px !important;border-radius:12px;font-size:22px !important;line-height:1;}
+.widget-icon-emoji{display:inline-flex;align-items:center;justify-content:center;line-height:1;position:relative;z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.18));}
+.widget-title-icon .widget-icon-emoji{font-size:15px;}
+.add-widget-card .aw-icon .widget-icon-emoji{font-size:22px;}
+.widget-title-icon::after,.add-widget-card .aw-icon::after{content:'';position:absolute;inset:1px;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0));pointer-events:none;}
+[data-widget-icon-type="completion_card"]{--wi-a:#7c6af7;--wi-b:#5b8cff;}
+[data-widget-icon-type="score_stat_cards"]{--wi-a:#ff8a4c;--wi-b:#ffcf5a;}
+[data-widget-icon-type="subject_bars"]{--wi-a:#22c55e;--wi-b:#14b8a6;}
+[data-widget-icon-type="mastery"]{--wi-a:#8b5cf6;--wi-b:#ec4899;}
+[data-widget-icon-type="weak_topics"]{--wi-a:#f97316;--wi-b:#ef4444;}
+[data-widget-icon-type="video_bars"]{--wi-a:#3b82f6;--wi-b:#8b5cf6;}
+[data-widget-icon-type="video_progress_rings"]{--wi-a:#06b6d4;--wi-b:#3b82f6;}
+[data-widget-icon-type="streak"]{--wi-a:#f97316;--wi-b:#facc15;}
+[data-widget-icon-type="sessions"]{--wi-a:#14b8a6;--wi-b:#22c55e;}
+[data-widget-icon-type="clock"]{--wi-a:#64748b;--wi-b:#334155;}
+[data-widget-icon-type="image"]{--wi-a:#ec4899;--wi-b:#8b5cf6;}
+[data-widget-icon-type="notes"]{--wi-a:#f59e0b;--wi-b:#ef4444;}
+[data-widget-icon-type="countdown"]{--wi-a:#ef4444;--wi-b:#ec4899;}
+[data-widget-icon-type="weekly_footprint"]{--wi-a:#0ea5e9;--wi-b:#06b6d4;}
+[data-widget-icon-type="activity"]{--wi-a:#6366f1;--wi-b:#8b5cf6;}
+[data-widget-icon-type="progress"]{--wi-a:#14b8a6;--wi-b:#22c55e;}
+[data-widget-icon-type="quote"]{--wi-a:#f43f5e;--wi-b:#a855f7;}
+.add-widget-card:hover .aw-icon,.dash-widget:hover .widget-title-icon{transform:translateY(-1px) scale(1.03);}
+body.light-mode .widget-title-icon, body.light-mode .add-widget-card .aw-icon{box-shadow:0 6px 14px color-mix(in srgb,var(--wi-a) 15%,transparent),inset 0 1px 0 rgba(255,255,255,.36);}
+</style>
+
+
+<style id="widget-badge-icons-final">
+/* Badge-style widget identity inspired by the Study History achievement badges. */
+.widget-badge{
+  --badge-a:#7c6af7; --badge-b:#a78bfa; --badge-glow:rgba(124,106,247,.30);
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:42px;height:42px;flex:0 0 42px;line-height:1;
+  border-radius:0;clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);overflow:hidden;isolation:isolate;
+  background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.24),transparent 28%),
+             linear-gradient(145deg,color-mix(in srgb,var(--badge-a) 88%,#fff),color-mix(in srgb,var(--badge-b) 90%,#000));
+  border:1px solid rgba(255,255,255,.26);
+  box-shadow:0 8px 20px var(--badge-glow), inset 0 1px 0 rgba(255,255,255,.34), inset 0 -8px 14px rgba(0,0,0,.10);
+  transform:rotate(-2deg);
+}
+.widget-badge::before{
+  content:'';position:absolute;inset:4px;border-radius:0;border:1px solid rgba(255,255,255,.32);opacity:.9;clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
+}
+.widget-badge::after{
+  content:'';position:absolute;left:-10px;top:-10px;width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.16);filter:blur(2px);
+}
+.wb-glow{position:absolute;inset:6px;border-radius:11px;background:radial-gradient(circle,rgba(255,255,255,.20),transparent 62%);z-index:0;}
+.wb-mark{
+  position:relative;z-index:2;font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+  font-size:23px;font-weight:900;letter-spacing:-1px;color:#fff;
+  text-shadow:0 2px 0 rgba(0,0,0,.18),0 0 10px rgba(255,255,255,.18);
+  transform:rotate(2deg);line-height:1;
+}
+.wb-spark{position:absolute;right:5px;top:5px;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.88);box-shadow:0 0 8px rgba(255,255,255,.65);z-index:2;}
+.widget-badge.title{width:28px;height:28px;flex-basis:28px;border-radius:0;clip-path:polygon(25% 4%,75% 4%,97% 50%,75% 96%,25% 96%,3% 50%);transform:rotate(-2deg);}
+.widget-badge.title .wb-mark{font-size:15px;}
+.widget-badge.title .wb-spark{width:4px;height:4px;right:4px;top:4px;}
+.widget-badge.title .wb-mark{font-size:14px;}
+.add-widget-card .widget-badge{margin:0 auto 8px !important;}
+.add-widget-card:hover .widget-badge,.dash-widget:hover .widget-badge.title{transform:rotate(-2deg) translateY(-2px) scale(1.04);}
+.badge-violet{--badge-a:#6d5dfc;--badge-b:#a78bfa;--badge-glow:rgba(124,106,247,.34)}
+.badge-gold{--badge-a:#f59e0b;--badge-b:#fcd34d;--badge-glow:rgba(245,158,11,.34)}
+.badge-green{--badge-a:#10b981;--badge-b:#34d399;--badge-glow:rgba(16,185,129,.32)}
+.badge-pink{--badge-a:#8b5cf6;--badge-b:#f472b6;--badge-glow:rgba(236,72,153,.32)}
+.badge-orange{--badge-a:#f97316;--badge-b:#ef4444;--badge-glow:rgba(249,115,22,.32)}
+.badge-blue{--badge-a:#2563eb;--badge-b:#60a5fa;--badge-glow:rgba(59,130,246,.32)}
+.badge-cyan{--badge-a:#06b6d4;--badge-b:#22d3ee;--badge-glow:rgba(6,182,212,.30)}
+.badge-fire{--badge-a:#f97316;--badge-b:#facc15;--badge-glow:rgba(249,115,22,.32)}
+.badge-teal{--badge-a:#0f766e;--badge-b:#14b8a6;--badge-glow:rgba(20,184,166,.30)}
+.badge-slate{--badge-a:#475569;--badge-b:#94a3b8;--badge-glow:rgba(100,116,139,.24)}
+.badge-rose{--badge-a:#e11d48;--badge-b:#a855f7;--badge-glow:rgba(225,29,72,.30)}
+.badge-amber{--badge-a:#d97706;--badge-b:#f59e0b;--badge-glow:rgba(245,158,11,.30)}
+.badge-red{--badge-a:#dc2626;--badge-b:#f43f5e;--badge-glow:rgba(239,68,68,.30)}
+.badge-sky{--badge-a:#0284c7;--badge-b:#38bdf8;--badge-glow:rgba(14,165,233,.30)}
+.badge-indigo{--badge-a:#4f46e5;--badge-b:#818cf8;--badge-glow:rgba(99,102,241,.30)}
+.badge-mint{--badge-a:#059669;--badge-b:#2dd4bf;--badge-glow:rgba(20,184,166,.30)}
+.badge-magenta{--badge-a:#db2777;--badge-b:#c026d3;--badge-glow:rgba(219,39,119,.30)}
+body.light-mode .widget-badge{box-shadow:0 8px 18px color-mix(in srgb,var(--badge-a) 20%,transparent),inset 0 1px 0 rgba(255,255,255,.70),inset 0 -8px 14px rgba(0,0,0,.05);}
+</style>
+
+<style id="true-emoji-widget-final">
+/* Widget icons: real emoji only, inside the existing colorful tiles. */
+.widget-title-icon,.add-widget-card .aw-icon{position:relative;overflow:hidden;}
+.widget-title-icon .widget-icon-emoji,.add-widget-card .aw-icon .widget-icon-emoji{
+  display:inline-flex !important;align-items:center !important;justify-content:center !important;
+  font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif !important;
+  line-height:1 !important;position:relative !important;z-index:5 !important;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.18));
+}
+.widget-title-icon .widget-icon-emoji{font-size:15px !important;}
+.add-widget-card .aw-icon .widget-icon-emoji{font-size:22px !important;}
+</style>
 </head>
 <body>
 
@@ -4325,42 +4492,42 @@ renderDashboard(); }, 400);
     <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">📊 Study Info</div>
     <div class="add-widget-grid" style="margin-bottom:16px;">
       <div class="add-widget-card" onclick="addWidget('completion_card')">
-        <div class="aw-icon">📈</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="completion_card" aria-hidden="true">📈</span></div>
         <div class="aw-name">Completion Card</div>
         <div class="aw-desc">Overall progress bar</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('score_stat_cards')">
-        <div class="aw-icon">🎯</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="score_stat_cards" aria-hidden="true">🎯</span></div>
         <div class="aw-name">Score Stat Cards</div>
         <div class="aw-desc">Avg / High / Remark / Rank</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('subject_bars')">
-        <div class="aw-icon">📚</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="subject_bars" aria-hidden="true">📚</span></div>
         <div class="aw-name">Subject Bars</div>
         <div class="aw-desc">Completion per subject</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('mastery')">
-        <div class="aw-icon">🧠</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="mastery" aria-hidden="true">🧠</span></div>
         <div class="aw-name">Mastery</div>
         <div class="aw-desc">Confidence-based mastery per subject</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('weak_topics')">
-        <div class="aw-icon">🩹</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="weak_topics" aria-hidden="true">🩹</span></div>
         <div class="aw-name">Weak Topics</div>
         <div class="aw-desc">Lowest confidence + drill score, combined</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('video_bars')">
-        <div class="aw-icon">🎥</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="video_bars" aria-hidden="true">🎥</span></div>
         <div class="aw-name">Video Lectures</div>
         <div class="aw-desc">Video lecture progress</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('video_progress_rings')">
-        <div class="aw-icon">🎞️</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="video_progress_rings" aria-hidden="true">🎞️</span></div>
         <div class="aw-name">Video Progress Rings</div>
         <div class="aw-desc">Visual lecture completion</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('streak')">
-        <div class="aw-icon">🔥</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="streak" aria-hidden="true">🔥</span></div>
         <div class="aw-name">Study Streak</div>
         <div class="aw-desc">Current streak & dots</div>
       </div>
@@ -4368,47 +4535,47 @@ renderDashboard(); }, 400);
     <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">🧩 Custom Widgets</div>
     <div class="add-widget-grid">
       <div class="add-widget-card" onclick="addWidget('sessions')">
-        <div class="aw-icon">📅</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="sessions" aria-hidden="true">📅</span></div>
         <div class="aw-name">Upcoming Sessions</div>
         <div class="aw-desc">Next 7 days</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('clock')">
-        <div class="aw-icon">🕰️</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="clock" aria-hidden="true">🕰️</span></div>
         <div class="aw-name">Digital Clock</div>
         <div class="aw-desc">Fully designable</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('image')">
-        <div class="aw-icon">🖼️</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="image" aria-hidden="true">🖼️</span></div>
         <div class="aw-name">Image</div>
         <div class="aw-desc">Photo with crop tool</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('notes')">
-        <div class="aw-icon">📝</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="notes" aria-hidden="true">📝</span></div>
         <div class="aw-name">Quick Notes</div>
         <div class="aw-desc">Personal reminders</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('countdown')">
-        <div class="aw-icon">⏰</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="countdown" aria-hidden="true">⏰</span></div>
         <div class="aw-name">Countdown Widget</div>
         <div class="aw-desc">Big countdown number</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('weekly_footprint')">
-        <div class="aw-icon">🗓️</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="weekly_footprint" aria-hidden="true">🗓️</span></div>
         <div class="aw-name">Weekly Footprint</div>
         <div class="aw-desc">Subjects studied across 7 days</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('activity')">
-        <div class="aw-icon">🧾</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="activity" aria-hidden="true">🧾</span></div>
         <div class="aw-name">Recent Activity</div>
         <div class="aw-desc">Your latest study footprint</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('progress')">
-        <div class="aw-icon">💫</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="progress" aria-hidden="true">💫</span></div>
         <div class="aw-name">Progress Ring</div>
         <div class="aw-desc">Topic completion ring</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('quote')">
-        <div class="aw-icon">💬</div>
+        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="quote" aria-hidden="true">💬</span></div>
         <div class="aw-name">Motivational Quote</div>
         <div class="aw-desc">Your saved quote</div>
       </div>
@@ -5670,6 +5837,14 @@ function calcEntry(entry) {
     } else {
       remark = 'FAILED';
     }
+  } else if (pcts.length > 0) {
+    // Partial-entry rule: when fewer than six subjects are entered, still show
+    // a meaningful remark instead of leaving the Remarks column blank.
+    // The full six-subject board rule above remains unchanged.
+    const hasBelow65 = pcts.some(p => p < 65);
+    if (avg >= 75 && !hasBelow65) remark = 'PASSED';
+    else if (avg >= 65) remark = 'CONDITIONAL';
+    else remark = 'FAILED';
   }
   return { far, afar, mas, audit, tax, rfbt, avg, remark };
 }
@@ -6135,17 +6310,35 @@ function setHistoryViewMode(mode) {
 // Tallies real study activity (not just achievement unlocks) for a YYYY-MM
 // key, pulling from the recent detailed log and the compacted archive.
 function roadmapActivityStats(key) {
-  const s = {studyDays:0, completed:0, started:0, scores:0};
+  // Keep roadmap progress consistent with Topic Tracker's real distinction:
+  // regular topics and video lectures are separate kinds and should never be
+  // mixed into one "topics completed" number.
+  const s = {studyDays:0, completed:0, started:0, videoCompleted:0, videoStarted:0, scores:0};
+
+  Object.entries(state.topics||{}).forEach(([sKey, arr]) => {
+    const kind = DEFAULT_TOPICS[sKey]?.kind === 'video' ? 'video' : 'topics';
+    (arr||[]).forEach(t => {
+      if (t.status===2 && t.dateEnded && String(t.dateEnded).startsWith(key)) {
+        if (kind === 'video') s.videoCompleted++;
+        else s.completed++;
+      }
+      if (t.status>0 && t.dateStarted && String(t.dateStarted).startsWith(key)) {
+        if (kind === 'video') s.videoStarted++;
+        else s.started++;
+      }
+    });
+  });
+
+  // Study-day and score activity are still taken from the activity system,
+  // which is the authoritative source for those event types.
   (state.activityLog||[]).forEach(e=>{
     if(!e.day || !e.day.startsWith(key)) return;
     if(e.type==='study') s.studyDays++;
-    else if(e.type==='progress') (/^Completed/.test(e.title||'') ? s.completed++ : s.started++);
     else if(e.type==='score') s.scores++;
   });
   (state.activityArchive||[]).forEach(a=>{
     if(!a.day || !a.day.startsWith(key)) return;
     s.studyDays += a.types?.study||0;
-    s.completed += a.types?.progress||0;
     s.scores += a.types?.score||0;
   });
   return s;
@@ -6205,6 +6398,8 @@ function roadmapRenderInfoPanel(idx) {
   const pills = [];
   if (s.completed) pills.push(`✅ ${s.completed} topic${s.completed===1?'':'s'} completed`);
   if (s.started) pills.push(`🚀 ${s.started} topic${s.started===1?'':'s'} started`);
+  if (s.videoCompleted) pills.push(`🎥 ${s.videoCompleted} lecture${s.videoCompleted===1?'':'s'} watched`);
+  if (s.videoStarted) pills.push(`▶️ ${s.videoStarted} lecture${s.videoStarted===1?'':'s'} started`);
   if (s.scores) pills.push(`📝 ${s.scores} score${s.scores===1?'':'s'} logged`);
   if (s.studyDays) pills.push(`📅 ${s.studyDays} study day${s.studyDays===1?'':'s'}`);
   pills.push(`🏆 ${node.achievements.length} achievement${node.achievements.length===1?'':'s'}`);
@@ -6847,9 +7042,9 @@ function getWeakTopics(limit) {
   return { rows: weakRows.slice(0, limit || 10), coveredCount: rows.length, weakCount: weakRows.length, totalTopics };
 }
 
-function renderWeakTopics() {
-  const el = document.getElementById('dash-weak-topics');
-  const footerEl = document.getElementById('dash-weak-topics-footer');
+function renderWeakTopics(widgetId) {
+  const el = document.getElementById('dash-weak-topics-' + widgetId);
+  const footerEl = document.getElementById('dash-weak-topics-footer-' + widgetId);
   if (!el) return;
   const { rows, coveredCount, weakCount, totalTopics } = getWeakTopics(10);
 
@@ -6989,6 +7184,7 @@ function addWidget(type) {
   }
   state.dashWidgets = ws;
   save(); renderDashboardWidgets();
+  requestAnimationFrame(() => renderDashboardWidgets());
 
   // Scroll the new widget into view and give it a brief highlight so it's
   // obvious where it landed, instead of leaving the user to hunt for it.
@@ -7174,7 +7370,7 @@ function renderDashboardWidgets() {
   // ── 8-direction resize ────────────────────────────────────────────────────
   bindResizeHandles(grid);
   renderUpcomingSessions();
-  renderWeakTopics();
+  getWidgets().filter(w => w.type === 'weak_topics').forEach(w => renderWeakTopics(w.id));
   renderProgressRingWidgets();
   startClockWidgets();
 }
@@ -7325,7 +7521,7 @@ function renderWidgetHTML(w, i) {
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;">
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div class="section-title" style="margin:0">📅 Upcoming Sessions</div>
+        <div class="section-title widget-title-row">${widgetTitleIcon('sessions')}<span>Upcoming Sessions</span></div>
         <button class="btn btn-ghost btn-sm" onclick="showPage('calendar')">View</button>
       </div>
       <div id="dash-upcoming-sessions" style="font-size:12px;max-height:220px;overflow-y:auto;padding-right:4px;"></div>
@@ -7336,15 +7532,15 @@ function renderWidgetHTML(w, i) {
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;">
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div class="section-title" style="margin:0">🎯 Weak Topics</div>
+        <div class="section-title widget-title-row">${widgetTitleIcon('weak_topics')}<span>Weak Topics</span></div>
         <button onclick="toggleWidgetLegend('${w.id}-weak')" title="How is this ranked?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
       </div>
       <div id="legend-${w.id}-weak" style="display:none;font-size:10px;color:var(--muted);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px">
         Ranks topics you've actually rated or drilled — combining your confidence rating (Topic Tracker) with your average Practice/Drill score for that topic. ⚠️ means you're more confident than your scores support; 💡 means your scores are better than your confidence suggests.
       </div>
       <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
-        <div id="dash-weak-topics" style="font-size:12px;flex:1;overflow-y:auto;padding-right:4px;"></div>
-        <div id="dash-weak-topics-footer"></div>
+        <div id="dash-weak-topics-${w.id}" style="font-size:12px;flex:1;overflow-y:auto;padding-right:4px;"></div>
+        <div id="dash-weak-topics-footer-${w.id}"></div>
       </div>
     </div>`;
   }
@@ -7361,7 +7557,7 @@ function renderWidgetHTML(w, i) {
       </div>`;
     }
     return `<div class="dash-widget" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}background:var(--card);border:2px dashed var(--border);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-direction:column;gap:8px;color:var(--muted)" onclick="openWidgetImageEdit('${w.id}')">      ${b.editBar}
-      <div style="font-size:36px">🖼️</div>
+      <div class="widget-title-icon" style="width:42px;height:42px;flex-basis:42px;font-size:21px;border-radius:12px">${widgetIconSvg('image')}</div>
       <div style="font-size:12px">Tap to add photo</div>
       <div style="font-size:10px;opacity:0.6">Fills this tile automatically</div>
     </div>`;
@@ -7370,7 +7566,7 @@ function renderWidgetHTML(w, i) {
   if (w.type === 'notes') {
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;">
       ${b.editBar}
-      <div class="section-title" style="margin-bottom:10px">📝 Quick Notes</div>
+      <div class="section-title widget-title-row" style="margin-bottom:10px">${widgetTitleIcon('notes')}<span>Quick Notes</span></div>
       <textarea onblur="saveWidgetNotes('${w.id}',this.value)" style="width:100%;height:calc(100% - 46px);min-height:100px;background:transparent;border:none;outline:none;resize:none;font-family:var(--font-body);font-size:12px;color:var(--text);line-height:1.7" placeholder="Write anything here…">${w.notes||''}</textarea>
     </div>`;
   }
@@ -7379,7 +7575,7 @@ function renderWidgetHTML(w, i) {
     const days = countdownDays();
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
       ${b.editBar}
-      <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">⏳ Days to CPALE</div>
+      <div class="widget-title-row" style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">${widgetTitleIcon('countdown')}<span>Days to CPALE</span></div>
       <div style="font-family:var(--font-mono);font-size:clamp(36px,6vw,64px);font-weight:800;color:var(--accent2);line-height:1">${days!==null?days:'—'}</div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px">${state.examDate||'Set exam date in Settings'}</div>
     </div>`;
@@ -7387,22 +7583,22 @@ function renderWidgetHTML(w, i) {
 
   if (w.type === 'progress') {
     const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectStats(subj),color=SUBJECTS_META[subj].color,tier=progressTierColor(st.pct),r=30,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='subRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px"><svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="${r}" fill="none" stroke="${color}" stroke-opacity="0.22" stroke-width="7"/><circle cx="37" cy="37" r="${r}" fill="none" stroke="${tier}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 37 37)"/><text x="37" y="35" text-anchor="middle" font-size="12" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="37" y="47" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:10px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="section-title">📚 Subject Progress</div><div style="font-size:9px;color:var(--muted)">Completed topics</div></div><div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">${rings}</div></div>`;
+    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="section-title widget-title-row">${widgetTitleIcon('progress')}<span>Subject Progress</span></div><div style="font-size:9px;color:var(--muted)">Completed topics</div></div><div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">${rings}</div></div>`;
   }
 
   if (w.type === 'video_progress_rings') {
     const rings=MAIN_SUBJECTS.map(subj=>{const st=getMainSubjectVideoStats(subj);if(!st.total)return '';const color=SUBJECTS_META[subj].color,tier=progressTierColor(st.pct),r=27,circ=2*Math.PI*r,off=circ-(st.pct/100)*circ,g='vidRing_'+w.id+'_'+subj;return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:70px"><svg width="68" height="68" viewBox="0 0 68 68"><circle cx="34" cy="34" r="${r}" fill="none" stroke="${color}" stroke-opacity="0.22" stroke-width="7"/><circle cx="34" cy="34" r="${r}" fill="none" stroke="${tier}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 34 34)"/><text x="34" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)" font-family="monospace">${st.pct.toFixed(0)}%</text><text x="34" y="43" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="monospace">${st.completed}/${st.total}</text></svg><div style="font-size:9px;font-weight:800;color:${color}">${subj}</div></div>`}).join('');
     const has=MAIN_SUBJECTS.some(x=>getMainSubjectVideoStats(x).total>0);
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="section-title">🎥 Video Progress</div><div style="font-size:9px;color:var(--muted)">Lectures watched</div></div>${has?`<div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">${rings}</div>`:'<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">No video lectures added yet.</div>'}</div>`;
+    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="section-title widget-title-row">${widgetTitleIcon('video_progress_rings')}<span>Video Progress</span></div><div style="font-size:9px;color:var(--muted)">Lectures watched</div></div>${has?`<div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">${rings}</div>`:'<div style="text-align:center;color:var(--muted);font-size:11px;padding:16px">No video lectures added yet.</div>'}</div>`;
   }
 
 
   if (w.type === 'weekly_footprint') {
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;overflow:hidden">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><div class="section-title">🗓️ This Week</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Your study footprint by subject</div></div><button class="btn btn-ghost btn-sm" onclick="showPage('history')" style="font-size:9px;padding:4px 7px">History →</button></div>${renderWeeklyFootprintHTML()}</div>`;
+    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;overflow:hidden">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><div class="section-title widget-title-row"><span class="widget-title-icon">🗓️</span><span>This Week</span></div><div style="font-size:9px;color:var(--muted);margin-top:2px">Your study footprint by subject</div></div><button class="btn btn-ghost btn-sm" onclick="showPage('history')" style="font-size:9px;padding:4px 7px">History →</button></div>${renderWeeklyFootprintHTML()}</div>`;
   }
 
   if (w.type === 'activity') {
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;overflow:hidden">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div class="section-title">🧾 Recent Activity</div><button class="btn btn-ghost btn-sm" onclick="showPage('history')" style="font-size:9px;padding:4px 7px">View all →</button></div><div>${renderRecentActivityHTML(6)}</div></div>`;
+    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;overflow:hidden">${b.editBar}<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div class="section-title widget-title-row">${widgetTitleIcon('activity')}<span>Recent Activity</span></div><button class="btn btn-ghost btn-sm" onclick="showPage('history')" style="font-size:9px;padding:4px 7px">View all →</button></div><div>${renderRecentActivityHTML(6)}</div></div>`;
   }
 
   if (w.type === 'quote') {
@@ -7413,7 +7609,7 @@ function renderWidgetHTML(w, i) {
     const sign = hasQuote ? `<div style="font-size:11px;color:var(--muted);margin-top:10px;letter-spacing:.5px">— you, on your better days ${flair}</div>` : '';
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
       ${b.editBar}
-      <div style="font-size:32px;margin-bottom:12px">💬</div>
+      <div class="widget-title-icon" style="width:42px;height:42px;flex-basis:42px;font-size:21px;border-radius:12px;margin-bottom:12px">${widgetIconSvg('quote')}</div>
       <div style="font-size:13px;font-style:italic;color:var(--dim);line-height:1.8;overflow:hidden">${hasQuote?state.quote:'No quote yet — go on, hype yourself up a little. 😌 Set one in Settings.'}</div>
       ${sign}
     </div>`;
@@ -7431,7 +7627,7 @@ function renderWidgetHTML(w, i) {
     }).join('');
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       ${b.editBar}
-      <div style="font-size:36px">🔥</div>
+      <div class="widget-title-icon" style="width:44px;height:44px;flex-basis:44px;font-size:22px;border-radius:12px">${widgetIconSvg('streak')}</div>
       <div style="flex:1">
         <div style="font-family:var(--font-mono);font-size:32px;font-weight:800;color:var(--warn);line-height:1">${streak.current}</div>
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px">Day Streak</div>
@@ -7451,7 +7647,7 @@ function renderWidgetHTML(w, i) {
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:flex-end;">
         <div>
-          <div class="section-title" style="margin-bottom:2px;">Overall Completion</div>
+          <div class="section-title widget-title-row" style="margin-bottom:2px;">${widgetTitleIcon('completion_card')}<span>Overall Completion</span></div>
           <div style="display:flex;align-items:center;gap:5px">
             <span style="font-size:12px;font-weight:600;color:var(--accent3)">${getCompletionRank(stats.pct)}</span>
             <button onclick="toggleWidgetLegend('${w.id}-comp')" title="What do these ranks mean?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
@@ -7487,7 +7683,7 @@ function renderWidgetHTML(w, i) {
     const tier = getPassingRankTier(scoreData, highAvg);
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:center;">
       ${b.editBar}
-      <div><div class="stat-label">Avg Score</div><div class="stat-value" style="color:var(--accent2)">${overallAvg ? overallAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">all exams</div></div>
+      <div><div class="stat-label widget-title-row">${widgetTitleIcon('score_stat_cards')}<span>Avg Score</span></div><div class="stat-value" style="color:var(--accent2)">${overallAvg ? overallAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">all exams</div></div>
       <div><div class="stat-label">Highest Score</div><div class="stat-value" style="color:var(--pass)">${highAvg ? highAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">best avg</div></div>
       <div><div class="stat-label">Latest Remark</div><div style="margin-top:6px">${latestRemark?`<span class="badge ${remarkMap[latestRemark]}">${latestRemark}</span>`:'<span class="badge badge-none">No scores yet</span>'}</div></div>
       <div style="border-left:1px solid var(--border);padding-left:12px;">
@@ -7523,7 +7719,7 @@ function renderWidgetHTML(w, i) {
     }).join('');
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:18px;overflow-y:auto;">
       ${b.editBar}
-      <div class="section-title" style="margin-bottom:14px;">Completion Per Subject</div>
+      <div class="section-title widget-title-row" style="margin-bottom:14px;">${widgetTitleIcon('subject_bars')}<span>Completion Per Subject</span></div>
       ${barsHTML}
     </div>`;
   }
@@ -7550,7 +7746,7 @@ function renderWidgetHTML(w, i) {
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;">
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div><div class="section-title" style="margin-bottom:2px">🧠 Mastery</div><div style="font-size:9px;color:var(--muted)">Based on your confidence ratings, not just completion</div></div>
+        <div><div class="section-title widget-title-row" style="margin-bottom:2px">${widgetTitleIcon('mastery')}<span>Mastery</span></div><div style="font-size:9px;color:var(--muted)">Based on your confidence ratings, not just completion</div></div>
       </div>
       <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
         <svg width="82" height="82" viewBox="0 0 82 82">
@@ -7627,7 +7823,7 @@ function renderWidgetHTML(w, i) {
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div>
-          <div class="section-title">🎥 Video Lectures</div>
+          <div class="section-title widget-title-row">${widgetTitleIcon('video_bars')}<span>Video Lectures</span></div>
           <div style="font-size:9px;color:var(--muted);margin-top:2px">Progress is based only on lectures you've actually added.</div>
         </div>
         <div style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">${allVideo.completed}/${allVideo.total} watched</div>
@@ -7641,7 +7837,9 @@ function renderWidgetHTML(w, i) {
   // rank_legend widget removed — its two legends are now embedded directly
   // in completion_card and score_stat_cards below (behind an ⓘ toggle).
 
-  return '';
+  // Defensive fallback: every saved widget should render a visible card even if
+  // an older/custom widget type is encountered after an upgrade.
+  return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;">${b.editBar}<div class="section-title widget-title-row">${widgetTitleIcon(w.type)}<span>Widget</span></div><div style="font-size:11px;color:var(--muted);margin-top:6px">This widget type is available but does not have a renderer in this version yet.</div></div>`;
 }
 
 // ---- CLOCK DESIGNER ----
@@ -12730,5 +12928,56 @@ window.addEventListener('scroll', () => {
 window.addEventListener('resize', refreshSettingsTabFreeze);
 </script>
 
+
+<style id="widget-emoji-final">
+/* Final widget icon choice: recognizable emoji inside the existing colorful widget tiles.
+   The widget types, handlers, data, and renderers remain unchanged. */
+.widget-title-icon, .add-widget-card .aw-icon { font-family: inherit; }
+.widget-title-icon .widget-icon-emoji,
+.add-widget-card .aw-icon .widget-icon-emoji {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  position:relative;
+  z-index:2;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.18));
+  font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+  text-rendering:geometricPrecision;
+}
+.widget-title-icon .widget-icon-emoji { font-size:15px !important; }
+.add-widget-card .aw-icon .widget-icon-emoji { font-size:22px !important; }
+</style>
+<script id="widget-emoji-final-script">
+/* Simple, reliable emoji identities for widgets. This replaces only the visual icon renderer. */
+const WIDGET_EMOJI_FINAL = Object.freeze({
+  completion_card:'📈',
+  score_stat_cards:'🎯',
+  subject_bars:'📚',
+  mastery:'🧠',
+  weak_topics:'🩹',
+  video_bars:'🎥',
+  video_progress_rings:'🎞️',
+  streak:'🔥',
+  sessions:'📅',
+  clock:'🕰️',
+  image:'🖼️',
+  notes:'📝',
+  countdown:'⏰',
+  weekly_footprint:'🗓️',
+  activity:'🧾',
+  progress:'💫',
+  quote:'💬'
+});
+function widgetBadge(type, sizeClass='') {
+  const emoji = WIDGET_EMOJI_FINAL[type] || '◈';
+  return `<span class="widget-icon-emoji" data-widget-icon-type="${type}" aria-hidden="true">${emoji}</span>`;
+}
+function widgetIconSvg(type, sizeClass='') { return widgetBadge(type, sizeClass); }
+function widgetTitleIcon(type) {
+  const emoji = WIDGET_EMOJI_FINAL[type] || '◈';
+  return `<span class="widget-title-icon" data-widget-icon-type="${type}" aria-hidden="true"><span class="widget-icon-emoji">${emoji}</span></span>`;
+}
+</script>
 </body>
 </html>
