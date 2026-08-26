@@ -11611,12 +11611,14 @@ async function attemptSilentDriveReconnect() {
   _ensureDriveTokenClient().requestAccessToken({ prompt: '' });
 }
 
-// Drive access tokens last about an hour. Refresh a little early so
-// background backups don't silently stop mid-session just because the
-// token quietly expired in the background.
+// Drive access tokens last about an hour. We don't auto-refresh them
+// silently anymore (that opens a real popup window under the hood, and
+// Google's servers currently error on that specific silent-request path —
+// a broader trend as browsers phase out the old third-party-cookie-based
+// silent auth pattern). Instead, an expired token just surfaces the
+// "click Connect to reconnect" message the next time a backup runs.
 function _scheduleDriveTokenRefresh() {
   clearTimeout(_driveTokenRefreshTimer);
-  _driveTokenRefreshTimer = setTimeout(() => { attemptSilentDriveReconnect(); }, 50 * 60 * 1000);
 }
 
 // Debounced auto-backup: fires a little while after the last change, the
@@ -11692,8 +11694,6 @@ async function driveBackupNow(silent=false) {
     if (!silent) toast('☁️ Backed up to Google Drive.');
   } catch(e) {
     if (e.message === 'token-expired') {
-      // Try to quietly pick up a fresh token before bothering the person.
-      await attemptSilentDriveReconnect();
       if (!silent) toast('Google Drive session expired — click Connect to reconnect.');
     }
     else if (!silent) { toast('⚠️ Drive backup failed — try again in a moment.'); }
@@ -11742,10 +11742,10 @@ function renderDriveStatusPanel() {
   const lastSync = Number(localStorage.getItem(DRIVE_LAST_SYNC_KEY) || 0);
   if (connected) {
     el.innerHTML = `<div style="color:var(--pass)">✓ Connected — backing up automatically${lastSync ? ' · last synced ' + timeAgo(lastSync) : ' · syncing now...'}</div>
-      <div style="color:var(--muted);margin-top:2px">No need to click anything — every change saves to Drive a few seconds after you make it.</div>`;
+      <div style="color:var(--muted);margin-top:2px">No need to click anything else this session — every change saves to Drive a few seconds after you make it.</div>`;
   } else {
     el.innerHTML = lastSync
-      ? `<div style="color:var(--muted)">Not connected this session · last synced ${timeAgo(lastSync)}</div>`
+      ? `<div style="color:var(--muted)">Not connected this session · last synced ${timeAgo(lastSync)}<br>For your security, this reconnects once per browser session — just click below to resume.</div>`
       : `<div style="color:var(--muted)">Not connected.</div>`;
   }
 }
@@ -13290,7 +13290,6 @@ function replyScores(d) {
 }
 
 init();
-attemptSilentDriveReconnect(); // resumes Drive backups quietly if this person connected before — no popup shown
 </script>
 
 <!-- ===== PWA SERVICE WORKER REGISTRATION ===== -->
