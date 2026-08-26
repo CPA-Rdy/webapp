@@ -10863,9 +10863,12 @@ function renderCalFocusChart() { /* removed — subject focus chart was removed 
 // ============================================================
 // SETTINGS
 // ============================================================
-let currentSettingsTab = 'subjects';
+let currentSettingsTab = (function () {
+  try { return localStorage.getItem('cpale_last_settings_tab') || 'subjects'; } catch (e) { return 'subjects'; }
+})();
 function setSettingsTab(tab) {
   currentSettingsTab = tab;
+  try { localStorage.setItem('cpale_last_settings_tab', tab); } catch (e) {}
   document.querySelectorAll('.settings-tab-panel').forEach(el => {
     el.classList.toggle('active', el.id === 'settings-tab-' + tab);
   });
