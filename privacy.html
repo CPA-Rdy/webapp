@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — CPALE Ready</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; line-height: 1.7; color: #222; }
+  h1 { font-size: 24px; }
+  h2 { font-size: 18px; margin-top: 32px; }
+  code { background: #f2f2f2; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  .updated { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>Privacy Policy — CPALE Ready</h1>
+<p class="updated">Last updated: August 26, 2026</p>
+
+<p>CPALE Ready is a CPA board exam study tracker. This page explains what data the app handles and, specifically, what happens when you connect Google Drive.</p>
+
+<h2>What the app stores</h2>
+<p>By default, all of your study data (topics, scores, calendar entries, achievements, and settings) is stored locally in your browser only. Nothing is sent to any server we operate. You can export this data as a JSON file at any time from Settings → Data.</p>
+
+<h2>Google Drive backup (optional)</h2>
+<p>If you choose to connect Google Drive from Settings → Data, CPALE Ready requests the <code>drive.file</code> Google OAuth scope — the narrowest Drive scope Google offers. This means:</p>
+<ul>
+  <li>The app can only ever see or modify a single backup file that it creates itself, named <code>cpale-ready-backup.json</code>.</li>
+  <li>The app cannot see, list, or access any other file in your Google Drive.</li>
+  <li>Your backup data travels directly from your browser to your own Google Drive account. It never passes through, or is stored on, any server operated by us.</li>
+  <li>The access token Google issues after you connect is kept only in your browser's memory for that session — we do not store it, log it, or transmit it anywhere.</li>
+</ul>
+
+<h2>Disconnecting</h2>
+<p>You can revoke CPALE Ready's access to your Google Drive at any time from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions page</a>. Revoking access does not delete the backup file already saved in your Drive — you can delete that yourself from Google Drive directly.</p>
+
+<h2>Contact</h2>
+<p>Questions about this policy or the app can be sent to the developer via the contact details listed on the app's Google Cloud OAuth consent screen.</p>
+
+</body>
+</html>
