@@ -49,7 +49,16 @@
   --font-body: 'Sora', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --sidebar-w: 230px;
+  --app-zoom: 1;
 }
+
+/* ---- GLOBAL FONT / UI SIZE ----
+   `zoom` scales the whole rendered page uniformly — text, padding, icons,
+   sticky/fixed elements — the same way native browser zoom does, without
+   needing every one of the hundreds of inline px font-sizes in this file
+   to be rewritten in rem. Applied to <html> so position:fixed children
+   (sidebar, modals, banners) scale and stay correctly anchored. */
+html { zoom: var(--app-zoom, 1); }
 
 /* LIGHT MODE — calibrated separately from the dark palette.
    Light mode is a first-class appearance, not the dark theme with the tint removed. */
@@ -108,7 +117,15 @@ body.light-mode .tracker-date-input { color-scheme: light; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html {
-  overflow-x: hidden;
+  /* overflow-x:clip (not hidden) — hidden pairs with the unset overflow-y
+     and gets computed to overflow-y:auto, which silently turns html/body
+     into their own dead scroll container (never actually scrolls, since
+     it's always sized to fit its content) instead of the real viewport
+     scroller. Any position:sticky element anywhere in the app then anchors
+     to that dead container and never appears to stick. clip avoids the
+     coupling while still preventing horizontal scroll. See body, below,
+     and the matching mobile/tablet media queries. */
+  overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
 }
@@ -119,7 +136,7 @@ body {
   color: var(--text);
   min-height: 100vh;
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow-x: clip; /* see html rule above — do not change back to hidden */
   width: 100%;
   max-width: 100vw;
   transition: background 0.3s, color 0.3s;
@@ -367,7 +384,6 @@ label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px
 
 #page-scoresheet .scoresheet-practice-freeze-target.scoresheet-practice-fixed {
   position: fixed !important;
-  top: 0 !important;
   z-index: 1000 !important;
   margin-top: 0 !important;
   margin-bottom: 16px !important;
@@ -411,6 +427,18 @@ tr:hover td { background: rgba(124,106,247,0.03); }
 /* Row hover tint needs to also cover the frozen actions cell, or it'll look
    like a seam cutting through the highlighted row. */
 .tracker-table-wrap tr:hover td.tracker-actions-col { background: color-mix(in srgb, var(--card) 88%, rgba(124,106,247,0.1)); }
+
+/* ---- PRACTICE SET SCORES: scrollable history, fixed controls ----
+   With month/day grouping this table can grow very long (100+ entries).
+   Cap the scrollable area to a fixed height and keep the Newest first /
+   Collapse all / Expand all bar pinned outside the scroll region, right
+   below the table, so it never requires scrolling to the very bottom
+   to reach it. */
+.practice-scroll-wrap { max-height: 46vh; min-height: 120px; }
+.practice-table-card #practice-pagination {
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+}
 
 /* ---- MOBILE TABLE COLUMNS ---- */
 @media (max-width: 600px) {
@@ -701,6 +729,12 @@ body.light-mode.theme-custom select.status-select.status-2 {
 }
 
 /* ---- SCORESHEET CHART ---- */
+#score-overview-inner .score-overview-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
 .score-chart-section {
   margin-top: 16px;
 }
@@ -746,7 +780,7 @@ body.light-mode.theme-custom select.status-select.status-2 {
 /* ---- SETTINGS TABS ---- */
 .settings-tab-panel { display: none; animation: fadein 0.15s ease; }
 .settings-tab-panel.active { display: block; }
-.settings-tab-btn { opacity: 0.7; }
+.settings-tab-btn { opacity: 0.7; padding: 11px 20px !important; font-size: 15px !important; font-weight: 600; border-radius: 10px; }
 .settings-tab-btn.active { opacity: 1; background: var(--accent); color: #fff; border-color: var(--accent); }
 
 /* ---- TOAST ---- */
@@ -842,14 +876,14 @@ body.light-mode.theme-custom select.status-select.status-2 {
 
 /* ---- TRACKER SUBTABS ---- */
 .tracker-subtabs {
-  display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
+  display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
 }
 .tracker-subtab-group {
   display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
 }
 .tracker-subtab {
-  padding: 5px 12px; border-radius: 6px; cursor: pointer;
-  font-size: 11px; font-weight: 500; color: var(--muted);
+  padding: 8px 16px; border-radius: 7px; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--muted);
   border: 1px solid var(--border); background: var(--card); transition: all 0.15s; white-space: nowrap;
 }
 .tracker-subtab:hover { border-color: var(--accent); color: var(--accent2); }
@@ -858,7 +892,33 @@ body.light-mode.theme-custom select.status-select.status-2 {
 /* ---- SUB-SUBJECT DROPDOWN (used for both Topics and Video Lectures groups) ---- */
 .tracker-menu-dropdown { position: relative; display: inline-block; }
 .tracker-menu-btn { display: inline-flex; align-items: center; gap: 6px; }
-.tracker-menu-btn .hamburger-icon { font-size: 11px; line-height: 1; }
+.tracker-menu-btn .hamburger-icon { font-size: 10px; line-height: 1; display: inline-block; transition: transform 0.15s; }
+.tracker-menu-btn.active .hamburger-icon, .tracker-menu-dropdown:has(.tracker-menu.open) .hamburger-icon { transform: rotate(180deg); }
+
+/* ---- TARGET SLIDER (Performance Radar) — custom thumb so it visibly reads as draggable ---- */
+.target-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px; border-radius: 99px; outline: none;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent) var(--pct, 50%), var(--border) var(--pct, 50%), var(--border) 100%);
+  cursor: pointer;
+}
+.target-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); border: 3px solid var(--card);
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 6px rgba(0,0,0,0.35);
+  cursor: grab; margin-top: 0; transition: transform 0.12s ease;
+}
+.target-slider::-webkit-slider-thumb:hover { transform: scale(1.12); }
+.target-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.2); }
+.target-slider::-moz-range-thumb {
+  width: 24px; height: 24px; border-radius: 50%; border: 3px solid var(--card);
+  background: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 2px 6px rgba(0,0,0,0.35);
+  cursor: grab; transition: transform 0.12s ease;
+}
+.target-slider::-moz-range-thumb:hover { transform: scale(1.12); }
+.target-slider::-moz-range-thumb:active { cursor: grabbing; transform: scale(1.2); }
+.target-slider::-moz-range-track { background: transparent; border: none; }
 .tracker-menu {
   display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
   min-width: 240px; max-height: 320px; overflow-y: auto;
@@ -873,6 +933,19 @@ body.light-mode.theme-custom select.status-select.status-2 {
 }
 .tracker-menu-item:hover { background: rgba(124,106,247,0.12); color: var(--text); }
 .tracker-menu-item.active { color: var(--accent2); background: rgba(124,106,247,0.1); font-weight: 600; }
+
+/* ---- MAIN SUBJECT TABS (flat, clickable, icon-led — no nesting) ---- */
+.tracker-main-tab {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 8px 14px; border-radius: 10px; background: var(--card); transition: all .15s;
+  border: 1.5px solid var(--border);
+}
+.tracker-main-tab:hover { border-color: var(--msc); }
+.tracker-main-tab.active { border-color: var(--msc); background: color-mix(in srgb, var(--msc) 10%, var(--card)); }
+.tracker-main-tab .tm-emoji { font-size: 16px; line-height: 1; }
+.tracker-main-tab .tm-tab-name { font-size: 13px; font-weight: 800; color: var(--text); }
+.tracker-main-tab.active .tm-tab-name { color: var(--msc); }
+.tracker-main-tab .tm-tab-pct { font-size: 10px; color: var(--muted); }
 
 /* ---- SCORE QUIZ TYPE BADGE ---- */
 .quiz-type-badge {
@@ -1166,7 +1239,7 @@ body.light-mode.theme-custom select.status-select.status-2 {
 
 /* ---- TABLET: 601–1024px (portrait AND landscape) ---- */
 @media (min-width: 601px) and (max-width: 1024px) {
-  html, body { overflow-x: hidden !important; width: 100% !important; }
+  html, body { overflow-x: clip !important; width: 100% !important; }
   #main { padding: 60px 24px 28px !important; }
   .page { width: 100%; box-sizing: border-box; }
 
@@ -1197,7 +1270,7 @@ body.light-mode.theme-custom select.status-select.status-2 {
   /* ── Base: zero horizontal scroll ── */
   *, *::before, *::after { box-sizing: border-box !important; }
   html, body {
-    overflow-x: hidden !important;
+    overflow-x: clip !important;
     max-width: 100vw !important;
     width: 100% !important;
     position: relative;
@@ -1258,6 +1331,9 @@ body.light-mode.theme-custom select.status-select.status-2 {
   #page-scoresheet table { min-width: 520px; width: max-content; }
   #page-scoresheet .card[style*="grid-template-columns:repeat(3,1fr)"] {
     display: flex !important; flex-direction: column !important; gap: 10px !important;
+  }
+  #score-overview-inner .score-overview-grid {
+    grid-template-columns: 1fr !important;
   }
 
   /* ── Tracker table: scroll inside card ── */
@@ -2697,6 +2773,19 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
 .roadmap-info-panel{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);position:sticky;left:0}
 .roadmap-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--border);font-size:10.5px;font-weight:700;color:var(--text);cursor:pointer;margin:0 6px 6px 0;transition:border-color .15s}
 .roadmap-chip:hover{border-color:var(--accent)}
+.rm-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:14px}
+.rm-stat-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.rm-stat-box-head{display:flex;align-items:center;gap:6px;font:800 9.5px var(--font-body);letter-spacing:1px;text-transform:uppercase;color:var(--rsc,var(--accent));margin-bottom:9px}
+.rm-stat-box-nums{display:flex;gap:20px;flex-wrap:wrap}
+.rm-stat-num{display:flex;align-items:baseline;gap:6px}
+.rm-stat-num b{font:800 19px var(--font-mono);color:var(--text)}
+.rm-stat-num span{font-size:10px;color:var(--muted)}
+.rm-badge-grid{display:flex;flex-wrap:wrap;gap:8px}
+.rm-badge-card{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:7px 11px 7px 8px;cursor:pointer;transition:border-color .15s}
+.rm-badge-card:hover{border-color:var(--accent)}
+.rm-badge-icon{width:30px;height:30px;border-radius:8px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+.rm-badge-name{font-size:10.5px;font-weight:800;color:var(--text);line-height:1.3}
+.rm-badge-date{font-size:8.5px;color:var(--muted)}
 
 </style>
 
@@ -3863,11 +3952,23 @@ renderDashboard(); }, 400);
     </div>
     <button class="btn btn-primary btn-sm" id="score-add-btn" onclick="openScoreEntryForCurrentTab()">+ Add Entry</button>
   </div>
-  <div class="tabs" id="scoresheet-tabs" style="margin-bottom:14px">
-    <div class="tab active" id="scoresheet-tab-exams" onclick="setScoresheetTab('exams')">📝 Preboards & Exams</div>
-    <div class="tab" id="scoresheet-tab-practice" onclick="setScoresheetTab('practice')">🎯 Drills & Practice Sets</div>
+  <div class="freeze-pane-bar" id="scoresheet-tabs-wrap" style="padding-bottom:14px">
+    <div class="tabs" id="scoresheet-tabs" style="margin-bottom:0">
+      <div class="tab active" id="scoresheet-tab-exams" onclick="setScoresheetTab('exams')">📝 Preboards & Exams</div>
+      <div class="tab" id="scoresheet-tab-practice" onclick="setScoresheetTab('practice')">🎯 Drills & Practice Sets</div>
+    </div>
   </div>
   <div id="scoresheet-panel-exams">
+  <div class="card" id="score-overview-card" style="margin-bottom:16px">
+    <div id="score-overview-inner"></div>
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">
+      <div class="section-title" style="margin-bottom:8px">🎯 Performance Radar &amp; Insights</div>
+      <div class="grid-2" style="align-items:start;margin-top:8px;grid-template-columns:1.15fr 1fr">
+        <div id="score-radar-chart" style="width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center"></div>
+        <div id="score-radar-insights"></div>
+      </div>
+    </div>
+  </div>
   <div class="card tracker-table-wrap" style="overflow:auto;margin-bottom:16px">
     <table id="scoresheet-table">
       <thead>
@@ -3932,11 +4033,13 @@ renderDashboard(); }, 400);
       </div>
       <div id="practice-score-filters" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"></div>
     </div>
-    <div class="card tracker-table-wrap" style="overflow:auto;margin-bottom:16px">
-      <table id="practice-scores-table">
-        <thead><tr><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Score</th><th>%</th><th>Result</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
-        <tbody id="practice-score-tbody"></tbody>
-      </table>
+    <div class="card practice-table-card" style="margin-bottom:16px">
+      <div class="tracker-table-wrap practice-scroll-wrap" style="overflow:auto">
+        <table id="practice-scores-table">
+          <thead><tr><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Score</th><th>%</th><th>Result</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
+          <tbody id="practice-score-tbody"></tbody>
+        </table>
+      </div>
       <div id="practice-pagination"></div>
     </div>
     <div class="card" id="practice-analytics" style="margin-bottom:16px">
@@ -4004,10 +4107,12 @@ renderDashboard(); }, 400);
       <button class="btn btn-ghost btn-sm" onclick="openAddTopicModal()">+ Add Topic</button>
     </div>
   </div>
-  <div id="tracker-main-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
-  <div class="tracker-subtabs" id="tracker-sub-tabs"></div>
-  <div class="card" style="margin-bottom:12px;" id="tracker-subject-info"></div>
-  <div class="conf-guide" id="conf-guide-box">
+  <div class="freeze-pane-bar" style="padding:4px 0 12px;">
+    <div id="tracker-main-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+    <div class="tracker-subtabs" id="tracker-sub-tabs"></div>
+    <div class="card" style="margin-top:12px;" id="tracker-subject-info"></div>
+  </div>
+  <div class="conf-guide" id="conf-guide-box" style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;" id="conf-guide-title">🎯 Confidence Level Guide — What do the dots mean?</div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px;" id="conf-guide-sub">Rate how well you understand each topic on a 1–5 scale. Be honest — this helps you prioritize review sessions.</div>
     <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--danger)"></div><span style="color:var(--danger);font-weight:600;min-width:60px">Level 1</span><span style="color:var(--dim)" id="conf-guide-l1">I read/heard it but can't explain it — total confusion.</span></div>
@@ -4178,6 +4283,7 @@ renderDashboard(); }, 400);
     <button class="btn btn-ghost btn-sm" onclick="toggleAllHistoryDays(true)">⌄ Expand All</button>
   </div>
   <div id="history-list"></div>
+  <div id="history-pagination"></div>
   </div>
 </div>
 
@@ -4186,7 +4292,7 @@ renderDashboard(); }, 400);
     <div><h2>Settings</h2><p>Customize your tracker</p></div>
   </div>
 
-  <div id="settings-tabbar" class="freeze-pane-bar" style="display:flex;gap:6px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:16px;">
+  <div id="settings-tabbar" class="freeze-pane-bar" style="display:flex;gap:10px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:16px;">
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="subjects" onclick="setSettingsTab('subjects')">📚 Subjects</button>
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="profile" onclick="setSettingsTab('profile')">👤 Profile</button>
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="ai" onclick="setSettingsTab('ai')">🤖 AI Coach</button>
@@ -4436,6 +4542,13 @@ renderDashboard(); }, 400);
         </select>
         <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Tip: the top group are all similar modern sans-serif fonts, so switching between them can look subtle. Pick one from the other groups if you want a change that's obvious at a glance.</div>
       </div>
+
+      <div class="form-row">
+        <label>Font Size</label>
+        <div id="font-size-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Scales text and spacing across the whole app — sidebar, tables, dashboard, everything — not just this page.</div>
+      </div>
+
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <label style="margin:0">Appearance Mode</label>
         <div class="toggle" onclick="toggleDarkMode()">
@@ -4447,7 +4560,12 @@ renderDashboard(); }, 400);
 
   <div id="settings-tab-data" class="settings-tab-panel">
     <div class="card" style="max-width:560px">
-      <div class="section-title">Data Management</div>
+      <div class="section-title">💾 Backup Status</div>
+      <div id="backup-status-panel" style="font-size:11px;line-height:1.7;margin-top:6px"></div>
+    </div>
+
+    <div class="card" style="max-width:560px;margin-top:16px">
+      <div class="section-title">Local Backup</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;gap:10px;">
         <button class="btn btn-primary" onclick="saveToFile()" style="flex:1">💾 Save to File</button>
@@ -4455,14 +4573,36 @@ renderDashboard(); }, 400);
       </div>
         <div style="font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;line-height:1.6;">
           💡 <strong style="color:var(--dim)">Save to File</strong> lets you pick or create a <code style="font-family:var(--font-mono);font-size:10px;color:var(--accent2)">.json</code> file. On Chrome/Edge, it <strong style="color:var(--accent2)">auto-saves every 3 seconds</strong> after any change — the <span style="color:var(--pass)">✓</span> indicator next to the button confirms autosave. LocalStorage backup is always active.
+          <br><br>🔒 <strong style="color:var(--dim)">Tip:</strong> point it at a folder synced by Google Drive, OneDrive, or Dropbox and every autosave becomes an off-device backup automatically — no extra steps.
         </div>
         <button class="btn btn-ghost" onclick="exportData()">⬇ Export Backup (JSON)</button>
         <div>
           <label style="margin-bottom:6px">Import Backup</label>
           <input type="file" id="import-file" accept=".json" onchange="importData(event)">
         </div>
-        <button class="btn btn-danger" onclick="resetAll()">⚠ Reset All Data</button>
       </div>
+    </div>
+
+    <div class="card" style="max-width:560px;margin-top:16px">
+      <div class="section-title">☁️ Google Drive Backup</div>
+      <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+        Connect your own Google Drive to back up automatically. This app can only ever see the one backup file it creates — never anything else in your Drive — and your data goes straight from your browser to your Drive. It never passes through our servers.
+      </p>
+      <div id="drive-status-panel" style="font-size:11px;line-height:1.7;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" id="drive-connect-btn" onclick="connectGoogleDrive()">🔗 Connect Google Drive</button>
+        <button class="btn btn-ghost btn-sm" id="drive-backup-btn" style="display:none" onclick="driveBackupNow()">⬆ Backup Now</button>
+        <button class="btn btn-ghost btn-sm" id="drive-restore-btn" style="display:none" onclick="driveRestoreNow()">⬇ Restore from Drive</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:560px;margin-top:16px">
+      <div class="section-title">⚠ Safety Net</div>
+      <p style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+        Before any import or reset, a snapshot of your current data is saved automatically so a wrong click never has to be permanent.
+      </p>
+      <div id="undo-snapshot-panel"></div>
+      <button class="btn btn-danger" style="margin-top:12px;width:100%" onclick="resetAll()">⚠ Reset All Data</button>
     </div>
   </div>
 
@@ -5231,14 +5371,14 @@ let state = {
   videoSubjectNames: {}, // user-editable display names for built-in video libraries
   subjectNames: {}, // user-editable display names for all other subjects
   subjectColors: {}, // user-customized colors for FAR/AFAR/MAS/AUDIT/TAX/RFBT
+  examTarget: 75, // single consolidated target % for the Preboards & Exams scoresheet radar
 };
 
 // Paste your bug report Google Form link here once it's ready.
 const BUG_REPORT_FORM_URL = 'https://forms.gle/KAJDvSpFK5VwhCEm6';
 
 let currentTrackerMain = 'FAR';
-let currentTrackerSub = 'FOA';
-let trackerVideoGroupCollapsed = true; // video dropdown starts closed
+let currentTrackerSub = 'FOA';let trackerVideoGroupCollapsed = true; // video dropdown starts closed
 let trackerTopicGroupCollapsed = true; // topics dropdown starts closed
 let calViewDate = new Date();
 let calView = 'month';
@@ -5267,6 +5407,7 @@ function save() {
     }
   }
   scheduleAutoSave();
+  scheduleAutoDriveBackup();
 }
 function load() {
   const raw = localStorage.getItem('cpale_v2_state');
@@ -5338,6 +5479,21 @@ function showPage(id) {
   try { localStorage.setItem('cpale_last_page', id); } catch (e) {}
   // Close sidebar on mobile/tablet after navigation
   if (window.innerWidth <= 1024) closeSidebar();
+}
+
+// Remembers finer-grained "where the user was" state (which subject/tab/view
+// they had open within a page) so a refresh restores that too, not just the
+// top-level page. Cheap: one JSON blob, merged so callers only touch their
+// own key.
+function saveUiSubState(patch) {
+  try {
+    const cur = JSON.parse(localStorage.getItem('cpale_ui_state') || '{}');
+    Object.assign(cur, patch);
+    localStorage.setItem('cpale_ui_state', JSON.stringify(cur));
+  } catch (e) {}
+}
+function loadUiSubState() {
+  try { return JSON.parse(localStorage.getItem('cpale_ui_state') || '{}'); } catch (e) { return {}; }
 }
 
 // ============================================================
@@ -5683,6 +5839,53 @@ function applyFont(font) {
   document.documentElement.style.setProperty('--font-body', `'${font}', ${fallback}`);
   document.body.style.fontFamily = `'${font}', ${fallback}`;
   save();
+}
+
+// ============================================================
+// GLOBAL FONT / UI SIZE
+// ============================================================
+const FONT_SIZE_SCALES = { small: 0.9, default: 1, large: 1.15, xlarge: 1.3 };
+const FONT_SIZE_LABELS = { small: 'Small', default: 'Default', large: 'Large', xlarge: 'X-Large' };
+
+function applyFontSize(size) {
+  if (!FONT_SIZE_SCALES[size]) size = 'default';
+  state.fontSize = size;
+  document.documentElement.style.setProperty('--app-zoom', FONT_SIZE_SCALES[size]);
+  renderFontSizePicker();
+  save();
+  // The freeze-pane bars (settings tabbar, practice scoresheet header, subject
+  // quicknav) cache their pixel left/width/top offsets from getBoundingClientRect()
+  // and only recompute them on scroll/resize — changing the zoom level alone
+  // doesn't fire either, so their cached offsets go stale against the new
+  // scale and the bar renders in the wrong place. Nudge a resize event (after
+  // layout has actually settled at the new zoom) so every freeze-pane handler
+  // that already listens for 'resize' recalculates against the new size.
+  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+}
+
+// The freeze-pane bars below (#settings-tabbar, the Practice Set Scores card)
+// don't use plain CSS position:sticky — they measure their own on-screen
+// position with getBoundingClientRect() and then pin themselves with
+// position:fixed plus a hand-set left/top/width in px. That rect is already
+// in zoomed (visual) pixels, but re-applying that same number as an inline
+// px style on an element inside the zoomed <html> gets multiplied by the
+// zoom factor AGAIN when the browser renders it — so the offset drifts
+// further off target the higher the zoom goes (invisible at Default==1,
+// since anything × 1 is a no-op, which is why this only showed up at
+// Large/X-Large). Dividing by the current zoom factor before assigning
+// cancels that out. Every freeze-pane function below runs measured values
+// through this first.
+function currentZoomFactor() {
+  return FONT_SIZE_SCALES[state.fontSize || 'default'] || 1;
+}
+
+function renderFontSizePicker() {
+  const el = document.getElementById('font-size-picker');
+  if (!el) return;
+  const current = state.fontSize || 'default';
+  el.innerHTML = Object.keys(FONT_SIZE_SCALES).map(key =>
+    `<button type="button" class="btn btn-sm ${current === key ? 'btn-primary' : 'btn-ghost'}" onclick="applyFontSize('${key}')">${FONT_SIZE_LABELS[key]}</button>`
+  ).join('');
 }
 
 // ============================================================
@@ -6058,6 +6261,11 @@ let historySubject = 'all';
 let historyRange = 'all';
 let historySelectedDay = null;
 let historyDate = null;
+// Recent (non-archived) days are paginated instead of all rendering at
+// once, so the list has a fixed, predictable footprint instead of
+// growing into an endless scroll the longer someone uses the tracker.
+let historyPage = 1;
+const HISTORY_PAGE_SIZE = 10; // day-groups per page
 
 const ACTIVITY_DETAIL_DAYS = 90;
 const ACTIVITY_MAX_RECENT = 600;
@@ -6198,12 +6406,14 @@ function addActivity(type, title, detail='') {
 function setHistoryFilter(filter) {
   historyFilter=filter;
   historySelectedDay=null;
+  historyPage=1;
   document.querySelectorAll('.history-filter').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));
   renderHistoryPage();
 }
 function setHistorySubject(subject) {
   historySubject=subject;
   historySelectedDay=null;
+  historyPage=1;
   renderHistorySubjectChips();
   renderHistoryPage();
 }
@@ -6215,18 +6425,21 @@ function renderHistorySubjectChips() {
 function setHistoryRange(range) {
   historyRange=range;
   historySelectedDay=null;
+  historyPage=1;
   document.querySelectorAll('.history-range').forEach(b=>b.classList.toggle('active',b.dataset.range===range));
   renderHistoryPage();
 }
 function selectHistoryDay(day) {
   historySelectedDay=day;
   historyRange='all';
+  historyPage=1;
   document.querySelectorAll('.history-range').forEach(b=>b.classList.toggle('active',b.dataset.range==='all'));
   renderHistoryPage();
 }
 function clearHistoryDay() {
   historySelectedDay=null;
   historyDate=null;
+  historyPage=1;
   const picker=document.getElementById('history-date-picker');
   if(picker) picker.value='';
   renderHistoryPage();
@@ -6242,6 +6455,7 @@ function selectHistoryDate(date) {
   historySelectedDay=date||null;
   historyRange='all';
   historyFilter='all';
+  historyPage=1;
   document.querySelectorAll('.history-filter').forEach(b=>b.classList.toggle('active',b.dataset.filter==='all'));
   document.querySelectorAll('.history-range').forEach(b=>b.classList.toggle('active',b.dataset.range==='all'));
   renderHistoryPage();
@@ -6249,10 +6463,17 @@ function selectHistoryDate(date) {
 function focusHistoryToday() {
   historySelectedDay=null;
   historyRange='7';
+  historyPage=1;
   document.querySelectorAll('.history-range').forEach(b=>b.classList.toggle('active',b.dataset.range==='7'));
   renderHistoryPage();
   const first=document.querySelector('#history-list [data-history-day]');
   if(first) first.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function goHistoryPage(delta) {
+  historyPage += delta;
+  renderHistoryPage();
+  const wrap=document.getElementById('history-list-wrap');
+  if(wrap) wrap.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function historyMatches(e) {
   if(historyDate && e.day!==historyDate) return false;
@@ -6298,6 +6519,7 @@ let roadmapSelectedIdx = null;
 
 function setHistoryViewMode(mode) {
   historyViewMode = mode;
+  saveUiSubState({ historyView: mode });
   const listBtn=document.getElementById('history-view-list-btn'), rmBtn=document.getElementById('history-view-roadmap-btn');
   const listWrap=document.getElementById('history-list-wrap'), rmWrap=document.getElementById('history-roadmap-wrap');
   if(listBtn) listBtn.className = 'btn btn-sm ' + (mode==='list'?'btn-primary':'btn-ghost');
@@ -6392,25 +6614,29 @@ function roadmapRenderInfoPanel(idx) {
     panel.innerHTML = `<div class="section-title" style="margin-bottom:6px">🚩 Day One</div><div style="font-size:11.5px;color:var(--muted)">${roadmapFmtDate(node.at)} — this is where it all began! Everything on the map happened after this. 🌱</div>`;
     return;
   }
-  // Lead with what actually got done that month, not every single badge —
+  // Lead with what actually got done that month, grouped like a real
+  // dashboard (Learning / Content / Progress) instead of a flat pill list —
   // easier to glance back and go "oh right, I did that!"
   const s = node.stats || {};
-  const pills = [];
-  if (s.completed) pills.push(`✅ ${s.completed} topic${s.completed===1?'':'s'} completed`);
-  if (s.started) pills.push(`🚀 ${s.started} topic${s.started===1?'':'s'} started`);
-  if (s.videoCompleted) pills.push(`🎥 ${s.videoCompleted} lecture${s.videoCompleted===1?'':'s'} watched`);
-  if (s.videoStarted) pills.push(`▶️ ${s.videoStarted} lecture${s.videoStarted===1?'':'s'} started`);
-  if (s.scores) pills.push(`📝 ${s.scores} score${s.scores===1?'':'s'} logged`);
-  if (s.studyDays) pills.push(`📅 ${s.studyDays} study day${s.studyDays===1?'':'s'}`);
-  pills.push(`🏆 ${node.achievements.length} achievement${node.achievements.length===1?'':'s'}`);
-  const pillsHtml = pills.map(p=>`<span class="roadmap-chip">${p}</span>`).join('');
+  const boxes = [];
+  if (s.completed || s.started) boxes.push({c:'var(--pass)', label:'Learning', nums:[
+    s.completed?['✅',s.completed,'Topics completed']:null, s.started?['🚀',s.started,'Topics started']:null].filter(Boolean)});
+  if (s.videoCompleted || s.videoStarted) boxes.push({c:'var(--accent2)', label:'Content', nums:[
+    s.videoCompleted?['🎥',s.videoCompleted,'Lectures watched']:null, s.videoStarted?['▶️',s.videoStarted,'Lectures started']:null].filter(Boolean)});
+  const progressNums = [s.scores?['📝',s.scores,'Scores logged']:null, s.studyDays?['📅',s.studyDays,'Study days']:null,
+    node.achievements.length?['🏆',node.achievements.length,'Achievements']:null].filter(Boolean);
+  if (progressNums.length) boxes.push({c:'var(--accent3)', label:'Progress', nums:progressNums});
+  const boxesHtml = boxes.map(b=>`<div class="rm-stat-box" style="--rsc:${b.c}"><div class="rm-stat-box-head">${b.label}</div><div class="rm-stat-box-nums">${
+    b.nums.map(([icon,n,lbl])=>`<div class="rm-stat-num"><b>${icon} ${n}</b><span>${lbl}</span></div>`).join('')}</div></div>`).join('');
   const expanded = roadmapBadgesExpanded === idx;
   const shownAch = expanded ? node.achievements : node.achievements.slice(0,5);
   const moreCount = node.achievements.length - shownAch.length;
-  const achChips = shownAch.map(a=>`<span class="roadmap-chip" onclick="roadmapNodeClick('${a.id}')" title="${roadmapFmtDate(a.at)}">${a.icon} ${a.name}</span>`).join('')
-    + (moreCount>0 ? `<span class="roadmap-chip" onclick="roadmapToggleBadges(${idx})">+${moreCount} more</span>` : '')
-    + (expanded && node.achievements.length>5 ? `<span class="roadmap-chip" onclick="roadmapToggleBadges(${idx})">Show less</span>` : '');
-  panel.innerHTML = `<div class="section-title" style="margin-bottom:8px">${node.label} ${node.year} — here's what you crushed! 💪</div><div style="margin-bottom:${achChips?'10px':'0'}">${pillsHtml}</div>${achChips?`<div style="font-size:10px;color:var(--muted);margin:2px 0 6px">Badges earned</div><div>${achChips}</div>`:''}`;
+  const achCards = shownAch.map(a=>`<div class="rm-badge-card" onclick="roadmapNodeClick('${a.id}')"><div class="rm-badge-icon">${a.icon}</div><div><div class="rm-badge-name">${a.name}</div><div class="rm-badge-date">Earned ${roadmapFmtDate(a.at)}</div></div></div>`).join('')
+    + (moreCount>0 ? `<div class="rm-badge-card" onclick="roadmapToggleBadges(${idx})" style="align-items:center;justify-content:center"><div class="rm-badge-name">+${moreCount} more</div></div>` : '')
+    + (expanded && node.achievements.length>5 ? `<div class="rm-badge-card" onclick="roadmapToggleBadges(${idx})" style="align-items:center;justify-content:center"><div class="rm-badge-name">Show less</div></div>` : '');
+  panel.innerHTML = `<div class="section-title" style="margin-bottom:10px">${node.label} ${node.year} — here's what you crushed! 💪</div>`
+    + (boxesHtml ? `<div class="rm-stat-grid">${boxesHtml}</div>` : '')
+    + (achCards ? `<div style="font-size:10px;color:var(--muted);margin:2px 0 8px;text-transform:uppercase;letter-spacing:1px;font-weight:800">✨ Badges earned</div><div class="rm-badge-grid">${achCards}</div>` : '');
 }
 
 function roadmapSelectNode(idx) {
@@ -6499,7 +6725,7 @@ function renderRoadmap() {
     const color = isFuture ? 'var(--border)' : (p.tier ? roadmapTierColor(p.tier) : (isCurrent ? 'var(--accent)' : 'var(--muted)'));
 
     let ringInner;
-    if (isFuture) ringInner = '';
+    if (isFuture) ringInner = '<span style="font-size:17px;opacity:.55">🔒</span>';
     else if (p.achievements.length) ringInner = p.achievements.length<=4
       ? p.achievements.map(a=>`<span>${a.icon}</span>`).join('')
       : p.achievements.slice(0,3).map(a=>`<span>${a.icon}</span>`).join('') + `<span class="rm-more">+${p.achievements.length-3}</span>`;
@@ -6581,6 +6807,12 @@ function renderHistoryPage() {
   if(historyViewMode==='roadmap'){renderRoadmap();return;}
   if(!events.length && !archive.length){list.innerHTML='<div class="card" style="padding:34px;text-align:center;color:var(--muted)"><div style="font-size:28px;margin-bottom:8px">↺</div><div style="font-size:13px;color:var(--dim);font-weight:700;margin-bottom:4px">Your footprint starts here</div><div style="font-size:11px">Complete a topic, log a study day, or record a score and it will appear here.</div></div>';return;}
   const groups={}; events.forEach(e=>(groups[e.day] ||= []).push(e));
+  const allDayKeys=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  const totalHistoryPages=Math.max(1, Math.ceil(allDayKeys.length / HISTORY_PAGE_SIZE));
+  if(historyPage>totalHistoryPages) historyPage=totalHistoryPages;
+  if(historyPage<1) historyPage=1;
+  const pageStart=(historyPage-1)*HISTORY_PAGE_SIZE;
+  const dayKeys=allDayKeys.slice(pageStart, pageStart+HISTORY_PAGE_SIZE);
   const selectedDayNotice = historyDate
     ? `<div class="history-selected-day"><span>Showing history for <b>${new Date(historyDate+'T00:00:00').toLocaleDateString('default',{weekday:'long',month:'short',day:'numeric',year:'numeric'})}</b></span><button class="btn btn-ghost btn-sm" onclick="clearHistoryDay()">Show all days</button></div>`
     : historySelectedDay
@@ -6588,13 +6820,19 @@ function renderHistoryPage() {
       : '';
   const today=localDateStr(), yd=new Date(); yd.setDate(yd.getDate()-1); const yesterday=localDateStr(yd);
   const dayLabel=d=>d===today?'Today':d===yesterday?'Yesterday':new Date(d+'T00:00:00').toLocaleDateString('default',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
-  const recentHTML=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(day=>{
+  const recentHTML=dayKeys.map(day=>{
     const rows=groups[day].map(e=>{const t=e.ts ? new Date(e.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}) : 'Time unavailable';const icon=e.type==='score'?'✎':e.type==='milestone'?'🎯':e.type==='progress'?'✓':'📚';const color=e.type==='score'?'var(--accent2)':e.type==='milestone'?'var(--accent3)':e.type==='progress'?'var(--pass)':'var(--accent)';return `<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);align-items:flex-start"><div style="width:30px;height:30px;border-radius:9px;background:${color}18;border:1px solid ${color}35;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${icon}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--text)">${e.title}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5">${e.detail||'Activity'}</div></div><div style="font:10px var(--font-mono);color:var(--muted);white-space:nowrap" title="${e.ts?'Recorded automatically':'This older record only contains a date'}">${t}</div></div>`}).join('');
     const count = groups[day].length;
     // Today (and an explicitly-selected single day) start expanded; every
     // other day starts collapsed so a long history doesn't turn into one
     // huge scroll — each day is one click away via its own summary row.
     const startOpen = day === today || historySelectedDay === day || historyDate === day;
+    // A single busy day (lots of drills logged in one sitting) can still
+    // have far more entries than fit comfortably on screen once its group
+    // is open. Past a threshold, give that day's own rows a bounded height
+    // with an internal scrollbar — a "dedicated space" — instead of letting
+    // it push the rest of the page down indefinitely.
+    const rowsScrollStyle = count > 12 ? 'max-height:420px;overflow-y:auto;' : '';
     return `<details class="history-day-group" data-history-day="${day}" ${startOpen?'open':''}>
       <summary class="history-day-select ${historySelectedDay===day?'selected':''}">
         <span class="history-day-label">${dayLabel(day)}<span class="history-day-count">${count} ${count===1?'entry':'entries'}</span></span>
@@ -6603,7 +6841,7 @@ function renderHistoryPage() {
           <span class="history-day-caret">⌄</span>
         </span>
       </summary>
-      <div class="card" style="padding:4px 14px;margin-top:6px">${rows}</div>
+      <div class="card" style="padding:4px 14px;margin-top:6px;${rowsScrollStyle}">${rows}</div>
     </details>`;
   }).join('');
   const archiveHTML=archive.length ? (() => {
@@ -6641,6 +6879,18 @@ function renderHistoryPage() {
     </details>` : '';
   })() : '';
   list.innerHTML=selectedDayNotice + recentHTML + archiveHTML;
+
+  const pagEl=document.getElementById('history-pagination');
+  if(pagEl){
+    if(allDayKeys.length===0 || totalHistoryPages<=1){ pagEl.innerHTML=''; }
+    else {
+      pagEl.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0 4px;font-size:12px;color:var(--muted)">
+        <button class="btn btn-ghost btn-sm" ${historyPage<=1?'disabled':''} onclick="goHistoryPage(-1)">‹ Newer</button>
+        <span>Page ${historyPage} of ${totalHistoryPages} · ${allDayKeys.length} day${allDayKeys.length===1?'':'s'}</span>
+        <button class="btn btn-ghost btn-sm" ${historyPage>=totalHistoryPages?'disabled':''} onclick="goHistoryPage(1)">Older ›</button>
+      </div>`;
+    }
+  }
 }
 function renderRecentActivityHTML(limit=6) {
   const events=(state.activityLog||[]).slice(0,limit); if(!events.length)return '<div style="padding:20px;text-align:center;color:var(--muted);font-size:11px">No activity yet. Your study footprint will appear here.</div>';
@@ -8160,9 +8410,17 @@ function openScoreEntryForCurrentTab(){
 
 // Keep the Practice Set Scores controls available while scrolling down the
 // Scoresheet. The card becomes fixed only after it reaches the top, and a
-// placeholder keeps the content below from jumping.
+// placeholder keeps the content below from jumping. It pins just below the
+// Preboards & Exams / Drills & Practice Sets tab bar (which sticks on its
+// own via plain CSS position:sticky), not at the very top of the viewport,
+// so the two don't overlap when both are pinned at once.
 let _practiceFreezePlaceholder = null;
 let _practiceFreezeActive = false;
+
+function scoresheetTabsBarHeight() {
+  const wrap = document.getElementById('scoresheet-tabs-wrap');
+  return wrap ? wrap.getBoundingClientRect().height / currentZoomFactor() : 0;
+}
 
 function updatePracticeScoreFreeze() {
   const page = document.getElementById('page-scoresheet');
@@ -8177,27 +8435,29 @@ function updatePracticeScoreFreeze() {
     // When scrolling back upward, the placeholder returns below the top of
     // the viewport. That means the card should return to normal document flow.
     const placeholderRect = _practiceFreezePlaceholder?.getBoundingClientRect();
-    if (placeholderRect && placeholderRect.top > 0) {
+    if (placeholderRect && placeholderRect.top > scoresheetTabsBarHeight()) {
       clearPracticeScoreFreeze();
       return;
     }
   } else {
     const cardRect = card.getBoundingClientRect();
-    if (cardRect.top > 0) return;
+    if (cardRect.top > scoresheetTabsBarHeight()) return;
   }
 
   if (!_practiceFreezeActive) {
     _practiceFreezePlaceholder = document.createElement('div');
     _practiceFreezePlaceholder.className = 'scoresheet-practice-freeze-placeholder';
-    _practiceFreezePlaceholder.style.height = `${Math.ceil(card.getBoundingClientRect().height)}px`;
+    _practiceFreezePlaceholder.style.height = `${Math.ceil(card.getBoundingClientRect().height / currentZoomFactor())}px`;
     card.parentNode.insertBefore(_practiceFreezePlaceholder, card);
     _practiceFreezeActive = true;
   }
 
   const panelRect = panel.getBoundingClientRect();
+  const z = currentZoomFactor();
   card.classList.add('scoresheet-practice-fixed');
-  card.style.setProperty('left', `${panelRect.left}px`, 'important');
-  card.style.setProperty('width', `${panelRect.width}px`, 'important');
+  card.style.setProperty('left', `${panelRect.left / z}px`, 'important');
+  card.style.setProperty('width', `${panelRect.width / z}px`, 'important');
+  card.style.setProperty('top', `${scoresheetTabsBarHeight()}px`, 'important');
 }
 
 function clearPracticeScoreFreeze() {
@@ -8208,6 +8468,7 @@ function clearPracticeScoreFreeze() {
   card.classList.remove('scoresheet-practice-fixed');
   card.style.removeProperty('left');
   card.style.removeProperty('width');
+  card.style.removeProperty('top');
 
   if (_practiceFreezePlaceholder?.parentNode) {
     _practiceFreezePlaceholder.parentNode.removeChild(_practiceFreezePlaceholder);
@@ -8226,10 +8487,12 @@ function refreshPracticeScoreFreeze() {
     const card = panel?.querySelector('.scoresheet-practice-freeze-target');
     const panelRect = panel?.getBoundingClientRect();
     if (card && panelRect) {
-      card.style.setProperty('left', `${panelRect.left}px`, 'important');
-      card.style.setProperty('width', `${panelRect.width}px`, 'important');
+      const z = currentZoomFactor();
+      card.style.setProperty('left', `${panelRect.left / z}px`, 'important');
+      card.style.setProperty('width', `${panelRect.width / z}px`, 'important');
+      card.style.setProperty('top', `${scoresheetTabsBarHeight()}px`, 'important');
       if (_practiceFreezePlaceholder) {
-        _practiceFreezePlaceholder.style.height = `${Math.ceil(card.getBoundingClientRect().height)}px`;
+        _practiceFreezePlaceholder.style.height = `${Math.ceil(card.getBoundingClientRect().height / z)}px`;
       }
     }
   }
@@ -9212,7 +9475,278 @@ function renderScoresheet() {
         </div>`;
     }
   }
+  renderScoreRadar();
   requestAnimationFrame(() => updatePracticeScoreFreeze());
+}
+
+let examTargetEditMode = false;
+let examTargetPreview = null; // live slider value while editing, before Save
+function getExamTarget() {
+  const v = state.examTarget;
+  return (v === null || v === undefined || isNaN(v)) ? 75 : v;
+}
+function toggleExamTargetEdit() {
+  examTargetEditMode = !examTargetEditMode;
+  examTargetPreview = getExamTarget();
+  renderScoreRadar();
+}
+function onTargetSlide(v) {
+  examTargetPreview = parseInt(v);
+  const lbl = document.getElementById('target-preview-val');
+  if (lbl) lbl.textContent = examTargetPreview + '%';
+  const rangeEl = document.getElementById('target-range');
+  if (rangeEl) rangeEl.style.setProperty('--pct', ((examTargetPreview-50)/45*100).toFixed(1) + '%');
+  const chartEl = document.getElementById('score-radar-chart');
+  if (!chartEl) return;
+  const keys = MAIN_SUBJECTS;
+  const entriesWithScores = state.scores.map(s => ({ s, c: calcEntry(s) })).filter(x => x.c.avg !== null);
+  const latestEntry = entriesWithScores.length ? entriesWithScores[entriesWithScores.length - 1] : null;
+  const valMap = {};
+  keys.forEach(k => { valMap[k] = latestEntry ? latestEntry.c[k.toLowerCase()] : null; });
+  drawRadarChart(chartEl, examTargetPreview, latestEntry, valMap, keys);
+
+  const available = keys.filter(k => valMap[k] !== null);
+  const rows = available.map(k => ({ k, v: valMap[k] }));
+  const sortedAsc = [...rows].sort((a,b) => a.v - b.v);
+  renderScoreOverview(examTargetPreview, latestEntry, sortedAsc[sortedAsc.length - 1], sortedAsc[0]);
+}
+
+// Overview strip above the radar: one glance at the latest overall score vs.
+// target, plus the current strongest/weakest subject — always whole-board,
+// never scoped to a single subject.
+function renderScoreOverview(target, latestEntry, strongest, weakest) {
+  const el = document.getElementById('score-overview-inner');
+  if (!el) return;
+
+  if (!latestEntry) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;padding:14px 4px">Add a score entry to see your overall snapshot.</div>`;
+    return;
+  }
+
+  const avg = latestEntry.c.avg;
+  const diff = avg - target;
+  const diffColor = diff >= 0 ? 'var(--pass)' : 'var(--danger)';
+  const diffText = diff >= 0
+    ? `↑ ${diff.toFixed(1)} pts above your ${target}% target`
+    : `↓ ${Math.abs(diff).toFixed(1)} pts below your ${target}% target`;
+  const trendMsg = diff >= 0
+    ? `You're trending in the right direction${weakest ? `. Keep an eye on ${weakest.k}` : ''} while maintaining your stronger subjects.`
+    : `Focus your next study sessions on${weakest ? ` ${weakest.k}` : ' your weaker subjects'} to close the gap.`;
+
+  el.innerHTML = `
+    <div class="score-overview-grid">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:52px;height:52px;border-radius:50%;border:2px solid var(--accent2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">⭐</div>
+        <div>
+          <div style="font-size:10.5px;color:var(--muted)">Your latest ${latestEntry.s.type || 'score'} score is</div>
+          <div style="font-size:24px;font-weight:800;font-family:var(--font-mono);color:var(--accent2)">${avg.toFixed(1)}%</div>
+          <div style="font-size:10.5px;font-weight:700;color:${diffColor};margin-top:2px">${diffText}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4;max-width:340px">${trendMsg}</div>
+        </div>
+      </div>
+      <div style="padding:10px;border:1px solid var(--border);border-radius:10px">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🎯 Target Score</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="font-size:17px;font-weight:800;font-family:var(--font-mono)">${target}%</div>
+          <button class="btn btn-ghost btn-sm" onclick="toggleExamTargetEdit()" title="Edit target" style="padding:2px 6px">✎</button>
+        </div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:2px">Latest: ${avg.toFixed(1)}%</div>
+      </div>
+      <div style="padding:10px;border-left:3px solid var(--pass);background:rgba(52,211,153,0.08);border-radius:10px">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">💪 Strongest</div>
+        ${strongest ? `<div style="font-size:15px;font-weight:800;color:${SUBJECTS_META[strongest.k].color}">${strongest.k}</div><div style="font-size:11px;font-family:var(--font-mono);color:var(--dim)">${strongest.v.toFixed(1)}%</div>` : `<div style="font-size:12px;color:var(--muted)">—</div>`}
+      </div>
+      <div style="padding:10px;border-left:3px solid var(--danger);background:rgba(239,68,68,0.08);border-radius:10px">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">⚠️ Needs Work</div>
+        ${weakest ? `<div style="font-size:15px;font-weight:800;color:${SUBJECTS_META[weakest.k].color}">${weakest.k}</div><div style="font-size:11px;font-family:var(--font-mono);color:var(--dim)">${weakest.v.toFixed(1)}%</div>` : `<div style="font-size:12px;color:var(--muted)">—</div>`}
+      </div>
+    </div>`;
+}
+function saveExamTarget() {
+  state.examTarget = examTargetPreview !== null ? examTargetPreview : getExamTarget();
+  save();
+  examTargetEditMode = false;
+  renderScoreRadar();
+  toast('Target saved!');
+}
+
+function drawRadarChart(chartEl, target, latestEntry, valMap, keys) {
+  // ---- Radar chart (SVG hexagon) ----
+  const W = 375, H = 375, cx = W/2, cy = H/2, R = 125;
+  const angleFor = i => (Math.PI * 2 * i / keys.length) - Math.PI/2;
+  const ptFor = (i, val) => {
+    const r = Math.max(0, Math.min(100, val)) / 100 * R;
+    const a = angleFor(i);
+    return [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+  };
+  // Unclamped, purely for label placement — ptFor caps at r=R so it can't be
+  // reused to push labels beyond the hexagon's outer ring.
+  const labelPtFor = (i, distR) => {
+    const a = angleFor(i);
+    return [cx + distR*Math.cos(a), cy + distR*Math.sin(a)];
+  };
+  const ringColor = 'var(--muted)';
+  const rings = [20,40,60,80,100].map(pct => {
+    const pts = keys.map((k,i) => ptFor(i,pct).join(',')).join(' ');
+    return `<polygon points="${pts}" fill="none" stroke="${ringColor}" stroke-width="1" opacity="0.4"/>`;
+  }).join('');
+  const spokes = keys.map((k,i) => {
+    const [x,y] = ptFor(i,100);
+    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${ringColor}" stroke-width="1" opacity="0.4"/>`;
+  }).join('');
+  const labels = keys.map((k,i) => {
+    const [x,y] = labelPtFor(i, R * 1.32);
+    const meta = SUBJECTS_META[k];
+    const val = valMap[k];
+    const pctText = (val !== null && val !== undefined) ? val.toFixed(1)+'%' : '';
+    return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle"><tspan fill="${meta.color}" font-size="12" font-weight="700">${k}</tspan>${pctText ? `<tspan fill="var(--dim)" font-size="10.5" font-weight="600"> ${pctText}</tspan>` : ''}</text>`;
+  }).join('');
+  const targetPts = keys.map((k,i) => ptFor(i, target).join(',')).join(' ');
+  const targetPoly = `<polygon points="${targetPts}" fill="none" stroke="var(--warn)" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.9"/>`;
+  const gradId = 'radarGrad';
+  let scorePoly = '', scoreDots = '';
+  if (latestEntry) {
+    const availKeys = keys.filter(k => valMap[k] !== null);
+    if (availKeys.length) {
+      const scorePts = keys.map((k,i) => valMap[k] !== null ? ptFor(i, valMap[k]).join(',') : ptFor(i,0).join(',')).join(' ');
+      scorePoly = `<polygon points="${scorePts}" fill="url(#${gradId})" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>`;
+      scoreDots = keys.filter(k=>valMap[k]!==null).map((k) => {
+        const i = keys.indexOf(k);
+        const [x,y] = ptFor(i, valMap[k]);
+        const col = valMap[k] >= target ? 'var(--pass)' : valMap[k] >= target - 10 ? 'var(--warn)' : 'var(--danger)';
+        return `<circle cx="${x}" cy="${y}" r="4" fill="${col}" stroke="var(--card)" stroke-width="1.5"><title>${k}: ${valMap[k].toFixed(1)}%</title></circle>`;
+      }).join('');
+    }
+  }
+  chartEl.innerHTML = `<svg width="100%" viewBox="-50 -38 ${W+100} ${H+83}" style="max-width:350px;overflow:visible">
+    <defs>
+      <radialGradient id="${gradId}">
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.38"/>
+        <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.08"/>
+      </radialGradient>
+    </defs>
+    ${rings}${spokes}${targetPoly}${scorePoly}${scoreDots}${labels}
+  </svg>
+  <div style="display:flex;justify-content:center;gap:16px;font-size:10px;color:var(--muted);margin-top:2px">
+    <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--accent);margin-right:5px;vertical-align:middle"></span>Latest score</span>
+    <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--warn);margin-right:5px;vertical-align:middle"></span>Target</span>
+  </div>`;
+}
+
+function renderScoreRadar(previewTarget) {
+  const chartEl = document.getElementById('score-radar-chart');
+  const insightsEl = document.getElementById('score-radar-insights');
+  const targetPillEl = document.getElementById('score-target-pill');
+  if (!chartEl || !insightsEl) return;
+
+  const target = previewTarget !== undefined ? previewTarget : getExamTarget();
+  if (targetPillEl) targetPillEl.textContent = '🎯 Target ' + getExamTarget() + '%';
+
+  const entriesWithScores = state.scores.map(s => ({ s, c: calcEntry(s) })).filter(x => x.c.avg !== null);
+  const latestEntry = entriesWithScores.length ? entriesWithScores[entriesWithScores.length - 1] : null;
+  const prevEntry = entriesWithScores.length > 1 ? entriesWithScores[entriesWithScores.length - 2] : null;
+  const keys = MAIN_SUBJECTS;
+  const valMap = {};
+  keys.forEach(k => { valMap[k] = latestEntry ? latestEntry.c[k.toLowerCase()] : null; });
+  const prevMap = {};
+  keys.forEach(k => { prevMap[k] = prevEntry ? prevEntry.c[k.toLowerCase()] : null; });
+
+  const available = keys.filter(k => valMap[k] !== null);
+  const rows = available.map(k => ({ k, v: valMap[k], gap: valMap[k] - target }));
+  const metCount = rows.filter(r => r.gap >= 0).length;
+  const sortedAsc = [...rows].sort((a,b) => a.v - b.v);
+  const weakest = sortedAsc[0];
+  const strongest = sortedAsc[sortedAsc.length - 1];
+
+  // Overview strip (latest score, target, strongest/weakest) sits above the
+  // radar and always reflects the overall picture across every subject —
+  // there's no per-subject view to switch into here, just this one snapshot.
+  renderScoreOverview(target, latestEntry, strongest, weakest);
+
+  drawRadarChart(chartEl, target, latestEntry, valMap, keys);
+
+  // ---- Editing mode: single consolidated target slider ----
+  if (examTargetEditMode) {
+    insightsEl.innerHTML = `
+      <div style="text-align:center;padding:6px 8px 0">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px">This is your own goal, not the CPALE passing cut — set it anywhere from 50–95%. Drag to preview it live on the radar.</div>
+        <div style="font-size:38px;font-weight:800;font-family:var(--font-mono);color:var(--accent2)" id="target-preview-val">${target}%</div>
+        <input type="range" class="target-slider" min="50" max="95" step="1" value="${target}" id="target-range" oninput="onTargetSlide(this.value)" style="width:100%;margin:16px 0 4px;--pct:${((target-50)/45*100).toFixed(1)}%">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:18px"><span>50%</span><span>95%</span></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="examTargetEditMode=false;renderScoreRadar()">Cancel</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="saveExamTarget()">Save Target</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (!latestEntry) {
+    insightsEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(124,106,247,0.16);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">💡</div>
+        <div style="font-size:12px;font-weight:700;color:var(--accent2)">Insights</div>
+      </div>
+      <div style="color:var(--muted);font-size:12px;padding:16px 4px;text-align:center">Add a score entry to see your radar and performance insights.</div>`;
+    return;
+  }
+
+  const belowTarget = [...rows].filter(r => r.gap < 0).sort((a,b) => a.gap - b.gap);
+  const statusColor = metCount === rows.length ? 'var(--pass)' : metCount >= rows.length/2 ? 'var(--warn)' : 'var(--danger)';
+  const statusBg = metCount === rows.length ? 'rgba(52,211,153,0.12)' : metCount >= rows.length/2 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)';
+  const statusBorder = metCount === rows.length ? 'rgba(52,211,153,0.35)' : metCount >= rows.length/2 ? 'rgba(245,158,11,0.35)' : 'rgba(239,68,68,0.35)';
+
+  // Official CPALE result — this is the actual board-exam passing rule
+  // (calcEntry's remark), independent of the user's own target slider above.
+  const remark = latestEntry.c.remark;
+  let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <div style="width:26px;height:26px;border-radius:50%;background:rgba(124,106,247,0.16);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">💡</div>
+    <div style="font-size:12px;font-weight:700;color:var(--accent2)">Insights</div>
+  </div>`;
+  if (remark) {
+    const rmClass = remark === 'PASSED' ? 'badge-pass' : remark === 'CONDITIONAL' ? 'badge-cond' : 'badge-fail';
+    const rmIcon = remark === 'PASSED' ? '✅' : remark === 'CONDITIONAL' ? '⚠️' : '❌';
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface,var(--card));border:1px solid var(--border);margin-bottom:8px">
+      <div style="font-size:10.5px;color:var(--muted)">Official CPALE result</div>
+      <span class="badge ${rmClass}">${rmIcon} ${remark}${latestEntry.c.avg!==null ? ' · '+latestEntry.c.avg.toFixed(1)+'%' : ''}</span>
+    </div>`;
+  }
+
+  html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:${statusBg};border:1px solid ${statusBorder};margin-bottom:12px">
+    <div style="font-size:20px;font-weight:800;font-family:var(--font-mono);color:${statusColor}">${metCount}/${rows.length}</div>
+    <div style="font-size:11px;color:var(--dim);line-height:1.3">subjects at or above your <strong>${target}% target</strong> (your own goal) on<br><strong>${latestEntry.s.label || latestEntry.s.type || 'latest entry'}</strong></div>
+  </div>`;
+
+  if (belowTarget.length) {
+    html += `<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Focus order</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:${prevEntry ? '12px' : '0'}">
+      ${belowTarget.map(r => `<div style="display:flex;align-items:center;gap:8px">
+        <div style="width:38px;font-size:11px;font-weight:700;color:${SUBJECTS_META[r.k].color}">${r.k}</div>
+        <div style="flex:1;height:8px;background:var(--border);border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${Math.max(0,r.v).toFixed(1)}%;background:var(--danger);border-radius:99px"></div>
+        </div>
+        <div style="font-size:10px;font-family:var(--font-mono);color:var(--danger);width:46px;text-align:right">−${Math.abs(r.gap).toFixed(1)}</div>
+      </div>`).join('')}
+    </div>`;
+  } else {
+    html += `<div style="font-size:12px;color:var(--pass);text-align:center;padding:6px 0 0">🎉 Every subject is at or above target!</div>`;
+  }
+
+  if (entriesWithScores.length > 1) {
+    const firstEntry = entriesWithScores[0];
+    const trend = latestEntry.c.avg - firstEntry.c.avg;
+    const trendColor = trend >= 0 ? 'var(--pass)' : 'var(--danger)';
+    const trendVerb = trend >= 0 ? 'up' : 'down';
+    const daysLeft = countdownDays();
+    const focusNote = metCount === rows.length
+      ? `every subject is at or above target right now — nice work`
+      : `keep chipping away at ${belowTarget.length === 1 ? belowTarget[0].k : belowTarget.length + ' subjects'} below target`;
+    html += `<div style="padding-top:10px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--dim);line-height:1.55">
+        📊 Your overall average is <strong style="color:${trendColor}">${trendVerb} ${Math.abs(trend).toFixed(1)} pts</strong> since your first recorded entry (<strong>${firstEntry.c.avg.toFixed(1)}%</strong> → <strong>${latestEntry.c.avg.toFixed(1)}%</strong>).${daysLeft !== null ? ` With <strong>${daysLeft} day${daysLeft===1?'':'s'}</strong> left until your exam, ${focusNote}.` : ` ${focusNote.charAt(0).toUpperCase()+focusNote.slice(1)}.`}
+      </div>
+    </div>`;
+  }
+  insightsEl.innerHTML = html;
 }
 
   renderPracticeScores();
@@ -9351,14 +9885,21 @@ document.addEventListener('click', (e) => {
   }
 });
 
+const SUBJECT_ICONS = { FAR:'📊', AFAR:'📈', MAS:'💼', AUDIT:'🔍', TAX:'🧾', RFBT:'⚖️' };
+
 function renderTracker() {
-  // Main subject tabs
+  // Main subjects are a flat row of clickable tabs (no nesting) — the
+  // dropdown/chevron pattern is reserved for the sub-subject and Video
+  // Lectures groups below, where there's a real "current selection vs. many
+  // options" case for it. Six subjects fit fine as direct tabs.
   const mainTabsEl = document.getElementById('tracker-main-tabs');
   mainTabsEl.innerHTML = MAIN_SUBJECTS.map(k => {
+    const meta = SUBJECTS_META[k];
     const ms = getMainSubjectStats(k);
-    const color = SUBJECTS_META[k].color;
-    return `<div class="tracker-subtab${k===currentTrackerMain?' active':''}" style="${k===currentTrackerMain?'border-color:'+color+';color:'+color+';background:'+color+'22':''}" onclick="setTrackerMain('${k}')">
-      ${k} <span style="font-size:10px;opacity:0.7">${ms.pct.toFixed(0)}%</span>
+    const isActive = k === currentTrackerMain;
+    return `<div class="tracker-main-tab${isActive?' active':''}" style="--msc:${meta.color}" onclick="setTrackerMain('${k}')">
+      <span class="tm-emoji">${SUBJECT_ICONS[k]||'📘'}</span>
+      <div><div class="tm-tab-name">${meta.name}</div><div class="tm-tab-pct">${ms.pct.toFixed(0)}%</div></div>
     </div>`;
   }).join('');
 
@@ -9389,7 +9930,7 @@ function renderTracker() {
     }).join('');
     subTabsHTML += `<div class="tracker-menu-dropdown">
       <button type="button" class="tracker-subtab tracker-menu-btn${currentIsTopic ? ' active' : ''}" onclick="event.stopPropagation();toggleTrackerTopicGroup()">
-        <span class="hamburger-icon">☰</span> 📚 ${currentIsTopic ? currentTopicLabel : 'Topics'} <span style="font-size:10px;opacity:0.7">(${topicSubs.length})</span>
+        <span class="hamburger-icon">▾</span> 📚 ${currentIsTopic ? currentTopicLabel : 'Topics'} <span style="font-size:10px;opacity:0.7">(${topicSubs.length})</span>
       </button>
       <div class="tracker-menu${trackerTopicGroupCollapsed ? '' : ' open'}">${topicDropdownItems}</div>
     </div>`;
@@ -9405,7 +9946,7 @@ function renderTracker() {
     }).join('');
     subTabsHTML += `<div class="tracker-menu-dropdown">
       <button type="button" class="tracker-subtab tracker-menu-btn${currentIsVideo ? ' active' : ''}" onclick="event.stopPropagation();toggleTrackerVideoGroup()">
-        <span class="hamburger-icon">☰</span> 🎥 Video Lectures <span style="font-size:10px;opacity:0.7">(${videoSubs.length})</span>
+        <span class="hamburger-icon">▾</span> 🎥 Video Lectures <span style="font-size:10px;opacity:0.7">(${videoSubs.length})</span>
       </button>
       <div class="tracker-menu${trackerVideoGroupCollapsed ? '' : ' open'}">${dropdownItems}</div>
     </div>`;
@@ -9418,16 +9959,25 @@ function renderTracker() {
   const color = SUBJECTS_META[currentTrackerMain].color;
   const isVideoSub = sInfo && sInfo.kind === 'video';
   document.getElementById('tracker-subject-info').innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-      <div>
-        <div style="font-size:15px;font-weight:700;color:${color}">${sInfo.name}</div>
-        <div style="font-size:11px;color:var(--muted)">${SUBJECTS_META[currentTrackerMain].fullName}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-left:3px solid ${color};background:linear-gradient(90deg,${color}14,transparent 60%);margin:-20px;padding:20px;border-radius:12px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="position:relative;width:64px;height:64px;flex:0 0 auto">
+          <svg width="64" height="64" viewBox="0 0 64 64" style="transform:rotate(-90deg)">
+            <circle cx="32" cy="32" r="27" fill="none" stroke="var(--border)" stroke-width="6"/>
+            <circle cx="32" cy="32" r="27" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="${(2*Math.PI*27).toFixed(1)}" stroke-dashoffset="${(2*Math.PI*27*(1-stats.pct/100)).toFixed(1)}"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 14px var(--font-mono);color:${color}">${stats.pct.toFixed(0)}%</div>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:${color}">${sInfo.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${SUBJECTS_META[currentTrackerMain].fullName}</div>
+        </div>
       </div>
       <div style="display:flex;gap:20px;align-items:center">
         <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--pass)">${stats.completed}</div><div style="font-size:10px;color:var(--muted)">Done</div></div>
         <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--warn)">${stats.inprog}</div><div style="font-size:10px;color:var(--muted)">In Progress</div></div>
-        <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700">${stats.total}</div><div style="font-size:10px;color:var(--muted)">Total</div></div>
-        <div style="width:110px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">${stats.pct.toFixed(1)}% done</div><div class="progress-bar"><div class="progress-fill" style="width:${stats.pct}%;background:${color}"></div></div></div>
+        <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700">${stats.total}</div><div style="font-size:10px;color:var(--muted)">Total Topics</div></div>
       </div>
     </div>`;
 
@@ -9508,12 +10058,14 @@ function setTrackerMain(key) {
   currentTrackerMain = key;
   currentTrackerSub = SUBJECTS_META[key].subs[0];
   selectedTopicIndices = new Set();
+  saveUiSubState({ trackerMain: currentTrackerMain, trackerSub: currentTrackerSub });
   renderTracker();
 }
 
 function setTrackerSub(key) {
   currentTrackerSub = key;
   selectedTopicIndices = new Set();
+  saveUiSubState({ trackerMain: currentTrackerMain, trackerSub: currentTrackerSub });
   renderTracker();
 }
 
@@ -10320,6 +10872,7 @@ function setSettingsTab(tab) {
   document.querySelectorAll('.settings-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
+  if (tab === 'data') renderDataManagementPanel();
 }
 
 // Settings has two stacked sticky bars when the Subjects tab is active — the
@@ -10331,7 +10884,7 @@ function syncSettingsStickyOffset() {
   const tabbar = document.getElementById('settings-tabbar');
   const quicknav = document.getElementById('subject-quicknav');
   if (!tabbar || !quicknav) return;
-  quicknav.style.top = tabbar.getBoundingClientRect().height + 'px';
+  quicknav.style.top = (tabbar.getBoundingClientRect().height / currentZoomFactor()) + 'px';
 }
 window.addEventListener('resize', () => {
   if (document.getElementById('page-settings')?.classList.contains('active')) syncSettingsStickyOffset();
@@ -10350,6 +10903,7 @@ function renderSettings() {
   document.getElementById('set-exam-date').value = state.examDate || '';
   document.getElementById('set-quote').value = state.quote || '';
   document.getElementById('set-font').value = state.font || 'Sora';
+  renderFontSizePicker();
   document.getElementById('dark-mode-toggle').classList.toggle('on', !!state.darkMode);
   renderColorSchemePicker();
   renderSubjectColorPicker();
@@ -10698,6 +11252,105 @@ function saveSettings() {
   toast('Settings saved!');
 }
 
+// ============================================================
+// DATA SAFETY NET — snapshots before risky ops, backup freshness
+// tracking, and the panel that surfaces both to the user.
+// ============================================================
+const BACKUP_TS_KEY = 'cpale_last_backup_ts';
+const SNAPSHOT_KEY = 'cpale_safety_snapshots';
+const MAX_SNAPSHOTS = 3;
+
+function markBackupNow() {
+  try { localStorage.setItem(BACKUP_TS_KEY, String(Date.now())); } catch(e) {}
+  renderDataManagementPanel();
+}
+
+function timeAgo(ts) {
+  if (!ts) return null;
+  const diff = Date.now() - Number(ts);
+  const mins = Math.floor(diff/60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  const hrs = Math.floor(mins/60);
+  if (hrs < 24) return hrs + ' hour' + (hrs===1?'':'s') + ' ago';
+  const days = Math.floor(hrs/24);
+  return days + ' day' + (days===1?'':'s') + ' ago';
+}
+
+// Snapshots the current on-disk state (raw string, not a live reference)
+// before an import or reset applies, so a wrong click is always undoable.
+// Kept small and capped — this is a short-lived safety net, not a version
+// history feature.
+function takeSafetySnapshot(label) {
+  try {
+    const raw = localStorage.getItem('cpale_v2_state');
+    if (!raw) return;
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || '[]'); } catch(e) {}
+    list.unshift({ ts: Date.now(), label, data: raw });
+    list = list.slice(0, MAX_SNAPSHOTS);
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(list));
+  } catch(e) {
+    // Snapshot storage failing (e.g. quota) shouldn't block the operation
+    // it was meant to protect — just proceed without the safety net.
+    console.error('Safety snapshot failed:', e);
+  }
+}
+
+function getLatestSnapshot() {
+  try {
+    const list = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || '[]');
+    return list[0] || null;
+  } catch(e) { return null; }
+}
+
+function restoreSafetySnapshot() {
+  const snap = getLatestSnapshot();
+  if (!snap) { toast('No snapshot to restore.'); return; }
+  if (!confirm(`Restore your data from before "${snap.label}" (${timeAgo(snap.ts)})? This replaces what's currently loaded.`)) return;
+  try {
+    const loaded = JSON.parse(snap.data);
+    state = { ...state, ...loaded };
+    save();
+    toast('↩ Restored previous data.');
+    location.reload();
+  } catch(e) {
+    toast('Snapshot was corrupted — could not restore.');
+  }
+}
+
+// A backup is only worth trusting if it's shaped like this app's data.
+// Rejects unrelated or corrupted JSON before it ever overwrites anything.
+function looksLikeValidBackup(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+  const expectedKeys = ['topics','scores','practiceScores','activityLog','calEvents'];
+  return expectedKeys.some(k => k in obj);
+}
+
+function renderDataManagementPanel() {
+  const statusEl = document.getElementById('backup-status-panel');
+  if (statusEl) {
+    const lastTs = Number(localStorage.getItem(BACKUP_TS_KEY) || 0);
+    const ago = timeAgo(lastTs);
+    let color = 'var(--muted)', msg = 'No backup taken yet — export one below so your data lives somewhere besides this browser.';
+    if (ago) {
+      const days = (Date.now()-lastTs)/86400000;
+      color = days < 1 ? 'var(--pass)' : days < 7 ? 'var(--warn)' : 'var(--danger)';
+      msg = `Last backup: <strong style="color:${color}">${ago}</strong>${days>=7?' — it\'s been a while, consider backing up again.':''}`;
+    }
+    statusEl.innerHTML = `<div style="color:${color === 'var(--muted)' ? 'var(--muted)' : 'var(--text)'}">${msg}</div>
+      <div style="color:var(--muted);margin-top:4px">Everything is stored only in this browser unless you export it, save it to a file, or connect Drive below — nobody but you ever has a copy.</div>`;
+  }
+  const undoEl = document.getElementById('undo-snapshot-panel');
+  if (undoEl) {
+    const snap = getLatestSnapshot();
+    undoEl.innerHTML = snap
+      ? `<button class="btn btn-ghost btn-sm" style="width:100%" onclick="restoreSafetySnapshot()">↩ Undo: ${snap.label} (${timeAgo(snap.ts)})</button>`
+      : `<div style="font-size:10px;color:var(--muted)">Nothing to undo right now.</div>`;
+  }
+  renderDriveStatusPanel();
+}
+
 function exportData() {
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -10705,6 +11358,7 @@ function exportData() {
   a.download='cpale_tracker_ln_backup.json';
   a.click(); toast('Backup exported!');
   setSidebarBackupStatus('✓ Exported ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+  markBackupNow();
 }
 
 function setSidebarBackupStatus(msg) {
@@ -10765,6 +11419,7 @@ async function saveToFile() {
           toast('💾 Saved to: ' + _savedFileHandle.name);
           const ind = document.getElementById('autosave-indicator');
           if (ind) { ind.textContent = '✓'; ind.style.color = 'var(--pass)'; ind.title = 'Saved: ' + _savedFileHandle.name; setTimeout(()=>{ if(ind && !_autoSavePending){ind.textContent='';ind.title='';} }, 3000); }
+          markBackupNow();
           return;
         } catch(e) {
           // Handle may have become invalid, show picker again
@@ -10782,6 +11437,7 @@ async function saveToFile() {
       await writable.write(blob);
       await writable.close();
       toast('💾 Saved to: ' + handle.name);
+      markBackupNow();
     } catch(e) {
       if (e.name !== 'AbortError') {
         // Fallback to download if something went wrong
@@ -10802,6 +11458,7 @@ function _fallbackDownload(blob) {
   a.click();
   toast('💾 File saved! (Tip: Use Chrome/Edge for better save-to-file support)');
   setSidebarBackupStatus('✓ Saved ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+  markBackupNow();
 }
 
 
@@ -10809,17 +11466,284 @@ function importData(event) {
   const file=event.target.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
+    let loaded;
     try {
-      const loaded=JSON.parse(e.target.result);
-      state={...state,...loaded}; save(); toast('Data imported!'); renderDashboard(); setSidebarBackupStatus('✓ Restored ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
-    } catch(err) { toast('Invalid file!'); }
+      loaded=JSON.parse(e.target.result);
+    } catch(err) { toast('⚠️ That file isn\'t valid JSON — nothing was changed.'); event.target.value=''; return; }
+    if (!looksLikeValidBackup(loaded)) {
+      toast('⚠️ That file doesn\'t look like a CPALE Ready backup — nothing was changed.');
+      event.target.value=''; return;
+    }
+    const counts = [
+      loaded.scores?.length ? loaded.scores.length + ' exam score' + (loaded.scores.length===1?'':'s') : null,
+      loaded.practiceScores?.length ? loaded.practiceScores.length + ' practice entr' + (loaded.practiceScores.length===1?'y':'ies') : null,
+      loaded.activityLog?.length ? loaded.activityLog.length + ' activity event' + (loaded.activityLog.length===1?'':'s') : null,
+    ].filter(Boolean).join(', ') || 'some data';
+    if (!confirm(`This backup contains ${counts}. Importing will replace what's currently loaded. A snapshot of your current data will be saved first so this can be undone. Continue?`)) {
+      event.target.value=''; return;
+    }
+    takeSafetySnapshot('Import');
+    state={...state,...loaded}; save(); toast('✓ Data imported!'); renderDashboard(); setSidebarBackupStatus('✓ Restored ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+    markBackupNow();
+    event.target.value='';
   };
   reader.readAsText(file);
 }
 
 function resetAll() {
-  if (confirm('Reset ALL data? This cannot be undone.')) {
+  if (confirm('Reset ALL data? A snapshot will be saved first so this can be undone from Settings → Data if it was a mistake.')) {
+    takeSafetySnapshot('Reset All Data');
     localStorage.removeItem('cpale_v2_state'); location.reload();
+  }
+}
+
+// ============================================================
+// GOOGLE DRIVE BACKUP
+// ------------------------------------------------------------
+// Uses Google Identity Services (client-side OAuth, no backend of ours
+// involved) with the narrow 'drive.file' scope: this app can only ever
+// see or touch the one backup file IT creates — never anything else in
+// the person's Drive. The access token lives in memory only for this
+// tab session; nothing about the person's Drive or its contents is
+// stored, logged, or sent anywhere by us.
+//
+// SETUP REQUIRED (one-time, by the developer, not per-user):
+//   1. Google Cloud Console → new project → OAuth consent screen (External,
+//      or Internal if using Workspace) → Enable the "Google Drive API".
+//   2. Credentials → Create OAuth Client ID → Application type "Web
+//      application" → add this app's real https:// domain under
+//      "Authorized JavaScript origins" (OAuth does not work on file://
+//      or plain http://).
+//   3. Paste the generated Client ID below.
+// Until a Client ID is set, the Connect button explains this instead of
+// silently failing.
+// ============================================================
+const GOOGLE_DRIVE_CLIENT_ID = '126056789950-mvkhpa4lfhjni62jme7lll0bpq219j4u.apps.googleusercontent.com'; // <-- paste your OAuth Client ID here, e.g. '123...apps.googleusercontent.com'
+const DRIVE_BACKUP_FILENAME = 'cpale-ready-backup.json';
+const DRIVE_FILE_ID_KEY = 'cpale_drive_file_id';
+const DRIVE_LAST_SYNC_KEY = 'cpale_drive_last_sync';
+// Remembers (locally, per-browser) that this person has granted Drive access
+// before, so we can quietly resume backups on future visits without making
+// them click "Connect" every single time.
+const DRIVE_CONNECTED_KEY = 'cpale_drive_was_connected';
+
+let _driveAccessToken = null;
+let _driveTokenClient = null;
+let _driveGisLoading = null;
+let _driveConnectRequested = false; // true only while a user-initiated connect is in flight
+let _driveTokenRefreshTimer = null;
+let _driveAutoBackupTimer = null;
+
+function _loadGis() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve();
+  if (_driveGisLoading) return _driveGisLoading;
+  _driveGisLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Could not load Google sign-in.'));
+    document.head.appendChild(s);
+  });
+  return _driveGisLoading;
+}
+
+// One shared token client, one shared callback. _driveConnectRequested tells
+// the callback whether this particular token was requested interactively
+// (show toasts, kick off an immediate backup) or silently in the background
+// (stay quiet either way — success or failure).
+function _ensureDriveTokenClient() {
+  if (_driveTokenClient) return _driveTokenClient;
+  _driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_DRIVE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: async (resp) => {
+      const wasInteractive = _driveConnectRequested;
+      _driveConnectRequested = false;
+      if (resp.error) {
+        if (wasInteractive) toast('⚠️ Google Drive connection was cancelled or denied.');
+        renderDriveStatusPanel();
+        return;
+      }
+      _driveAccessToken = resp.access_token;
+      localStorage.setItem(DRIVE_CONNECTED_KEY, '1');
+      renderDriveStatusPanel();
+      _scheduleDriveTokenRefresh();
+      if (wasInteractive) {
+        toast('✓ Google Drive connected — it\'ll back up automatically from now on.');
+        await driveBackupNow();
+      }
+    },
+  });
+  return _driveTokenClient;
+}
+
+async function connectGoogleDrive() {
+  if (!GOOGLE_DRIVE_CLIENT_ID) {
+    toast('☁️ Google Drive backup isn\'t set up yet on this deployment — ask your developer to finish the one-time setup (see code comments).');
+    return;
+  }
+  try {
+    await _loadGis();
+  } catch(e) {
+    toast('⚠️ Could not reach Google — check your connection and try again.');
+    return;
+  }
+  _driveConnectRequested = true;
+  _ensureDriveTokenClient().requestAccessToken({ prompt: _driveAccessToken ? '' : 'consent' });
+}
+
+// Tries to silently resume a Drive session — no popup, no prompt — on page
+// load or when a token is about to expire, but ONLY for someone who has
+// granted access before (we never surprise a new visitor with a Google
+// popup they didn't ask for). If Google can't do it silently (session
+// expired, cookies cleared, etc.) it just fails quietly; the person can
+// always hit "Connect" again themselves.
+async function attemptSilentDriveReconnect() {
+  if (!GOOGLE_DRIVE_CLIENT_ID) return;
+  if (localStorage.getItem(DRIVE_CONNECTED_KEY) !== '1') return;
+  try {
+    await _loadGis();
+  } catch(e) { return; }
+  _driveConnectRequested = false;
+  _ensureDriveTokenClient().requestAccessToken({ prompt: '' });
+}
+
+// Drive access tokens last about an hour. Refresh a little early so
+// background backups don't silently stop mid-session just because the
+// token quietly expired in the background.
+function _scheduleDriveTokenRefresh() {
+  clearTimeout(_driveTokenRefreshTimer);
+  _driveTokenRefreshTimer = setTimeout(() => { attemptSilentDriveReconnect(); }, 50 * 60 * 1000);
+}
+
+// Debounced auto-backup: fires a little while after the last change, the
+// same way the local file autosave does, so normal use (ticking off
+// topics, logging scores, etc.) ends up backed up to Drive automatically
+// with no button click required.
+function scheduleAutoDriveBackup() {
+  if (!_driveAccessToken) return;
+  clearTimeout(_driveAutoBackupTimer);
+  _driveAutoBackupTimer = setTimeout(() => { driveBackupNow(true); }, 10000);
+}
+
+async function _driveFetch(url, opts={}) {
+  if (!_driveAccessToken) throw new Error('not-connected');
+  const res = await fetch(url, { ...opts, headers: { ...(opts.headers||{}), Authorization: 'Bearer ' + _driveAccessToken } });
+  if (res.status === 401) { _driveAccessToken = null; throw new Error('token-expired'); }
+  return res;
+}
+
+// Finds this app's backup file in Drive if one already exists (remembers
+// the file id locally so repeat backups update the same file instead of
+// creating duplicates), otherwise leaves fileId null so the next backup
+// creates it fresh.
+async function _driveFindFileId() {
+  let fileId = localStorage.getItem(DRIVE_FILE_ID_KEY);
+  if (fileId) {
+    try {
+      const check = await _driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,trashed`);
+      if (check.ok) {
+        const meta = await check.json();
+        if (!meta.trashed) return fileId;
+      }
+    } catch(e) {}
+  }
+  try {
+    const q = encodeURIComponent(`name='${DRIVE_BACKUP_FILENAME}' and trashed=false`);
+    const res = await _driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.files?.[0]) { localStorage.setItem(DRIVE_FILE_ID_KEY, data.files[0].id); return data.files[0].id; }
+    }
+  } catch(e) {}
+  return null;
+}
+
+// silent=true is used for automatic background backups (on data change, or
+// the periodic safety-net sync) — same upload, just no toast spam on every
+// small edit. silent=false is the explicit "Backup Now" button, which
+// always confirms one way or another.
+async function driveBackupNow(silent=false) {
+  if (!_driveAccessToken) { if (!silent) toast('Connect Google Drive first.'); return; }
+  try {
+    const fileId = await _driveFindFileId();
+    const jsonStr = JSON.stringify(state, null, 2);
+    const metadata = { name: DRIVE_BACKUP_FILENAME, mimeType: 'application/json' };
+    const boundary = 'cpale_boundary_' + Date.now();
+    const body =
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${jsonStr}\r\n--${boundary}--`;
+    const url = fileId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+      : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+    const res = await _driveFetch(url, {
+      method: fileId ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body,
+    });
+    if (!res.ok) throw new Error('upload-failed');
+    const saved = await res.json();
+    if (saved.id) localStorage.setItem(DRIVE_FILE_ID_KEY, saved.id);
+    localStorage.setItem(DRIVE_LAST_SYNC_KEY, String(Date.now()));
+    markBackupNow();
+    if (!silent) toast('☁️ Backed up to Google Drive.');
+  } catch(e) {
+    if (e.message === 'token-expired') {
+      // Try to quietly pick up a fresh token before bothering the person.
+      await attemptSilentDriveReconnect();
+      if (!silent) toast('Google Drive session expired — click Connect to reconnect.');
+    }
+    else if (!silent) { toast('⚠️ Drive backup failed — try again in a moment.'); }
+  }
+  renderDriveStatusPanel();
+}
+
+// Safety-net sync: even if someone leaves the tab open and idle (so the
+// on-change debounce above never fires again), make sure Drive doesn't
+// drift too far behind whatever's in localStorage.
+setInterval(() => { if (_driveAccessToken) driveBackupNow(true); }, 5 * 60 * 1000);
+
+async function driveRestoreNow() {
+  if (!_driveAccessToken) { toast('Connect Google Drive first.'); return; }
+  try {
+    const fileId = await _driveFindFileId();
+    if (!fileId) { toast('No backup found in Drive yet — back up first.'); return; }
+    const res = await _driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    if (!res.ok) throw new Error('download-failed');
+    const loaded = await res.json();
+    if (!looksLikeValidBackup(loaded)) { toast('⚠️ The Drive backup looks corrupted — nothing was changed.'); return; }
+    if (!confirm('Restore from your Google Drive backup? This replaces what\'s currently loaded (a snapshot of the current data will be saved first).')) return;
+    takeSafetySnapshot('Restore from Drive');
+    state = { ...state, ...loaded }; save(); renderDashboard();
+    toast('✓ Restored from Google Drive.');
+  } catch(e) {
+    if (e.message === 'token-expired') { toast('Google Drive session expired — click Connect to reconnect.'); }
+    else { toast('⚠️ Restore failed — try again in a moment.'); }
+  }
+}
+
+function renderDriveStatusPanel() {
+  const el = document.getElementById('drive-status-panel');
+  const connectBtn = document.getElementById('drive-connect-btn');
+  const backupBtn = document.getElementById('drive-backup-btn');
+  const restoreBtn = document.getElementById('drive-restore-btn');
+  if (!el) return;
+  const connected = !!_driveAccessToken;
+  if (backupBtn) backupBtn.style.display = connected ? '' : 'none';
+  if (restoreBtn) restoreBtn.style.display = connected ? '' : 'none';
+  if (connectBtn) connectBtn.textContent = connected ? '🔄 Reconnect' : '🔗 Connect Google Drive';
+  if (!GOOGLE_DRIVE_CLIENT_ID) {
+    el.innerHTML = `<div style="color:var(--muted)">Not set up on this deployment yet.</div>`;
+    return;
+  }
+  const lastSync = Number(localStorage.getItem(DRIVE_LAST_SYNC_KEY) || 0);
+  if (connected) {
+    el.innerHTML = `<div style="color:var(--pass)">✓ Connected — backing up automatically${lastSync ? ' · last synced ' + timeAgo(lastSync) : ' · syncing now...'}</div>
+      <div style="color:var(--muted);margin-top:2px">No need to click anything — every change saves to Drive a few seconds after you make it.</div>`;
+  } else {
+    el.innerHTML = lastSync
+      ? `<div style="color:var(--muted)">Not connected this session · last synced ${timeAgo(lastSync)}</div>`
+      : `<div style="color:var(--muted)">Not connected.</div>`;
   }
 }
 
@@ -10924,6 +11848,7 @@ function init() {
     setAppearanceTokens(state.darkMode ? 'dark' : 'light');
   }
   applyFont(state.font||'Sora');
+  applyFontSize(state.fontSize||'default');
 
   document.getElementById('sidebar-name').textContent = state.name || 'Candidate';
   document.getElementById('sidebar-exam').textContent = state.examDate || '—';
@@ -10958,6 +11883,22 @@ function init() {
 
   // Today's date as selected cal day
   selectedCalDay=localDateStr();
+
+  // Restore finer-grained "where the user was" state (which tracker
+  // subject/sub-subject, which history view) before rendering those pages,
+  // so a refresh reopens exactly what was on screen, not just the top-level page.
+  try {
+    const uiState = loadUiSubState();
+    if (uiState.trackerMain && SUBJECTS_META[uiState.trackerMain]) {
+      currentTrackerMain = uiState.trackerMain;
+      if (uiState.trackerSub && SUBJECTS_META[uiState.trackerMain].subs.includes(uiState.trackerSub)) {
+        currentTrackerSub = uiState.trackerSub;
+      } else {
+        currentTrackerSub = SUBJECTS_META[uiState.trackerMain].subs[0];
+      }
+    }
+    if (uiState.historyView) historyViewMode = uiState.historyView;
+  } catch (e) {}
 
    renderDashboard();
   checkAchievements();
@@ -12346,6 +13287,7 @@ function replyScores(d) {
 }
 
 init();
+attemptSilentDriveReconnect(); // resumes Drive backups quietly if this person connected before — no popup shown
 </script>
 
 <!-- ===== PWA SERVICE WORKER REGISTRATION ===== -->
@@ -12485,7 +13427,15 @@ if ('serviceWorker' in navigator) {
     });
   });
 })();
-setTimeout(()=>{ initCustomMood(); updateCustomPreview(); }, 0);
+// initCustomMood() only syncs the Settings mood-button UI state, which is
+// harmless to run always. updateCustomPreview() is a *live preview* helper —
+// it unconditionally applies the Custom-theme color inputs (which default to
+// violet in the HTML) as the active theme. Calling it unconditionally on
+// every load was overwriting whatever preset color scheme the user actually
+// had selected, right after init() had correctly applied it — so a refresh
+// always visually reset to the default theme. Only run it when Custom is
+// actually the active scheme.
+setTimeout(()=>{ initCustomMood(); if (state.accentScheme === -1) updateCustomPreview(); }, 0);
 
 
 // ===== MOVABLE + FULLY RESIZABLE AI COACH WINDOW =====
@@ -12879,15 +13829,24 @@ function updateSettingsTabFreeze() {
   if (!_settingsFreezeActive) {
     _settingsFreezePlaceholder = document.createElement('div');
     _settingsFreezePlaceholder.className = 'settings-freeze-placeholder';
-    _settingsFreezePlaceholder.style.height = `${Math.ceil(tabbar.getBoundingClientRect().height)}px`;
+    _settingsFreezePlaceholder.style.height = `${Math.ceil(tabbar.getBoundingClientRect().height / currentZoomFactor())}px`;
     tabbar.parentNode.insertBefore(_settingsFreezePlaceholder, tabbar);
     _settingsFreezeActive = true;
   }
 
-  const rect = tabbar.getBoundingClientRect();
+  // Measure from the placeholder, NOT the tabbar itself. Once the tabbar is
+  // position:fixed, reading its OWN rect and writing that straight back as
+  // its own left/width is a feedback loop — any tiny mismatch between the
+  // assigned style and what the zoomed page actually renders gets fed back
+  // in and re-applied on every scroll tick, walking the bar further right
+  // each time until it's off-screen. The placeholder stays in normal
+  // document flow the whole time (it's never fixed), so its rect is always
+  // a stable, correct answer for "where should this bar sit" — no loop.
+  const z = currentZoomFactor();
+  const refRect = _settingsFreezePlaceholder.getBoundingClientRect();
   tabbar.classList.add('settings-fixed');
-  tabbar.style.setProperty('left', `${rect.left}px`, 'important');
-  tabbar.style.setProperty('width', `${rect.width}px`, 'important');
+  tabbar.style.setProperty('left', `${refRect.left / z}px`, 'important');
+  tabbar.style.setProperty('width', `${refRect.width / z}px`, 'important');
 }
 
 function clearSettingsTabFreeze() {
@@ -12909,13 +13868,18 @@ function refreshSettingsTabFreeze() {
     return;
   }
   const tabbar = document.getElementById('settings-tabbar');
-  if (tabbar) {
-    const rect = tabbar.getBoundingClientRect();
-    tabbar.style.setProperty('left', `${rect.left}px`, 'important');
-    tabbar.style.setProperty('width', `${rect.width}px`, 'important');
-    if (_settingsFreezePlaceholder) {
-      _settingsFreezePlaceholder.style.height = `${Math.ceil(tabbar.getBoundingClientRect().height)}px`;
-    }
+  if (tabbar && _settingsFreezePlaceholder) {
+    const z = currentZoomFactor();
+    // Same fix as above: left/width come from the placeholder (stable,
+    // never fixed), not from the tabbar's own already-fixed rect.
+    const refRect = _settingsFreezePlaceholder.getBoundingClientRect();
+    tabbar.style.setProperty('left', `${refRect.left / z}px`, 'important');
+    tabbar.style.setProperty('width', `${refRect.width / z}px`, 'important');
+    // Height is a one-way read of the tabbar's own current rendered size
+    // (it can change if the tab row wraps to 2 lines at a narrower width),
+    // written onto the placeholder — not read back into itself, so it
+    // doesn't loop the way left/width did.
+    _settingsFreezePlaceholder.style.height = `${Math.ceil(tabbar.getBoundingClientRect().height / z)}px`;
   }
   requestAnimationFrame(updateSettingsTabFreeze);
 }
