@@ -428,6 +428,10 @@ tr:hover td { background: rgba(124,106,247,0.03); }
    like a seam cutting through the highlighted row. */
 .tracker-table-wrap tr:hover td.tracker-actions-col { background: color-mix(in srgb, var(--card) 88%, rgba(124,106,247,0.1)); }
 
+/* Topic actions stay available even when reorder controls are disabled. */
+.tracker-topic-actions { white-space: nowrap; }
+.tracker-topic-actions .tracker-topic-rename-btn { display: inline-flex !important; }
+
 /* ---- PRACTICE SET SCORES: scrollable history, fixed controls ----
    With month/day grouping this table can grow very long (100+ entries).
    Cap the scrollable area to a fixed height and keep the Newest first /
@@ -910,6 +914,10 @@ body.light-mode.theme-custom select.status-select.status-2 {
 .tracker-menu-btn .hamburger-icon { font-size: 10px; line-height: 1; display: inline-block; transition: transform 0.15s; }
 .tracker-menu-btn.active .hamburger-icon, .tracker-menu-dropdown:has(.tracker-menu.open) .hamburger-icon { transform: rotate(180deg); }
 
+body.light-mode .tracker-menu-btn .hamburger-icon { color: var(--muted) !important; }
+body.light-mode .tracker-menu-btn.active .hamburger-icon,
+body.light-mode .tracker-menu-dropdown:has(.tracker-menu.open) .hamburger-icon { color: var(--accent2) !important; }
+
 /* ---- TARGET SLIDER (Performance Radar) — custom thumb so it visibly reads as draggable ---- */
 .target-slider {
   -webkit-appearance: none; appearance: none;
@@ -937,7 +945,7 @@ body.light-mode.theme-custom select.status-select.status-2 {
 .tracker-menu {
   display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
   min-width: 240px; max-height: 320px; overflow-y: auto;
-  background: var(--card-bg, #14141c); border: 1px solid var(--border);
+  background: var(--card-bg, var(--card)); border: 1px solid var(--border);
   border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); padding: 4px;
 }
 .tracker-menu.open { display: block; animation: fadein 0.12s ease; }
@@ -950,6 +958,23 @@ body.light-mode.theme-custom select.status-select.status-2 {
 .tracker-menu-item.active { color: var(--accent2); background: rgba(124,106,247,0.1); font-weight: 600; }
 
 /* ---- MAIN SUBJECT TABS (flat, clickable, icon-led — no nesting) ---- */
+.tracker-organize-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--border);border-radius:11px;background:linear-gradient(90deg,rgba(124,106,247,.08),transparent)}
+.topic-organizer-modal{width:620px;max-width:calc(100vw - 28px)}
+.organizer-summary{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:11px;line-height:1.5;margin-bottom:10px}
+.organizer-summary span{display:block;color:var(--muted);margin-top:2px}
+.organizer-move-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.settings-tracker-card{max-width:720px!important}
+.tracker-setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--border)}
+.tracker-setting-row:last-of-type{border-bottom:0}
+.tracker-setting-row strong{font-size:12px;color:var(--text)}
+.setting-help{font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:3px;max-width:560px}
+.settings-switch{position:relative;width:42px;height:24px;flex:0 0 auto}
+.settings-switch input{opacity:0;width:0;height:0;position:absolute}
+.settings-switch span{position:absolute;inset:0;border-radius:999px;background:var(--border);cursor:pointer;transition:.18s}
+.settings-switch span:after{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:var(--muted);transition:.18s}
+.settings-switch input:checked+span{background:var(--accent)}
+.settings-switch input:checked+span:after{transform:translateX(18px);background:#fff}
+@media(max-width:640px){.tracker-organize-bar{align-items:flex-start;flex-direction:column}.organizer-move-grid{grid-template-columns:1fr}.tracker-setting-row{align-items:flex-start}}
 .tracker-main-tab {
   display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
   padding: 8px 14px; border-radius: 10px; background: var(--card); transition: all .15s;
@@ -3251,6 +3276,83 @@ body.light-mode .widget-badge{box-shadow:0 8px 18px color-mix(in srgb,var(--badg
 .widget-title-icon .widget-icon-emoji{font-size:15px !important;}
 .add-widget-card .aw-icon .widget-icon-emoji{font-size:22px !important;}
 </style>
+
+<style>
+/* Quick Notes — muted premium stationery */
+.quick-note-widget { position:relative; overflow:visible; transition:transform .22s cubic-bezier(.22,1,.36,1), filter .22s ease; }
+.quick-note-widget:hover { transform:translateY(-1px); filter:drop-shadow(0 10px 22px rgba(20,20,28,.10)); }
+.quick-note-paper {
+  height:100%; min-height:142px; box-sizing:border-box;
+  padding:27px 30px 23px; position:relative; isolation:isolate; overflow:hidden;
+  color:#514b52;
+  border:1px solid color-mix(in srgb, var(--note-subject-color,#b7a8b7) 18%, #d1cbc8 82%);
+  border-radius:17px;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--note-subject-color,#b7a8b7) 7%, transparent) 0 72px, transparent 73px),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--note-subject-color,#b7a8b7) 9%, #ded7d0 91%),
+      color-mix(in srgb, var(--note-subject-color,#b7a8b7) 12%, #d7cec5 88%));
+  box-shadow:0 1px 0 rgba(255,255,255,.62) inset, 0 10px 24px rgba(31,28,36,.08), 0 2px 5px rgba(31,28,36,.045);
+}
+.quick-note-paper::before { content:""; position:absolute; left:26px; right:26px; top:56px; height:1px; background:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 18%,#c9c1bd 82%); pointer-events:none; opacity:.5; }
+.quick-note-paper::after { content:"✦"; position:absolute; right:20px; bottom:14px; font-size:11px; line-height:1; color:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 58%,#777077 42%); opacity:.28; pointer-events:none; transform:rotate(-7deg); }
+/* Dark mode: a softly tinted, slightly deeper paper so the note is clearly visible without glowing. */
+body:not(.light-mode) .quick-note-paper {
+  color:#eee9e6;
+  border-color:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 25%,#4f4b50 75%);
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb,var(--note-subject-color,#b7a8b7) 11%, transparent) 0 72px, transparent 73px),
+    linear-gradient(180deg,
+      color-mix(in srgb,var(--note-subject-color,#b7a8b7) 18%, #2d2c31 82%),
+      color-mix(in srgb,var(--note-subject-color,#b7a8b7) 22%, #27262b 78%));
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset, 0 11px 26px rgba(0,0,0,.26), 0 2px 6px rgba(0,0,0,.18);
+  filter:none;
+}
+body:not(.light-mode) .quick-note-paper::before { background:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 22%,#5a565c 78%); opacity:.38; }
+.quick-note-pin { position:absolute; top:-7px; left:50%; transform:translateX(-50%) rotate(-1.5deg); width:48px; height:12px; border-radius:5px; background:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 20%,#efe8e1 80%); border:1px solid color-mix(in srgb,var(--note-subject-color,#b7a8b7) 22%,#cfc5ba 78%); box-shadow:0 2px 7px rgba(70,57,48,.10), inset 0 1px 0 rgba(255,255,255,.46); font-size:0; opacity:.95; pointer-events:none; z-index:4; }
+.quick-note-pin::before { content:""; position:absolute; inset:2px 7px; border-radius:3px; background:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.03),rgba(255,255,255,.14)); }
+body:not(.light-mode) .quick-note-pin { background:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 28%,#3a383e 72%); border-color:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 24%,#59545a 76%); box-shadow:0 2px 7px rgba(0,0,0,.18); }
+.quick-note-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; position:relative; z-index:2; }
+.quick-note-title { display:flex; align-items:center; gap:7px; font-size:10.5px; font-weight:760; letter-spacing:.15px; color:#5d5760; opacity:.92; white-space:nowrap; }
+.quick-note-title::after { content:""; }
+body:not(.light-mode) .quick-note-title { color:#f0ebe7; }
+.quick-note-category-dot { width:7px; height:7px; border-radius:50%; background:var(--note-subject-color,#b7a8b7); box-shadow:0 0 0 3px color-mix(in srgb,var(--note-subject-color,#b7a8b7) 14%,transparent); flex:0 0 7px; }
+.quick-note-actions { display:flex; align-items:center; gap:4px; opacity:.82; }
+.quick-note-actions:hover { opacity:1; }
+.quick-note-classifier { max-width:110px; min-width:0; padding:5px 22px 5px 9px; border:1px solid color-mix(in srgb,var(--note-subject-color,#b7a8b7) 28%,#bdb4bb 72%) !important; border-radius:999px !important; background:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 10%,rgba(255,255,255,.20)) !important; color:#57505a !important; font-size:9px !important; font-weight:750; box-shadow:none !important; }
+body:not(.light-mode) .quick-note-classifier { color:#f1ece9 !important; border-color:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 34%,#6b6570 66%) !important; background:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 16%,rgba(255,255,255,.05)) !important; }
+.quick-note-btn { border:1px solid rgba(120,112,120,.10); background:rgba(255,255,255,.12); color:#625b64; cursor:pointer; font-size:10px; padding:5px 7px; border-radius:999px; line-height:1; }
+.quick-note-btn:hover { background:rgba(255,255,255,.36); }
+body:not(.light-mode) .quick-note-btn { color:#ece6e3; border-color:rgba(255,255,255,.10); background:rgba(255,255,255,.06); }
+body:not(.light-mode) .quick-note-btn:hover { background:rgba(255,255,255,.11); }
+.quick-note-paper select option { background:#ded7d0; color:#4f4851; }
+.quick-note-text { width:100%; height:calc(100% - 32px); min-height:96px; box-sizing:border-box; background:transparent !important; border:none !important; outline:none !important; resize:none; color:#4f4851 !important; padding:12px 2px 18px; font-family:"Segoe Print","Bradley Hand","Comic Sans MS",var(--font-body),sans-serif; font-size:12px; line-height:1.72; position:relative; z-index:2; }
+.quick-note-text::placeholder { color:#716971; opacity:.48; }
+body:not(.light-mode) .quick-note-text { color:#f0eae7 !important; }
+body:not(.light-mode) .quick-note-text::placeholder { color:#c9c1c7; opacity:.52; }
+.quick-note-status { position:absolute; right:20px; bottom:11px; font-size:8px; opacity:0; transition:opacity .2s; pointer-events:none; font-style:italic; color:#716873; z-index:3; }
+body:not(.light-mode) .quick-note-status { color:#ded5db; }
+.quick-note-status.show { opacity:.42; }
+.quick-note-checklist { display:flex; flex-direction:column; gap:7px; padding:5px 2px 8px; max-height:150px; overflow:auto; position:relative; z-index:2; border-top:1px solid color-mix(in srgb,var(--note-subject-color,#b7a8b7) 13%,transparent); margin-top:2px; }
+.quick-note-item { display:flex; align-items:flex-start; gap:8px; }
+.quick-note-check { appearance:none; width:15px; height:15px; flex:0 0 15px; margin:2px 0 0; border-radius:5px; border:1px solid color-mix(in srgb,var(--note-subject-color,#b7a8b7) 25%,#9b939a 75%); background:rgba(255,255,255,.10); cursor:pointer; position:relative; }
+.quick-note-check:checked { background:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 42%,#6c646d 58%); border-color:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 55%,#817980 45%); }
+.quick-note-check:checked::after { content:'✓'; position:absolute; inset:0; display:grid; place-items:center; font-size:10px; color:#fff; font-weight:800; }
+.quick-note-item-input { flex:1; min-width:0; border:0 !important; background:transparent !important; box-shadow:none !important; padding:4px 0 5px !important; color:#514a52 !important; font:500 11px/1.5 var(--font-body),sans-serif; }
+body:not(.light-mode) .quick-note-item-input { color:#eee8e5 !important; }
+.quick-note-item-input.done { text-decoration:line-through; opacity:.48; }
+.quick-note-item-remove { border:0; background:transparent; color:#8b838c; cursor:pointer; font-size:12px; padding:0 2px; opacity:.4; }
+body:not(.light-mode) .quick-note-item-remove { color:#d0c8ce; }
+.quick-note-item:hover .quick-note-item-remove { opacity:.8; }
+.quick-note-add { align-self:flex-start; border:0; background:transparent; color:#7e757e; cursor:pointer; font-size:9px; font-weight:700; padding:3px 0; }
+body:not(.light-mode) .quick-note-add { color:#d0c8ce; }
+.quick-note-progress { font-size:8px; color:#7a717a; opacity:.62; margin-left:4px; }
+body:not(.light-mode) .quick-note-progress { color:#d8d0d5; }
+.quick-note-collapsed { min-height:0 !important; height:auto !important; }
+.quick-note-collapsed .quick-note-paper { min-height:0; height:46px; padding-top:13px; }
+.quick-note-collapsed .quick-note-pin { display:none; }
+.quick-note-collapsed .quick-note-text, .quick-note-collapsed .quick-note-checklist, .quick-note-collapsed .quick-note-status { display:none; }
+</style>
 </head>
 <body>
 
@@ -4183,8 +4285,9 @@ renderDashboard(); }, 400);
       <p>Track your study progress across all CPALE subjects</p>
     </div>
     <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" id="tracker-bulk-move-btn" onclick="openBulkMoveModal()" style="display:none">↕ Move Selected</button>
       <button class="btn btn-danger btn-sm" id="tracker-bulk-delete-btn" onclick="bulkDeleteSelectedTopics()" style="display:none">🗑 Delete Selected</button>
-      <button class="btn btn-ghost btn-sm" onclick="openAddTopicModal()">+ Add Topic</button>
+      <button class="btn btn-primary btn-sm" onclick="openAddTopicModal()">+ Add Topic</button>
     </div>
   </div>
   <div class="freeze-pane-bar" style="padding:4px 0 12px;">
@@ -4206,6 +4309,7 @@ renderDashboard(); }, 400);
       <thead>
         <tr>
           <th style="width:26px"><input type="checkbox" id="tracker-select-all" onchange="toggleSelectAllTopics(this.checked)" title="Select all"></th>
+          <th class="tracker-reorder-cell" title="Reorder"></th>
           <th>#</th>
           <th>Topic</th>
           <th>Status</th>
@@ -4380,6 +4484,17 @@ renderDashboard(); }, 400);
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="appearance" onclick="setSettingsTab('appearance')">🎨 Appearance</button>
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="data" onclick="setSettingsTab('data')">💾 Data</button>
     <button class="btn btn-ghost btn-sm settings-tab-btn" data-tab="about" onclick="setSettingsTab('about')">ℹ About</button>
+  </div>
+
+  <div id="settings-tab-tracker" class="settings-tab-panel">
+    <div class="card settings-tracker-card">
+      <div class="section-title">Topic Tracker</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">Simple by default. Numbered topics are placed with their sequence automatically.</div>
+      <div class="tracker-setting-row" style="margin-bottom:0">
+        <div><strong>↕ Allow topic reordering</strong><div class="setting-help">Show the small drag handle when you want to rearrange topics.</div></div>
+        <label class="settings-switch"><input type="checkbox" id="set-tracker-show-reorder" onchange="saveTrackerPrefsFromUI()"><span></span></label>
+      </div>
+    </div>
   </div>
 
   <div id="settings-tab-subjects" class="settings-tab-panel">
@@ -4774,8 +4889,8 @@ renderDashboard(); }, 400);
       </div>
       <div class="add-widget-card" onclick="addWidget('notes')">
         <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="notes" aria-hidden="true">📝</span></div>
-        <div class="aw-name">Quick Notes</div>
-        <div class="aw-desc">Personal reminders</div>
+        <div class="aw-name">Sticky Note</div>
+        <div class="aw-desc">General or subject notes</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('countdown')">
         <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="countdown" aria-hidden="true">⏰</span></div>
@@ -4987,6 +5102,62 @@ renderDashboard(); }, 400);
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-bulk-move-topics">
+  <div class="modal">
+    <h3>Move Selected Topics</h3>
+    <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px">Move the selected topics together. Their order stays the same.</div>
+    <div id="bulk-move-summary" class="organizer-summary"></div>
+    <div class="form-row">
+      <label>Place them</label>
+      <select id="bulk-move-position" onchange="renderBulkMoveTargets()">
+        <option value="before">Before a topic</option>
+        <option value="after">After a topic</option>
+        <option value="top">At the top</option>
+        <option value="bottom">At the bottom</option>
+      </select>
+    </div>
+    <div class="form-row" id="bulk-move-target-row">
+      <label>Reference topic</label>
+      <select id="bulk-move-target"></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="applyBulkMoveTopics()">Move Topics</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-bulk-move-topics')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-topic-organizer">
+  <div class="modal topic-organizer-modal">
+    <h3>🧩 Organize Topics</h3>
+    <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px">Select a topic, then tell the tracker where you want it. No dragging required.</div>
+    <div class="form-row">
+      <label>Sub-subject</label>
+      <select id="organizer-subject" onchange="renderTopicOrganizer()"></select>
+    </div>
+    <div class="form-row">
+      <label>Topic to move</label>
+      <select id="organizer-topic" onchange="renderTopicOrganizerSummary()"></select>
+    </div>
+    <div id="organizer-summary" class="organizer-summary"></div>
+    <div class="organizer-move-grid">
+      <button class="btn btn-primary" onclick="smartGroupSelectedOrganizer()">✨ Group numbered sequence</button>
+      <button class="btn btn-ghost" onclick="moveOrganizerTopic('start')">⬆ To top</button>
+      <button class="btn btn-ghost" onclick="moveOrganizerTopic('before')">↑ Move before…</button>
+      <button class="btn btn-ghost" onclick="moveOrganizerTopic('after')">↓ Move after…</button>
+      <button class="btn btn-ghost" onclick="moveOrganizerTopic('end')">⬇ To bottom</button>
+    </div>
+    <div id="organizer-target-row" class="form-row" style="display:none;margin-top:10px">
+      <label id="organizer-target-label">Choose topic</label>
+      <select id="organizer-target"></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="applyOrganizerMove()">✓ Move Topic</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-topic-organizer')">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-add-topic">
   <div class="modal">
     <h3>Add / Edit Topic</h3>
@@ -4997,7 +5168,14 @@ renderDashboard(); }, 400);
     </div>
     <div class="form-row">
       <label>Topic Name</label>
-      <input type="text" id="modal-topic-name" placeholder="e.g. Cash and Cash Equivalents">
+      <input type="text" id="modal-topic-name" placeholder="e.g. Cash and Cash Equivalents" oninput="updateTopicPlacementHint()">
+    </div>
+    <div class="form-row" id="modal-topic-placement-row" style="display:none">
+      <label>Place Topic <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+      <div class="modal-topic-placement">
+        <select id="modal-topic-placement" onchange="updateTopicPlacementHint()"></select>
+        <small id="modal-topic-placement-hint">Smart placement keeps numbered continuations together when the pattern is clear.</small>
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-primary" onclick="saveTopicFromModal()">Save</button>
@@ -5472,6 +5650,9 @@ let state = {
   subjectNames: {}, // user-editable display names for all other subjects
   subjectColors: {}, // user-customized colors for FAR/AFAR/MAS/AUDIT/TAX/RFBT
   examTarget: 75, // single consolidated target % for the Preboards & Exams scoresheet radar
+  trackerPrefs: {
+    showReorder: true
+  }
 };
 
 // Paste your bug report Google Form link here once it's ready.
@@ -7515,7 +7696,8 @@ function addWidget(type) {
 
   closeModal('modal-add-widget');
   const id = 'w_' + Date.now();
-  const d = {cols:6,rows:12,notes:'',label:''};
+  const d = {cols:6,rows:12,notes:'',notesBySubject:{},noteCategory:'general',label:''};
+  if (type === 'subject_notes') d.noteCategory = getCurrentNoteSubjectKey();
   if (type==='clock')           { d.cols=4;  d.rows=12; d.clockFmt='12'; d.clockSec=true; d.clockDesign={timeColor:'#a78bfa',bgColor:'#16161f',dateColor:'#64748b',glowColor:'#7c6af7',font:"'JetBrains Mono',monospace",size:48,spacing:2,glowAmt:20,gradient:false,grad2Color:'#34d399',showDate:true,bold:true}; }
   // Image widgets land as an empty placeholder tile — like adding a blank
   // photo slot to a tablet home screen — sized to a default square. Tap it
@@ -7920,14 +8102,51 @@ function renderWidgetHTML(w, i) {
     </div>`;
   }
 
-  if (w.type === 'notes') {
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;">
+  if (w.type === 'notes' || w.type === 'subject_notes') {
+    const collapsed = !!w.minimized;
+    if (!w.notesBySubject) w.notesBySubject = {};
+    if (w.type === 'subject_notes' && !w.noteCategory) w.noteCategory = getCurrentNoteSubjectKey();
+    if (!w.noteCategory) w.noteCategory = 'general';
+    const category = w.noteCategory;
+    const isGeneral = category === 'general';
+    const activeSubject = isGeneral ? null : category;
+    const subjectName = activeSubject ? (SUBJECTS_META[activeSubject]?.name || activeSubject) : 'General';
+    const currentValue = isGeneral ? String(w.notes || '') : String(w.notesBySubject?.[activeSubject] || '');
+    const noteText = currentValue.replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+    const subjectColor = isGeneral ? '#b9aa9a' : (SUBJECTS_META[activeSubject]?.color || '#b3a4b9');
+    const title = '<span class="quick-note-category-dot" aria-hidden="true"></span><span>Quick Note</span><span style="font-size:8px;font-weight:650;opacity:.5;">'+escapeHtml(isGeneral?'General':subjectName)+'</span>';
+    const subjectOptions = Object.keys(SUBJECTS_META).map(k => `<option value="${k}" ${k===activeSubject?'selected':''}>${escapeHtml(SUBJECTS_META[k]?.name || k)}</option>`).join('');
+    const items = Array.isArray(w.checklists?.[category]) ? w.checklists[category] : [];
+    const done = items.filter(x=>x.done).length;
+    const checklistHtml = `<div class="quick-note-checklist">
+      ${items.map((item,i)=>`<div class="quick-note-item">
+        <input class="quick-note-check" type="checkbox" ${item.done?'checked':''} onchange="toggleWidgetChecklistItem('${w.id}',${i},this.checked)">
+        <input class="quick-note-item-input ${item.done?'done':''}" data-note-item-id="${w.id}-${i}" value="${String(item.text||'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]))}" placeholder="Add a task…" oninput="setWidgetChecklistText('${w.id}',${i},this.value)" onkeydown="handleWidgetChecklistKey('${w.id}',${i},event)">
+        <button class="quick-note-item-remove" title="Remove" onclick="removeWidgetChecklistItem('${w.id}',${i})">×</button>
+      </div>`).join('')}
+      <button class="quick-note-add" onclick="addWidgetChecklistItem('${w.id}')">＋ Add checklist item${items.length ? `<span class="quick-note-progress">${done}/${items.length}</span>` : ''}</button>
+    </div>`;
+    return `<div class="dash-widget ${collapsed?'quick-note-collapsed ':''}quick-note-widget" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}">
       ${b.editBar}
-      <div class="section-title widget-title-row" style="margin-bottom:10px">${widgetTitleIcon('notes')}<span>Quick Notes</span></div>
-      <textarea onblur="saveWidgetNotes('${w.id}',this.value)" style="width:100%;height:calc(100% - 46px);min-height:100px;background:transparent;border:none;outline:none;resize:none;font-family:var(--font-body);font-size:12px;color:var(--text);line-height:1.7" placeholder="Write anything here…">${w.notes||''}</textarea>
+      <div class="quick-note-paper" style="--note-subject-color:${subjectColor}">
+        <div class="quick-note-pin"></div>
+        <div class="quick-note-head">
+          <div class="quick-note-title">${title}</div>
+          <div class="quick-note-actions">
+            <select class="quick-note-classifier" title="Classify note" onchange="setWidgetNoteCategory('${w.id}',this.value)">
+              <option value="general" ${isGeneral?'selected':''}>General</option>
+              ${subjectOptions}
+            </select>
+            <button class="quick-note-btn" title="${collapsed?'Expand':'Minimize'}" onclick="toggleWidgetNotes('${w.id}')">${collapsed?'＋':'−'}</button>
+            <button class="quick-note-btn" title="Clear note and checklist" onclick="clearWidgetNotes('${w.id}')">✕</button>
+          </div>
+        </div>
+        <textarea class="quick-note-text" data-note-id="${w.id}" oninput="queueWidgetNotesSave('${w.id}',this.value)" placeholder="${isGeneral?'Jot something down…':`Notes for ${escapeHtml(subjectName)}…`}">${noteText}</textarea>
+        ${checklistHtml}
+        <span class="quick-note-status" id="note-status-${w.id}">Saved</span>
+      </div>
     </div>`;
   }
-
   if (w.type === 'countdown') {
     const days = countdownDays();
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
@@ -8412,9 +8631,91 @@ function startClockWidgets() {
   _clockIntervalId = setInterval(tick, 1000);
 }
 
+const _noteSaveTimers = {};
+function getCurrentNoteSubjectKey() { return currentTrackerMain || MAIN_SUBJECTS[0]; }
+function getWidgetNoteCategory(w) {
+  if (!w) return 'general';
+  if (w.noteCategory) return w.noteCategory;
+  if (w.type === 'subject_notes') return getCurrentNoteSubjectKey();
+  return 'general';
+}
+function setWidgetNoteCategory(id, category) {
+  const w = getWidgets().find(x => x.id === id);
+  if (!w) return;
+  w.noteCategory = category || 'general';
+  w.type = 'notes';
+  if (!w.notesBySubject) w.notesBySubject = {};
+  save(); renderDashboardWidgets();
+}
 function saveWidgetNotes(id, val) {
   const w = getWidgets().find(x => x.id === id);
-  if (w) { w.notes = val; save(); }
+  if (!w) return;
+  const category = getWidgetNoteCategory(w);
+  if (category === 'general') w.notes = val;
+  else { if (!w.notesBySubject) w.notesBySubject = {}; w.notesBySubject[category] = val; }
+  save();
+}
+function queueWidgetNotesSave(id, val) {
+  const w = getWidgets().find(x => x.id === id);
+  if (!w) return;
+  const category = getWidgetNoteCategory(w);
+  if (category === 'general') w.notes = val;
+  else { if (!w.notesBySubject) w.notesBySubject = {}; w.notesBySubject[category] = val; }
+  clearTimeout(_noteSaveTimers[id]);
+  const status = document.getElementById('note-status-' + id);
+  if (status) status.classList.add('show');
+  _noteSaveTimers[id] = setTimeout(() => { save(); if (status) setTimeout(() => status.classList.remove('show'), 500); }, 250);
+}
+
+function getNoteChecklist(w, category){
+  if (!w.checklists) w.checklists = {};
+  if (!Array.isArray(w.checklists[category])) w.checklists[category] = [];
+  return w.checklists[category];
+}
+function setWidgetNoteMode(id, mode){
+  const w=getWidgets().find(x=>x.id===id); if(!w) return;
+  w.noteMode = mode==='checklist' ? 'checklist' : 'note';
+  save(); renderDashboardWidgets();
+}
+function addWidgetChecklistItem(id){
+  const w=getWidgets().find(x=>x.id===id); if(!w) return;
+  const cat=getWidgetNoteCategory(w), items=getNoteChecklist(w,cat);
+  items.push({text:'',done:false}); save(); renderDashboardWidgets();
+  requestAnimationFrame(()=>{ const els=document.querySelectorAll(`[data-note-item-id^="${id}-"]`); els[els.length-1]?.focus(); });
+}
+function setWidgetChecklistText(id, index, value){
+  const w=getWidgets().find(x=>x.id===id); if(!w) return;
+  const cat=getWidgetNoteCategory(w), items=getNoteChecklist(w,cat); if(!items[index]) return;
+  items[index].text=value; queueWidgetNotesSave(id, value);
+}
+function toggleWidgetChecklistItem(id,index,checked){
+  const w=getWidgets().find(x=>x.id===id); if(!w) return;
+  const cat=getWidgetNoteCategory(w), items=getNoteChecklist(w,cat); if(!items[index]) return;
+  items[index].done=!!checked; save(); renderDashboardWidgets();
+}
+function removeWidgetChecklistItem(id,index){
+  const w=getWidgets().find(x=>x.id===id); if(!w) return;
+  const cat=getWidgetNoteCategory(w), items=getNoteChecklist(w,cat); items.splice(index,1);
+  save(); renderDashboardWidgets();
+}
+function handleWidgetChecklistKey(id,index,event){
+  if(event.key==='Enter'){ event.preventDefault(); const w=getWidgets().find(x=>x.id===id); if(!w) return; const cat=getWidgetNoteCategory(w),items=getNoteChecklist(w,cat); items.splice(index+1,0,{text:'',done:false}); save(); renderDashboardWidgets(); requestAnimationFrame(()=>document.querySelector(`[data-note-item-id="${id}-${index+1}"]`)?.focus()); }
+}
+function toggleWidgetNotes(id) {
+  const w = getWidgets().find(x => x.id === id);
+  if (!w) return;
+  w.minimized = !w.minimized;
+  save(); renderDashboardWidgets();
+}
+function clearWidgetNotes(id) {
+  const w = getWidgets().find(x => x.id === id);
+  if (!w) return;
+  const category = getWidgetNoteCategory(w);
+  if (category === 'general') w.notes = '';
+  else { if (!w.notesBySubject) w.notesBySubject = {}; w.notesBySubject[category] = ''; }
+  if (w.checklists) w.checklists[category] = [];
+  save(); renderDashboardWidgets();
+  requestAnimationFrame(() => document.querySelector('[data-note-id=\"'+id+'\"]')?.focus());
 }
 
 function openWidgetImageEdit(id) {
@@ -10066,6 +10367,8 @@ function renderTracker() {
   const stats = getSubjectStats(currentTrackerSub);
   const color = SUBJECTS_META[currentTrackerMain].color;
   const isVideoSub = sInfo && sInfo.kind === 'video';
+  const organizeBtn = document.getElementById('tracker-organize-btn');
+  if (organizeBtn) organizeBtn.textContent = isVideoSub ? '🧩 Organize Lectures' : '🧩 Organize';
   document.getElementById('tracker-subject-info').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-left:3px solid ${color};background:linear-gradient(90deg,${color}14,transparent 60%);margin:-20px;padding:20px;border-radius:12px">
       <div style="display:flex;align-items:center;gap:16px">
@@ -10091,6 +10394,11 @@ function renderTracker() {
 
   // Table
   const topics = state.topics[currentTrackerSub] || [];
+  const showReorder = getTrackerPrefs().showReorder !== false;
+  // Never reorder the saved array for display. The tracker always renders
+  // topics in their saved order so settings can never silently change it.
+  const displayTopics = topics.map((topic,index) => ({topic,index}));
+
   const confColors = ['var(--muted)','var(--danger)','var(--cond)','var(--warn)','var(--accent2)','var(--pass)'];
 
   // Swap the "Confidence" column / guide for a "Watch Progress" framing when
@@ -10120,7 +10428,9 @@ function renderTracker() {
   }
 
   const tbody = document.getElementById('tracker-tbody');
-  tbody.innerHTML = topics.map((t,i) => {
+  tbody.innerHTML = displayTopics.map((entry,displayIndex) => {
+    const t = entry.topic;
+    const i = entry.index;
     const confDots = Array.from({length:5},(_,ci) => {
       const filled = ci < t.confidence;
       // Unfilled dots used to fill with var(--border), which is a very pale
@@ -10134,9 +10444,15 @@ function renderTracker() {
       return `<span class="conf-dot" style="${style}" onclick="setConfidence('${currentTrackerSub}',${i},${newVal})" title="${tip}"></span>`;
     }).join('');
     const doneRow = t.status===2 ? 'opacity:0.6' : '';
-    return `<tr style="${doneRow}">
+    const showReorder = getTrackerPrefs().showReorder !== false;
+    const reorderDisplay = showReorder ? '' : 'display:none';
+    const dragAttrs = showReorder
+      ? `draggable="true" ondragstart="trackerTopicDragStart(event,${i})" ondragover="trackerTopicDragOver(event)" ondragleave="trackerTopicDragLeave(event)" ondrop="trackerTopicDrop(event,${i})" ondragend="trackerTopicDragEnd(event)"`
+      : `draggable="false"`;
+    return `<tr class="tracker-topic-row" data-topic-index="${i}" ${dragAttrs} style="${doneRow}">
       <td><input type="checkbox" class="tracker-row-check" ${selectedTopicIndices.has(i)?'checked':''} onchange="toggleTopicSelect(${i},this.checked)"></td>
-      <td style="color:var(--muted);font-size:11px;font-family:var(--font-mono)">${i+1}</td>
+      <td class="tracker-reorder-cell" style="${reorderDisplay}"><span class="tracker-drag-handle" draggable="false" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span></td>
+      <td style="color:var(--muted);font-size:11px;font-family:var(--font-mono)">${displayIndex+1}</td>
       <td style="font-size:13px;max-width:260px">${t.name}</td>
       <td>
         <select class="status-select status-${t.status}" onchange="setTopicStatus('${currentTrackerSub}',${i},this.value)">
@@ -10148,18 +10464,169 @@ function renderTracker() {
       <td><div style="display:flex;gap:3px">${confDots}</div></td>
       <td><input type="date" class="tracker-date-input" value="${t.dateStarted || ''}" onchange="setTopicDate('${currentTrackerSub}',${i},'dateStarted',this.value)" style="font-size:11px;color:var(--muted);font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 4px;width:126px"></td>
       <td><input type="date" class="tracker-date-input" value="${t.dateEnded || ''}" onchange="setTopicDate('${currentTrackerSub}',${i},'dateEnded',this.value)" style="font-size:11px;color:var(--muted);font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 4px;width:126px"></td>
-      <td class="tracker-actions-col">
-        <button class="btn btn-ghost btn-sm" onclick="editTopicName('${currentTrackerSub}',${i})" title="Edit name">✏</button>
+      <td class="tracker-actions-col tracker-topic-actions">
+        <button class="btn btn-ghost btn-sm tracker-topic-rename-btn" onclick="editTopicName('${currentTrackerSub}',${i})" title="Rename topic">✏</button>
         <button class="btn btn-danger btn-sm" onclick="deleteTopic('${currentTrackerSub}',${i})" title="Delete">✕</button>
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px">No topics. Add one!</td></tr>';
+  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:28px">No topics. Add one!</td></tr>';
   updateTrackerBulkBar();
 
   // Populate modal subjects
   document.getElementById('modal-topic-subject').innerHTML = ALL_SUBJECT_KEYS.map(k =>
     `<option value="${k}" ${k===currentTrackerSub?'selected':''}>${DEFAULT_TOPICS[k].name}</option>`
   ).join('');
+  const topicSubjectEl = document.getElementById('modal-topic-subject');
+  if (topicSubjectEl && !topicSubjectEl.dataset.placementBound) {
+    topicSubjectEl.addEventListener('change', () => { updateTopicPlacementOptions(); updateTopicPlacementHint(); });
+    topicSubjectEl.dataset.placementBound = '1';
+  }
+}
+
+let trackerDraggedTopicIndex = null;
+let trackerDraggedTopicSub = null;
+let trackerDraggedDropIndex = null;
+
+function moveTopic(sKey, idx, direction) {
+  const arr = state.topics[sKey] || [];
+  const target = idx + direction;
+  if (idx < 0 || idx >= arr.length || target < 0 || target >= arr.length) return;
+  const moved = arr.splice(idx, 1)[0];
+  arr.splice(target, 0, moved);
+  selectedTopicIndices = new Set();
+  save();
+  renderTracker();
+}
+
+function trackerTopicDragStart(event, idx) {
+  if (event.target.closest && event.target.closest('input,select,button')) {
+    event.preventDefault();
+    return;
+  }
+  trackerDraggedTopicIndex = idx;
+  trackerDraggedTopicSub = currentTrackerSub;
+  trackerDraggedDropIndex = idx;
+  event.currentTarget.classList.add('tracker-row-dragging');
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(idx));
+  }
+}
+
+function trackerTopicDragOver(event) {
+  if (trackerDraggedTopicIndex === null || trackerDraggedTopicSub !== currentTrackerSub) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('#tracker-tbody .tracker-row-drop-target').forEach(el => el.classList.remove('tracker-row-drop-target'));
+  const row = event.currentTarget;
+  const targetIdx = parseInt(row.dataset.topicIndex,10);
+  if (!Number.isFinite(targetIdx) || targetIdx === trackerDraggedTopicIndex) return;
+
+  // Use the row midpoint so dropping below a row actually moves the topic
+  // downward. This fixes the old behaviour where drops effectively always
+  // landed before the target row.
+  const rect = row.getBoundingClientRect();
+  const insertAfter = event.clientY > rect.top + rect.height / 2;
+  trackerDraggedDropIndex = insertAfter ? targetIdx + 1 : targetIdx;
+  row.classList.add('tracker-row-drop-target');
+}
+
+function trackerTopicDragLeave(event) {
+  const row = event.currentTarget;
+  const related = event.relatedTarget;
+  if (!related || !row.contains(related)) row.classList.remove('tracker-row-drop-target');
+}
+
+function trackerTopicDrop(event, targetIdx) {
+  if (trackerDraggedTopicIndex === null || trackerDraggedTopicSub !== currentTrackerSub) return;
+  event.preventDefault();
+  const fromIdx = trackerDraggedTopicIndex;
+  const rawDropIndex = Number.isFinite(trackerDraggedDropIndex) ? trackerDraggedDropIndex : targetIdx;
+  if (rawDropIndex === fromIdx || rawDropIndex === fromIdx + 1) { trackerTopicDragEnd(event); return; }
+  const arr = state.topics[currentTrackerSub] || [];
+  const moved = arr.splice(fromIdx, 1)[0];
+  let insertIndex = rawDropIndex;
+  if (insertIndex > fromIdx) insertIndex -= 1;
+  insertIndex = Math.max(0, Math.min(arr.length, insertIndex));
+  arr.splice(insertIndex, 0, moved);
+  selectedTopicIndices = new Set();
+  save();
+  trackerTopicDragEnd(event);
+  renderTracker();
+}
+
+function trackerTopicDragEnd(event) {
+  document.querySelectorAll('#tracker-tbody .tracker-topic-row').forEach(el => {
+    el.classList.remove('tracker-row-dragging','tracker-row-drop-target');
+  });
+  trackerDraggedTopicIndex = null;
+  trackerDraggedTopicSub = null;
+  trackerDraggedDropIndex = null;
+}
+
+function normalizeTopicBase(name) {
+  return String(name || '').trim().toLowerCase()
+    .replace(/\s*[#_\-–—]?\s*\d+\s*(?:of|\/|\-)\s*\d+\s*$/i, '')
+    .replace(/\s*[#_\-–—]?\s*\d+\s*$/i, '')
+    .replace(/[_\-–—]+\s*$/, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function getTopicNumber(name) {
+  // Accept both separated numbers ("Lecture 8", "Topic_8") and
+  // compact alphanumeric names ("A8", "B12").
+  const m = String(name || '').trim().match(/(\d+)\s*(?:of\s*\d+)?$/i);
+  return m ? parseInt(m[1],10) : null;
+}
+
+function smartTopicInsertIndex(sKey, name) {
+  const arr = state.topics[sKey] || [];
+  const num = getTopicNumber(name);
+  const base = normalizeTopicBase(name);
+  if (num === null) return arr.length;
+  const matches = arr.map((t,i) => ({i, num:getTopicNumber(t.name), base:normalizeTopicBase(t.name)}))
+    .filter(x => x.num !== null && x.base === base);
+  if (!matches.length) return arr.length;
+  const higher = matches.filter(x => x.num < num).sort((a,b) => b.num - a.num)[0];
+  if (higher) return higher.i + 1;
+  const first = matches.sort((a,b) => a.i - b.i)[0];
+  return first.i;
+}
+
+function updateTopicPlacementOptions() {
+  const select = document.getElementById('modal-topic-placement');
+  const sKey = document.getElementById('modal-topic-subject').value;
+  if (!select || !sKey) return;
+  const arr = state.topics[sKey] || [];
+  const name = String(document.getElementById('modal-topic-name').value || '').trim();
+  const smartIdx = smartTopicInsertIndex(sKey, name);
+  select.innerHTML = '<option value="smart">✨ Smart placement (recommended)</option><option value="start">At beginning of list</option><option value="end">At end of list</option>' + arr.map((t,i) => `<option value="after:${i}">After #${i+1} — ${escapeHtml(t.name)}</option>`).join('');
+  select.value = smartIdx === 0 ? 'start' : (smartIdx > 0 && smartIdx < arr.length ? `after:${smartIdx-1}` : 'smart');
+}
+
+function updateTopicPlacementHint() {
+  const select = document.getElementById('modal-topic-placement');
+  const hint = document.getElementById('modal-topic-placement-hint');
+  if (!select || !hint) return;
+  const sKey = document.getElementById('modal-topic-subject').value;
+  const name = String(document.getElementById('modal-topic-name').value || '').trim();
+  if (select.value === 'smart') {
+    const idx = smartTopicInsertIndex(sKey, name);
+    const arr = state.topics[sKey] || [];
+    if (idx === 0 && arr.length) hint.textContent = `Smart placement will put it before #1 — ${arr[0].name}.`;
+    else if (idx > 0 && idx <= arr.length) hint.textContent = `Smart placement will put it after #${idx} — ${arr[idx-1].name}.`;
+    else hint.textContent = 'No clear numbered continuation was detected, so it will go to the end.';
+  } else if (select.value === 'end') {
+    hint.textContent = 'The topic will be added after the last topic.';
+  } else {
+    const idx = parseInt(select.value.split(':')[1],10);
+    const arr = state.topics[sKey] || [];
+    hint.textContent = arr[idx] ? `The topic will be inserted immediately after #${idx+1}.` : '';
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 }
 
 function setTrackerMain(key) {
@@ -10168,6 +10635,7 @@ function setTrackerMain(key) {
   selectedTopicIndices = new Set();
   saveUiSubState({ trackerMain: currentTrackerMain, trackerSub: currentTrackerSub });
   renderTracker();
+  if (getWidgets().some(w => w.type === 'subject_notes')) renderDashboardWidgets();
 }
 
 function setTrackerSub(key) {
@@ -10175,6 +10643,7 @@ function setTrackerSub(key) {
   selectedTopicIndices = new Set();
   saveUiSubState({ trackerMain: currentTrackerMain, trackerSub: currentTrackerSub });
   renderTracker();
+  if (getWidgets().some(w => w.type === 'subject_notes')) renderDashboardWidgets();
 }
 
 function setTopicStatus(sKey, idx, val) {
@@ -10217,6 +10686,7 @@ function editTopicName(sKey, idx) {
   document.getElementById('edit-topic-id').value = sKey+'|'+idx;
   document.getElementById('modal-topic-name').value = t.name;
   document.getElementById('modal-topic-subject').value = sKey;
+  document.getElementById('modal-topic-placement-row').style.display = 'none';
   openModal('modal-add-topic');
 }
 
@@ -10227,6 +10697,56 @@ function deleteTopic(sKey, idx) {
     save(); renderTracker();
     toast('Topic deleted.');
   }
+}
+
+function openBulkMoveModal() {
+  const arr = state.topics[currentTrackerSub] || [];
+  const idxs = Array.from(selectedTopicIndices).filter(i => i >= 0 && i < arr.length).sort((a,b)=>a-b);
+  if (!idxs.length) return;
+  const summary = document.getElementById('bulk-move-summary');
+  if (summary) summary.innerHTML = `<strong>${idxs.length} topic${idxs.length===1?'':'s'} selected</strong><span>${idxs.slice(0,3).map(i=>escapeHtml(arr[i].name)).join(', ')}${idxs.length>3?' …':''}</span>`;
+  const pos=document.getElementById('bulk-move-position'); if (pos) pos.value='before';
+  renderBulkMoveTargets();
+  openModal('modal-bulk-move-topics');
+}
+
+function renderBulkMoveTargets() {
+  const arr = state.topics[currentTrackerSub] || [];
+  const selected = new Set(selectedTopicIndices);
+  const pos = document.getElementById('bulk-move-position')?.value || 'before';
+  const row = document.getElementById('bulk-move-target-row');
+  const target = document.getElementById('bulk-move-target');
+  if (!row || !target) return;
+  if (pos === 'top' || pos === 'bottom') { row.style.display='none'; return; }
+  row.style.display='';
+  target.innerHTML = arr.map((t,i) => selected.has(i) ? '' : `<option value="${i}">${i+1}. ${escapeHtml(t.name)}</option>`).join('') || '<option value="-1">No other topic available</option>';
+}
+
+function applyBulkMoveTopics() {
+  const arr = state.topics[currentTrackerSub] || [];
+  const selected = Array.from(selectedTopicIndices).filter(i => i >= 0 && i < arr.length).sort((a,b)=>a-b);
+  if (!selected.length) return;
+  const pos = document.getElementById('bulk-move-position')?.value || 'before';
+  const rawTarget = parseInt(document.getElementById('bulk-move-target')?.value || '-1',10);
+  const selectedSet = new Set(selected);
+  if ((pos === 'before' || pos === 'after') && (!Number.isFinite(rawTarget) || rawTarget < 0 || rawTarget >= arr.length || selectedSet.has(rawTarget))) {
+    toast('Choose a different reference topic.'); return;
+  }
+  const chosen = selected.map(i => arr[i]);
+  const remaining = arr.filter((_,i)=>!selectedSet.has(i));
+  let insertAt=0;
+  if (pos==='bottom') insertAt=remaining.length;
+  else if (pos==='top') insertAt=0;
+  else {
+    const targetId=arr[rawTarget]?.id;
+    insertAt=remaining.findIndex(t=>t.id===targetId);
+    if (pos==='after') insertAt += 1;
+  }
+  insertAt=Math.max(0,Math.min(remaining.length,insertAt));
+  arr.splice(0,arr.length,...remaining.slice(0,insertAt),...chosen,...remaining.slice(insertAt));
+  selectedTopicIndices=new Set();
+  save(); closeModal('modal-bulk-move-topics'); renderTracker();
+  toast(`${chosen.length} topic${chosen.length===1?'':'s'} moved.`);
 }
 
 // ============================================================
@@ -10246,14 +10766,13 @@ function toggleSelectAllTopics(checked) {
 }
 
 function updateTrackerBulkBar() {
+  const moveBtn = document.getElementById('tracker-bulk-move-btn');
   const btn = document.getElementById('tracker-bulk-delete-btn');
   const selectAllCb = document.getElementById('tracker-select-all');
   const topics = state.topics[currentTrackerSub] || [];
   const n = selectedTopicIndices.size;
-  if (btn) {
-    btn.style.display = n ? 'inline-flex' : 'none';
-    btn.textContent = `🗑 Delete Selected (${n})`;
-  }
+  if (moveBtn) { moveBtn.style.display = n ? 'inline-flex' : 'none'; moveBtn.textContent = `↕ Move Selected (${n})`; }
+  if (btn) { btn.style.display = n ? 'inline-flex' : 'none'; btn.textContent = `🗑 Delete Selected (${n})`; }
   if (selectAllCb) {
     selectAllCb.checked = topics.length > 0 && n === topics.length;
     selectAllCb.indeterminate = n > 0 && n < topics.length;
@@ -10275,6 +10794,9 @@ function openAddTopicModal() {
   document.getElementById('edit-topic-id').value = '';
   document.getElementById('modal-topic-name').value = '';
   document.getElementById('modal-topic-subject').value = currentTrackerSub;
+  document.getElementById('modal-topic-placement-row').style.display = '';
+  updateTopicPlacementOptions();
+  updateTopicPlacementHint();
   openModal('modal-add-topic');
 }
 
@@ -10288,7 +10810,14 @@ function saveTopicFromModal() {
     state.topics[sk][parseInt(idx)].name = name;
   } else {
     if (!state.topics[sKey]) state.topics[sKey] = [];
-    state.topics[sKey].push({ id:sKey+'_'+Date.now(), name, status:0, confidence:0, dateStarted:'', dateEnded:'' });
+    const arr = state.topics[sKey];
+    const placement = document.getElementById('modal-topic-placement')?.value || 'smart';
+    let insertAt = arr.length;
+    if (placement === 'smart') insertAt = (state.trackerPrefs?.autoGroup !== false) ? smartTopicInsertIndex(sKey, name) : arr.length;
+    else if (placement === 'start') insertAt = 0;
+    else if (placement.startsWith('after:')) insertAt = Math.min(arr.length, parseInt(placement.split(':')[1],10) + 1);
+    const newTopic = { id:sKey+'_'+Date.now(), name, status:0, confidence:0, dateStarted:'', dateEnded:'' };
+    arr.splice(insertAt, 0, newTopic);
   }
   save(); closeModal('modal-add-topic');
   // Switch to that subject
@@ -10371,14 +10900,25 @@ function saveBulkTopics() {
   const names=bulkAddMode==='range'?generateBulkRangeNames():getBulkListNames();
   if(!names.length){toast('Nothing to add — check your inputs.');return;}
   if(!state.topics[sKey]) state.topics[sKey]=[];
-  const existing=new Set(state.topics[sKey].map(t=>t.name.toLowerCase()));
+  const arr=state.topics[sKey];
+  const existing=new Set(arr.map(t=>String(t.name).trim().toLowerCase()));
+  const isVideo = DEFAULT_TOPICS[sKey] && DEFAULT_TOPICS[sKey].kind === 'video';
   let added=0,skipped=0;
-  names.forEach((name,i)=>{ if(existing.has(name.toLowerCase())){skipped++;return;} state.topics[sKey].push({id:sKey+'_'+Date.now()+'_'+i,name,status:0,confidence:0,dateStarted:'',dateEnded:''}); existing.add(name.toLowerCase()); added++; });
+  names.forEach((name,i)=>{
+    const clean=String(name).trim();
+    if(!clean || existing.has(clean.toLowerCase())){skipped++;return;}
+    const topic={id:sKey+'_'+Date.now()+'_'+i,name:clean,status:0,confidence:0,dateStarted:'',dateEnded:''};
+    const insertAt = (getTrackerPrefs().autoGroup !== false) ? smartTopicInsertIndex(sKey, clean) : arr.length;
+    arr.splice(insertAt,0,topic);
+    existing.add(clean.toLowerCase());
+    added++;
+  });
+  if (isVideo && getTrackerPrefs().autoGroup !== false) smartGroupTopicArray(arr);
   save(); closeModal('modal-bulk-add');
   const mainKey=Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(sKey));
   if(mainKey){currentTrackerMain=mainKey;currentTrackerSub=sKey;currentSubjectManageTab=mainKey;}
   renderTracker(); if(document.getElementById('page-settings').classList.contains('active')) renderSettings();
-  toast(`Added ${added} topic${added!==1?'s':''}${skipped?` (skipped ${skipped} duplicate${skipped!==1?'s':''})`:''}!`);
+  toast(`Added ${added} lecture${added!==1?'s':''}${skipped?` (skipped ${skipped} duplicate${skipped!==1?'s':''})`:''}. Numbered groups kept together.`);
 }
 
 // ============================================================
@@ -11136,6 +11676,195 @@ function confirmTransferSubSubject() {
   toast(`"${item.name}" moved to ${toKey}.`);
 }
 
+
+function getTrackerPrefs() {
+  if (!state.trackerPrefs) state.trackerPrefs = { showReorder:true };
+  // Keep old saved preference data harmless while the tracker stays minimal.
+  delete state.trackerPrefs.completedBottom;
+  delete state.trackerPrefs.defaultPlacement;
+  state.trackerPrefs.autoGroup = true;
+  return state.trackerPrefs;
+}
+function renderTrackerPrefsUI() {
+  const p = getTrackerPrefs();
+  const r = document.getElementById('set-tracker-show-reorder');
+  if (r) r.checked = p.showReorder !== false;
+}
+function saveTrackerPrefsFromUI() {
+  const p = getTrackerPrefs();
+  const r = document.getElementById('set-tracker-show-reorder');
+  if (r) p.showReorder = r.checked;
+  p.autoGroup = true;
+  delete p.completedBottom;
+  delete p.defaultPlacement;
+  state.trackerPrefs = p;
+  save();
+  if (document.getElementById('page-tracker')?.classList.contains('active')) renderTracker();
+  toast('Tracker preference saved!');
+}
+
+function openTopicOrganizer() {
+  const sub = document.getElementById('organizer-subject');
+  if (!sub) return;
+  const keys = ALL_SUBJECT_KEYS.filter(k => state.topics[k]);
+  sub.innerHTML = keys.map(k => `<option value="${k}" ${k===currentTrackerSub?'selected':''}>${escapeHtml(DEFAULT_TOPICS[k]?.name || k)}</option>`).join('');
+  renderTopicOrganizer();
+  openModal('modal-topic-organizer');
+}
+function renderTopicOrganizer() {
+  const sub = document.getElementById('organizer-subject')?.value || currentTrackerSub;
+  const topicSel = document.getElementById('organizer-topic');
+  if (!topicSel) return;
+  const arr = state.topics[sub] || [];
+  topicSel.innerHTML = arr.length ? arr.map((t,i) => `<option value="${i}">${i+1}. ${escapeHtml(t.name)}</option>`).join('') : '<option value="-1">No topics in this list</option>';
+  renderTopicOrganizerSummary();
+}
+function renderTopicOrganizerSummary() {
+  const sub = document.getElementById('organizer-subject')?.value || currentTrackerSub;
+  const idx = parseInt(document.getElementById('organizer-topic')?.value || '-1',10);
+  const targetRow = document.getElementById('organizer-target-row');
+  const target = document.getElementById('organizer-target');
+  const summary = document.getElementById('organizer-summary');
+  const arr = state.topics[sub] || [];
+  if (idx < 0 || !arr[idx]) {
+    if (summary) summary.innerHTML = '<span style="color:var(--muted)">No topics to organize yet.</span>';
+    if (targetRow) targetRow.style.display='none';
+    return;
+  }
+  const isVideo = DEFAULT_TOPICS[sub] && DEFAULT_TOPICS[sub].kind === 'video';
+  if (summary) summary.innerHTML = `<strong>${escapeHtml(arr[idx].name)}</strong><span>Currently #${idx+1} of ${arr.length}</span>${isVideo ? '<span style="color:var(--accent2)">🎥 Numbered lectures can be grouped automatically.</span>' : ''}`;
+  if (target) target.innerHTML = arr.map((t,i) => `<option value="${i}" ${i===idx?'disabled':''}>${i+1}. ${escapeHtml(t.name)}</option>`).join('');
+}
+function smartGroupSelectedOrganizer() {
+  const sub = document.getElementById('organizer-subject')?.value || currentTrackerSub;
+  const arr = state.topics[sub] || [];
+  if (!arr.length) { toast('No lectures/topics to organize yet.'); return; }
+  const changed = smartGroupTopicArray(arr);
+  if (changed) { save(); renderTopicOrganizer(); renderTracker(); toast(DEFAULT_TOPICS[sub]?.kind === 'video' ? '🎥 Numbered lectures grouped together!' : '✨ Numbered topics grouped together!'); }
+  else toast('Everything already looks organized.');
+}
+
+let organizerPendingMove = null;
+function moveOrganizerTopic(mode) {
+  const idx = parseInt(document.getElementById('organizer-topic')?.value || '-1',10);
+  const targetRow = document.getElementById('organizer-target-row');
+  const target = document.getElementById('organizer-target');
+  if (idx < 0) return;
+  if (mode === 'start' || mode === 'end') {
+    organizerPendingMove = { mode, targetIdx:null };
+    if (targetRow) targetRow.style.display='none';
+  } else {
+    organizerPendingMove = { mode, targetIdx: parseInt(target?.value || '-1',10) };
+    if (targetRow) targetRow.style.display='block';
+    document.getElementById('organizer-target-label').textContent = mode === 'before' ? 'Move before this topic' : 'Move after this topic';
+  }
+  const summary = document.getElementById('organizer-summary');
+  const verb = mode==='start'?'to the top':mode==='end'?'to the bottom':mode==='before'?'before the selected target':'after the selected target';
+  if (summary) summary.innerHTML += `<div style="margin-top:5px;color:var(--accent2)">Ready to move ${verb}. Click <strong>Move Topic</strong>.</div>`;
+}
+function applyOrganizerMove() {
+  const sub = document.getElementById('organizer-subject')?.value;
+  const idx = parseInt(document.getElementById('organizer-topic')?.value || '-1',10);
+  const arr = state.topics[sub] || [];
+  if (!sub || idx<0 || !arr[idx] || !organizerPendingMove) { toast('Choose a move action first.'); return; }
+  const action = organizerPendingMove;
+  let targetIndex = action.mode === 'start' ? 0 : action.mode === 'end' ? arr.length-1 : action.targetIdx;
+  if ((action.mode==='before' || action.mode==='after') && (targetIndex<0 || targetIndex>=arr.length || targetIndex===idx)) { toast('Choose a different target topic.'); return; }
+  const moved = arr.splice(idx,1)[0];
+  if (action.mode==='before') targetIndex = idx < targetIndex ? targetIndex-1 : targetIndex;
+  if (action.mode==='after') targetIndex = idx < targetIndex ? targetIndex : targetIndex+1;
+  targetIndex = Math.max(0, Math.min(arr.length, targetIndex));
+  arr.splice(targetIndex,0,moved);
+  organizerPendingMove = null;
+  save();
+  renderTopicOrganizer();
+  renderTracker();
+  toast('Topic moved and saved!');
+}
+
+function smartGroupTopicArray(arr) {
+  if (!Array.isArray(arr) || arr.length < 2) return false;
+  const before = arr.map(t => t.id).join('|');
+
+  // Build numbered groups by normalized base. A group is treated as ONE
+  // contiguous block, even when its members were originally separated by
+  // other topics (e.g. A1-A5, B1-B5, A6-A10 -> A1-A10, B1-B5).
+  const indexed = arr.map((t,i)=>({
+    t,
+    i,
+    num:getTopicNumber(t.name),
+    base:normalizeTopicBase(t.name)
+  }));
+  const groups = new Map();
+  indexed.filter(x => x.num !== null).forEach(x => {
+    if (!groups.has(x.base)) groups.set(x.base, []);
+    groups.get(x.base).push(x);
+  });
+
+  const groupedIds = new Set();
+  const groupBlocks = [];
+  groups.forEach((group, base) => {
+    if (group.length < 2) return;
+    group.sort((a,b) => a.num - b.num || a.i - b.i);
+    group.forEach(x => groupedIds.add(x.t.id));
+    groupBlocks.push({ base, firstIndex: Math.min(...group.map(x => x.i)), items: group.map(x => x.t) });
+  });
+
+  // Keep the relative position of each distinct group based on where that
+  // group first appeared, rather than alphabetizing/reordering the whole list.
+  groupBlocks.sort((a,b) => a.firstIndex - b.firstIndex);
+
+  const result = [];
+  const emittedGroups = new Set();
+  for (const item of arr) {
+    const matchingBlock = groupBlocks.find(block => block.items.some(t => t.id === item.id));
+    if (matchingBlock) {
+      if (!emittedGroups.has(matchingBlock.base)) {
+        result.push(...matchingBlock.items);
+        emittedGroups.add(matchingBlock.base);
+      }
+    } else if (!groupedIds.has(item.id)) {
+      result.push(item);
+    }
+  }
+
+  // A single numbered item is not enough to form a group, so it stays in place.
+  // Any numbered groups are now contiguous and internally ordered.
+  let changed = result.map(t => t.id).join('|') !== before;
+  arr.splice(0, arr.length, ...result);
+
+  return changed;
+}
+function smartGroupCurrentTopics() {
+  const arr = state.topics[currentTrackerSub] || [];
+  const changed = smartGroupTopicArray(arr);
+  if (changed) { save(); renderTracker(); toast('✨ Numbered topics grouped together!'); }
+  else toast('Everything already looks organized.');
+}
+function smartGroupAllTopics() {
+  let changed=0;
+  Object.keys(state.topics||{}).forEach(k => { if (smartGroupTopicArray(state.topics[k])) changed++; });
+  if (changed) { save(); renderTracker(); if (document.getElementById('page-settings')?.classList.contains('active')) renderSettings(); toast(`✨ Organized ${changed} topic list${changed===1?'':'s'}!`); }
+  else toast('Everything already looks organized.');
+}
+function resetTrackerOrderConfirm() {
+  if (!confirm('Restore the original built-in topic order for all lists? Custom topics will stay, and tracked progress will not be deleted.')) return;
+  let changed=false;
+  Object.keys(DEFAULT_TOPICS||{}).forEach(k=>{
+    const original=(DEFAULT_TOPICS[k]?.topics||[]).map(name=>String(name).toLowerCase());
+    const arr=state.topics[k];
+    if (!arr || !original.length) return;
+    const rank=new Map(original.map((n,i)=>[n,i]));
+    const sorted=arr.slice().sort((a,b)=>{
+      const ra=rank.has(String(a.name).toLowerCase())?rank.get(String(a.name).toLowerCase()):999999;
+      const rb=rank.has(String(b.name).toLowerCase())?rank.get(String(b.name).toLowerCase()):999999;
+      return ra-rb;
+    });
+    if (sorted.map(t=>t.id).join('|')!==arr.map(t=>t.id).join('|')) { arr.splice(0,arr.length,...sorted); changed=true; }
+  });
+  if (changed) { save(); renderTracker(); toast('↺ Built-in topic order restored.'); } else toast('No changes were needed.');
+}
+
 function renderSettings() {
   setSettingsTab(currentSettingsTab);
   syncSettingsStickyOffset();
@@ -11154,6 +11883,7 @@ function renderSettings() {
   renderGroqKeyStatus();
   normalizeCoachPersonaState();
   renderCoachPersonaPicker();
+  renderTrackerPrefsUI();
 
   // Koda is now using pure code-based conversation brain (no AI models needed!)
   console.log('✓ Koda ready with conversational code brain (free, fast, local)');
@@ -11194,7 +11924,8 @@ function renderSettings() {
             <button class="btn btn-ghost btn-sm" onclick="setTrackerMain('${mk}');setTrackerSub('${sk}');showPage('tracker')" title="Go to tracker">↗ Tracker</button>
             <button class="btn btn-ghost btn-sm" onclick="promptEditSubjectName('${sk}')" title="Edit subject name">✎ Name</button>
             ${isCustom ? `<button class="btn btn-ghost btn-sm" onclick="toggleSubSubjectKind('${mk}','${sk}')" title="${isVideo ? 'Convert to a regular topics sub-subject' : 'Convert to a video-lecture set'}">${isVideo ? '📋 Make Topics' : '🎥 Make Video'}</button>` : ''}
-            <button class="btn btn-primary btn-sm" onclick="promptAddTopicInline('${sk}')" title="Add topic">+ Topic</button>
+            <button class="btn btn-primary btn-sm" onclick="promptAddTopicInline('${sk}')" title="Add topic">${isVideo ? '+ Lecture' : '+ Topic'}</button>
+            ${isVideo ? `<button class="btn btn-ghost btn-sm" onclick="quickOrganizeSubSubject('${sk}')" title="Group numbered lectures">✨ Arrange</button>` : ''}
             <button class="btn btn-ghost btn-sm" onclick="promptTransferSubSubject('${mk}','${sk}')" title="Move this sub-subject to another main subject">🔀 Transfer</button>
             ${isCustom ? `<button class="btn btn-danger btn-sm" onclick="deleteSubSubject('${mk}','${sk}')" title="Remove this sub-subject">🗑</button>` : ''}
           </div>
@@ -11371,11 +12102,25 @@ function deleteSubSubject(mainKey, sk) {
   toast('Sub-subject removed.');
 }
 
+function quickOrganizeSubSubject(sk) {
+  const arr = state.topics[sk] || [];
+  if (!arr.length) { toast('No lectures in this set yet.'); return; }
+  const changed = smartGroupTopicArray(arr);
+  if (changed) {
+    save();
+    renderSettings();
+    if (document.getElementById('page-tracker')?.classList.contains('active')) renderTracker();
+    toast(DEFAULT_TOPICS[sk]?.kind === 'video' ? '🎥 Lectures arranged by number.' : '✨ Topics arranged.');
+  } else toast('This lecture/topic set is already arranged.');
+}
+
 function promptAddTopicInline(sk) {
   const name = prompt(`Add a new topic to "${DEFAULT_TOPICS[sk]?.name || sk}":`);
   if (!name || !name.trim()) return;
   if (!state.topics[sk]) state.topics[sk] = [];
-  state.topics[sk].push({ id: sk+'_'+Date.now(), name: name.trim(), status:0, confidence:0, dateStarted:'', dateEnded:'' });
+  const arr = state.topics[sk];
+  const insertAt = smartTopicInsertIndex(sk, name.trim());
+  arr.splice(insertAt, 0, { id: sk+'_'+Date.now(), name: name.trim(), status:0, confidence:0, dateStarted:'', dateEnded:'' });
   save();
   renderSettings();
   toast('Topic added!');
