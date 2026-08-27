@@ -156,7 +156,7 @@ body {
 }
 
 .sidebar-top {
-  padding: 20px 16px 14px;
+  padding: 22px 16px 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -165,7 +165,7 @@ body {
 }
 
 .avatar-ring {
-  width: 60px; height: 60px;
+  width: 76px; height: 76px;
   border-radius: 50%;
   border: 2px solid var(--accent);
   padding: 2px;
@@ -178,7 +178,7 @@ body {
 }
 .avatar-ring img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .avatar-pixel {
-  width: 56px; height: 56px;
+  width: 72px; height: 72px;
   image-rendering: pixelated;
   border-radius: 50%;
 }
@@ -191,7 +191,7 @@ body {
   text-transform: uppercase;
   font-weight: 600;
 }
-.sidebar-name { font-size: 14px; font-weight: 700; color: var(--text); margin-top: 2px; }
+.sidebar-name { font-size: 17px; font-weight: 700; color: var(--text); margin-top: 2px; }
 
 .nav { flex: 1; padding: 10px 0; overflow-y: auto; }
 .nav-section {
@@ -2801,8 +2801,8 @@ body:not(.light-mode).theme-custom.mood-focus { --mood-button: linear-gradient(1
 .history-search-box input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font:11px var(--font-body)}
 .history-range-buttons{display:flex;gap:5px;flex-wrap:wrap}
 .history-range.active{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
-.profile-avatar-button{width:82px !important;height:82px !important;padding:3px !important;border-radius:50% !important;cursor:pointer;border:2px solid var(--accent) !important;background:var(--card) !important;display:flex !important;align-items:center !important;justify-content:center !important;overflow:hidden}
-.profile-avatar-button .avatar-pixel{width:72px !important;height:72px !important;border-radius:50%;display:block}
+.profile-avatar-button{width:96px !important;height:96px !important;padding:3px !important;border-radius:50% !important;cursor:pointer;border:2px solid var(--accent) !important;background:var(--card) !important;display:flex !important;align-items:center !important;justify-content:center !important;overflow:hidden}
+.profile-avatar-button .avatar-pixel{width:86px !important;height:86px !important;border-radius:50%;display:block}
 .profile-viewer-modal{width:min(430px,calc(100vw - 28px));text-align:center;padding:20px}
 .profile-viewer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;text-align:left}
 .profile-viewer-frame{width:min(320px,72vw);height:min(320px,72vw);margin:0 auto;border-radius:50%;overflow:hidden;border:1px solid var(--border);background:var(--surface)}
@@ -3540,7 +3540,7 @@ body:not(.light-mode) .quick-note-progress { color:#d8d0d5; }
 <nav id="sidebar">
   <div class="sidebar-top">
     <button class="avatar-ring profile-avatar-button" onclick="openProfilePhotoViewer()" title="View profile picture" aria-label="View profile picture">
-      <canvas class="avatar-pixel" id="sidebar-avatar" width="72" height="72"></canvas>
+      <canvas class="avatar-pixel" id="sidebar-avatar" width="86" height="86"></canvas>
     </button>
     <div class="sidebar-name-area">
       <div class="sidebar-badge">CPALE Ready</div>
@@ -4516,7 +4516,7 @@ renderDashboard(); }, 400);
       <div class="section-title">Avatar</div>
       <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:16px">
         <div class="avatar-ring" style="width:80px;height:80px;flex-shrink:0">
-          <canvas id="settings-avatar-preview" width="76" height="76" style="image-rendering:pixelated;border-radius:50%"></canvas>
+          <canvas id="settings-avatar-preview" width="80" height="80" style="width:76px;height:76px;image-rendering:pixelated;border-radius:50%;display:block"></canvas>
         </div>
         <div style="flex:1">
           <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Choose a built-in pixel avatar or upload your own photo.</div>
@@ -5422,7 +5422,13 @@ function generatePixelAvatar(seed, colors) {
 
 function drawAvatar(canvas, avatarIdx, size) {
   if (!canvas) return;
+  canvas.width = size;
+  canvas.height = size;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  canvas.style.imageRendering = 'pixelated';
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
   const av = PIXEL_AVATARS[avatarIdx];
   if (!av) return;
   const scale = size / 8;
@@ -5445,18 +5451,34 @@ function drawAvatar(canvas, avatarIdx, size) {
 
 function drawPhotoAvatar(canvas, dataUrl, size) {
   if (!canvas || !dataUrl) return;
-  const ctx = canvas.getContext('2d');
+
+  // Photos get a genuinely high-resolution backing store. The visible avatar
+  // stays the same size, but the source image is rendered at up to 1024px
+  // before the browser downsamples it for display. This keeps the photo smooth
+  // and detailed without affecting the crisp pixel-art avatars.
+  const renderSize = Math.max(512, Math.min(1024, Math.round(Math.max(size, 256) * 4)));
+  canvas.width = renderSize;
+  canvas.height = renderSize;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  canvas.style.imageRendering = 'auto';
+  const ctx = canvas.getContext('2d', { alpha: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
   const img = new Image();
+  img.decoding = 'async';
   img.onload = () => {
-    ctx.clearRect(0, 0, size, size);
+    ctx.clearRect(0, 0, renderSize, renderSize);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+    ctx.arc(renderSize / 2, renderSize / 2, renderSize / 2, 0, Math.PI * 2);
     ctx.clip();
-    const s = Math.min(img.width, img.height);
-    const sx = (img.width - s) / 2;
-    const sy = (img.height - s) / 2;
-    ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+
+    const sourceSize = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height);
+    const sx = ((img.naturalWidth || img.width) - sourceSize) / 2;
+    const sy = ((img.naturalHeight || img.height) - sourceSize) / 2;
+    ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, renderSize, renderSize);
     ctx.restore();
   };
   img.src = dataUrl;
@@ -5516,11 +5538,11 @@ function refreshAllAvatars() {
   const sidebarCanvas = document.getElementById('sidebar-avatar');
   const previewCanvas = document.getElementById('settings-avatar-preview');
   if (state.avatarPhoto) {
-    drawPhotoAvatar(sidebarCanvas, state.avatarPhoto, 72);
-    drawPhotoAvatar(previewCanvas, state.avatarPhoto, 76);
+    drawPhotoAvatar(sidebarCanvas, state.avatarPhoto, 86);
+    drawPhotoAvatar(previewCanvas, state.avatarPhoto, 80);
   } else {
-    drawAvatar(sidebarCanvas, state.avatarIdx, 72);
-    drawAvatar(previewCanvas, state.avatarIdx, 76);
+    drawAvatar(sidebarCanvas, state.avatarIdx, 86);
+    drawAvatar(previewCanvas, state.avatarIdx, 80);
   }
 }
 
