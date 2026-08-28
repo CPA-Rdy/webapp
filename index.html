@@ -8353,13 +8353,15 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
           onpointerdown="event.stopPropagation()"
           onpointerup="event.stopPropagation()"
           ontouchstart="event.stopPropagation()"
-          onclick="event.stopPropagation()"
+          ontouchend="if(window.matchMedia && window.matchMedia('(pointer:coarse)').matches){event.preventDefault();event.stopPropagation();openMobileNoteEditor('${w.id}');}"
+          onclick="if(window.matchMedia && window.matchMedia('(pointer:coarse)').matches){event.preventDefault();event.stopPropagation();openMobileNoteEditor('${w.id}');}else{event.stopPropagation();}"
           onmousedown="event.stopPropagation()"
           onmouseup="event.stopPropagation()"
           inputmode="text" spellcheck="true" autocapitalize="sentences" autocomplete="off"
+          ${(typeof matchMedia==='function' && matchMedia('(pointer:coarse)').matches)?'readonly':''}
           oninput="updateWidgetNotesInMemory('${w.id}',this.value)"
           onblur="flushWidgetNotesSave('${w.id}',this.value)"
-          placeholder="${isGeneral?'Jot something down…':`Notes for ${escapeHtml(subjectName)}…`}">${noteText}</textarea>
+          placeholder="${isGeneral?'Tap to write…':`Tap to write notes for ${escapeHtml(subjectName)}…`}">${noteText}</textarea>
         <span class="quick-note-status" id="note-status-${w.id}">Saved</span>
       </div>
     </div>`;
@@ -8928,6 +8930,65 @@ function clearWidgetNotes(id) {
 
   renderDashboardWidgets();
   requestAnimationFrame(() => document.querySelector('[data-note-id=\"'+id+'\"]')?.focus());
+}
+
+// ============================================================================
+// MOBILE QUICK NOTE EDITOR
+// Directly editing a textarea inside the draggable dashboard can make some
+// mobile browsers repeatedly steal focus from the virtual keyboard. On touch
+// devices, the widget acts as the launcher and a dedicated native textarea in
+// a fixed modal owns the keyboard/input session. Desktop keeps the inline note.
+// ============================================================================
+let _mobileNoteEditorId = null;
+function ensureMobileNoteEditor(){
+  if (document.getElementById('mobile-note-editor-overlay')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'mobile-note-editor-overlay';
+  wrap.style.cssText = 'display:none;position:fixed;inset:0;z-index:12000;background:rgba(5,7,12,.72);padding:12px;box-sizing:border-box;align-items:flex-end;justify-content:center;';
+  wrap.innerHTML = `
+    <div id="mobile-note-editor-card" style="width:min(720px,100%);max-height:min(88vh,720px);background:var(--card);border:1px solid var(--border);border-radius:16px 16px 10px 10px;box-shadow:0 20px 70px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);">
+        <div>
+          <div id="mobile-note-editor-title" style="font-size:12px;font-weight:800;color:var(--text);">Quick Note</div>
+          <div id="mobile-note-editor-sub" style="font-size:10px;color:var(--muted);margin-top:2px;">Tap outside to close</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="closeMobileNoteEditor(false)">Cancel</button>
+          <button class="btn btn-primary btn-sm" type="button" onclick="closeMobileNoteEditor(true)">Done</button>
+        </div>
+      </div>
+      <textarea id="mobile-note-editor-text" spellcheck="true" autocapitalize="sentences" autocomplete="off" inputmode="text" style="width:100%;min-height:42vh;max-height:62vh;box-sizing:border-box;border:0;outline:0;resize:none;background:var(--surface);color:var(--text);padding:16px;font-family:var(--font-body);font-size:17px;line-height:1.65;-webkit-text-size-adjust:100%;touch-action:auto;-webkit-user-select:text;user-select:text;"></textarea>
+    </div>`;
+  wrap.addEventListener('touchmove', e => { if (e.target === wrap) e.preventDefault(); }, {passive:false});
+  wrap.addEventListener('click', e => { if (e.target === wrap) closeMobileNoteEditor(false); });
+  document.body.appendChild(wrap);
+}
+function openMobileNoteEditor(id){
+  ensureMobileNoteEditor();
+  const w = getWidgets().find(x => x.id === id);
+  if (!w) return;
+  const category = getWidgetNoteCategory(w);
+  const value = category === 'general' ? String(w.notes || '') : String(w.notesBySubject?.[category] || '');
+  _mobileNoteEditorId = id;
+  const title = document.getElementById('mobile-note-editor-title');
+  const sub = document.getElementById('mobile-note-editor-sub');
+  const ta = document.getElementById('mobile-note-editor-text');
+  const overlay = document.getElementById('mobile-note-editor-overlay');
+  const subjectName = category === 'general' ? 'General' : (SUBJECTS_META[category]?.name || category);
+  if (title) title.textContent = 'Quick Note';
+  if (sub) sub.textContent = subjectName + ' · changes save when you tap Done';
+  if (ta) { ta.value = value; ta.readOnly = false; }
+  if (overlay) { overlay.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  setTimeout(()=>{ ta?.focus(); try { ta?.setSelectionRange(ta.value.length, ta.value.length); } catch(_){} }, 60);
+}
+function closeMobileNoteEditor(commit){
+  const id = _mobileNoteEditorId;
+  const ta = document.getElementById('mobile-note-editor-text');
+  const overlay = document.getElementById('mobile-note-editor-overlay');
+  if (commit && id && ta) saveWidgetNotes(id, ta.value);
+  _mobileNoteEditorId = null;
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 function openWidgetImageEdit(id) {
@@ -9633,6 +9694,16 @@ window.addEventListener('resize', () => {
   }, 150);
 });
 
+function performanceMotivation(avg, weakestName, context='practice') {
+  const safeAvg = Number(avg);
+  const focus = weakestName ? `<strong style="color:var(--danger)">${escapeHtml(weakestName)}</strong>` : 'your weakest area';
+  if (!Number.isFinite(safeAvg)) return 'Keep logging scores — every result gives you a clearer picture of where to focus next.';
+  if (safeAvg >= 85) return `🔥 You're performing at <strong style="color:var(--pass)">${safeAvg.toFixed(0)}%</strong> — that's strong territory. Don't get comfortable; keep pushing your weakest area so your floor rises with your ceiling.`;
+  if (safeAvg >= 75) return `💪 You're at <strong style="color:var(--pass)">${safeAvg.toFixed(0)}%</strong>, right around or above the target. Keep the momentum and turn that passing performance into something you can reproduce under exam pressure.`;
+  if (safeAvg >= 65) return `⚠️ You're around <strong style="color:var(--warn)">${safeAvg.toFixed(0)}%</strong>. You're within striking distance, but this is where targeted practice matters most — tighten up ${focus} and push that average over the line.`;
+  return `🚨 You're at <strong style="color:var(--danger)">${safeAvg.toFixed(0)}%</strong>, below the 65% line. Don't let the number discourage you — let it tell you where the fire is. Focus on ${focus}, practice deliberately, and bring the next score up.`;
+}
+
 function renderPracticeTrend(){
   const chartEl = document.getElementById('practice-trend-chart');
   const insightEl = document.getElementById('practice-trend-insight');
@@ -9711,7 +9782,8 @@ function renderPracticeTrend(){
       ${statCard('🏆','rgba(52,211,153,0.16)','Highest', `<span style="color:var(--pass)">${strongest.avg.toFixed(0)}%</span>`, strongest.name)}
       ${statCard('⚠️','rgba(248,113,113,0.16)','Lowest', `<span style="color:${weakest.avg>=65?'var(--warn)':'var(--danger)'}">${weakest.avg.toFixed(0)}%</span>`, weakest.name)}
       ${statCard('🎯','rgba(96,165,250,0.16)','Pass Target', '75%', 'Board pass line')}
-    </div>`;
+    </div>
+    <div style="margin-top:10px;padding:11px 13px;border:1px solid var(--border);border-left:3px solid ${overallAvg>=75?'var(--pass)':overallAvg>=65?'var(--warn)':'var(--danger)'};border-radius:10px;background:var(--surface);font-size:11.5px;line-height:1.6">${performanceMotivation(overallAvg, weakest.name, 'practice')}</div>`;
 
     // Bottom row: an Insights card (plain-language read) alongside a Score
     // Guide card (what the colors/lines on the radar mean) — mirrors the
@@ -9758,6 +9830,7 @@ function renderPracticeTrend(){
     }).join('');
     chartEl.innerHTML += `
       <div style="width:100%;margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">${insightsCard}${scoreGuideCard}</div>
+      <div style="width:100%;margin-top:10px;padding:11px 13px;border:1px solid var(--border);border-left:3px solid ${weakest.avg>=75?'var(--pass)':weakest.avg>=65?'var(--warn)':'var(--danger)'};border-radius:10px;background:var(--surface);font-size:11.5px;line-height:1.6">${performanceMotivation(overallAvg, weakest.name, 'practice')}</div>
       <div style="width:100%;margin-top:14px">${rankRowsHTML}</div>`;
     if (legendElEarly) legendElEarly.textContent = '';
     return;
@@ -10398,6 +10471,14 @@ function renderScoreRadar(previewTarget) {
         📊 Your overall average is <strong style="color:${trendColor}">${trendVerb} ${Math.abs(trend).toFixed(1)} pts</strong> since your first recorded entry (<strong>${firstEntry.c.avg.toFixed(1)}%</strong> → <strong>${latestEntry.c.avg.toFixed(1)}%</strong>).${daysLeft !== null ? ` With <strong>${daysLeft} day${daysLeft===1?'':'s'}</strong> left until your exam, ${focusNote}.` : ` ${focusNote.charAt(0).toUpperCase()+focusNote.slice(1)}.`}
       </div>
     </div>`;
+  }
+  // Performance-based motivation: the insight should not feel identical for
+  // someone who is comfortably above target and someone who is struggling.
+  if (latestEntry && latestEntry.c.avg !== null) {
+    const avgNow = latestEntry.c.avg;
+    const focus = weakest ? weakest.k : null;
+    const message = performanceMotivation(avgNow, focus, 'preboard');
+    html += `<div style="margin-top:10px;padding:11px 13px;border:1px solid var(--border);border-left:3px solid ${avgNow>=75?'var(--pass)':avgNow>=65?'var(--warn)':'var(--danger)'};border-radius:10px;background:var(--surface);font-size:11.5px;line-height:1.6">${message}</div>`;
   }
   insightsEl.innerHTML = html;
 }
@@ -16000,6 +16081,8 @@ if ('serviceWorker' in navigator) {
     });
   });
 })();
+if (window.matchMedia && window.matchMedia('(pointer:coarse)').matches) ensureMobileNoteEditor();
+
 // initCustomMood() only syncs the Settings mood-button UI state, which is
 // harmless to run always. updateCustomPreview() is a *live preview* helper —
 // it unconditionally applies the Custom-theme color inputs (which default to
