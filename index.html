@@ -1255,7 +1255,7 @@ body.light-mode .tracker-menu-dropdown:has(.tracker-menu.open) .hamburger-icon {
     padding: 10px 20px 8px !important;
     padding-top: max(10px, env(safe-area-inset-top, 10px)) !important;
   }
-  #dash-fixed-bar + div[style*="height"] { height: 110px !important; }
+  #dash-fixed-bar + div[style*="height"] { height: 84px !important; }
 
   .grid-4 { grid-template-columns: 1fr 1fr; }
   .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
@@ -1280,11 +1280,39 @@ body.light-mode .tracker-menu-dropdown:has(.tracker-menu.open) .hamburger-icon {
 /* ---- TABLET: 601–1024px (portrait AND landscape) ---- */
 @media (min-width: 601px) and (max-width: 1024px) {
   html, body { overflow-x: clip !important; width: 100% !important; }
-  #main { padding: 60px 24px 28px !important; }
+  #main { padding: 52px 24px 28px !important; }
   .page { width: 100%; box-sizing: border-box; }
 
-  /* Dashboard fixed bar */
-  #dash-fixed-bar { padding: 12px 24px 8px !important; }
+  /* Dashboard header on tablets: keep it in normal document flow.
+     It should scroll away with the page rather than remain over the first
+     dashboard widget while the user scrolls. */
+  #page-dashboard #dash-fixed-bar {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    padding: 7px 24px 6px !important;
+    z-index: 1 !important;
+  }
+  #page-dashboard #dash-fixed-bar h2 {
+    font-size: 20px !important;
+    line-height: 1.25 !important;
+  }
+  #page-dashboard #dash-fixed-bar h2 span#dash-clause-span {
+    font-size: 13px !important;
+  }
+  #page-dashboard #dash-fixed-bar > div:first-child {
+    margin-bottom: 4px !important;
+  }
+  #page-dashboard #dash-fixed-bar button {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+  }
+  #page-dashboard #dash-fixed-bar + div[style*="height"] {
+    /* The header is now in normal flow, so the old fixed-header spacer is unnecessary. */
+    height: 0 !important;
+  }
 
   /* Tablet tracker table — scrollable within card */
   #page-tracker .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -3982,7 +4010,7 @@ renderDashboard(); }, 400);
 
 <div class="page active" id="page-dashboard">
   <!-- Fixed header bar: greeting + dashboard controls — always visible -->
-  <div id="dash-fixed-bar" style="position:fixed;top:0;left:var(--sidebar-w);right:0;z-index:90;background:var(--bg);padding:10px 32px 8px;border-bottom:1px solid var(--border);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:left 0.3s;">
+  <div id="dash-fixed-bar" style="position:static;width:100%;z-index:2;background:var(--bg);padding:10px 32px 8px;border-bottom:1px solid var(--border);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <div>
         <h2 id="dash-name-heading" style="font-size:26px;font-weight:800;letter-spacing:-0.3px;line-height:1.45;">
@@ -4000,8 +4028,8 @@ renderDashboard(); }, 400);
       <button class="btn btn-ghost btn-sm" onclick="if(confirm('Reset dashboard to default layout?'))resetDashboardToDefault()" style="font-size:11px;color:var(--muted);">↺ Reset</button>
     </div>
   </div>
-  <!-- Spacer so content doesn't hide under the fixed bar -->
-  <div style="height:92px;"></div>
+  <!-- Dashboard header is in normal flow; no overlay spacer needed. -->
+  <div style="height:0;"></div>
 
   <!-- UNIFIED WIDGET GRID — everything is a widget now -->
   <div id="dash-canvas-wrapper">
@@ -16656,6 +16684,19 @@ window.addEventListener('resize', refreshSettingsTabFreeze);
 }
 .widget-title-icon .widget-icon-emoji { font-size:15px !important; }
 .add-widget-card .aw-icon .widget-icon-emoji { font-size:22px !important; }
+
+/* ── Dashboard header: always participates in document flow ── */
+#page-dashboard #dash-fixed-bar {
+  position: static !important;
+  width: 100% !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  z-index: 2 !important;
+}
+#page-dashboard #dash-fixed-bar + div[style*="height"] { height: 0 !important; }
 </style>
 <script id="widget-emoji-final-script">
 /* Simple, reliable emoji identities for widgets. This replaces only the visual icon renderer. */
