@@ -3333,26 +3333,12 @@ body:not(.light-mode) .quick-note-text::placeholder { color:#c9c1c7; opacity:.52
 .quick-note-status { position:absolute; right:20px; bottom:11px; font-size:8px; opacity:0; transition:opacity .2s; pointer-events:none; font-style:italic; color:#716873; z-index:3; }
 body:not(.light-mode) .quick-note-status { color:#ded5db; }
 .quick-note-status.show { opacity:.42; }
-.quick-note-checklist { display:flex; flex-direction:column; gap:7px; padding:5px 2px 8px; max-height:150px; overflow:auto; position:relative; z-index:2; border-top:1px solid color-mix(in srgb,var(--note-subject-color,#b7a8b7) 13%,transparent); margin-top:2px; }
-.quick-note-item { display:flex; align-items:flex-start; gap:8px; }
-.quick-note-check { appearance:none; width:15px; height:15px; flex:0 0 15px; margin:2px 0 0; border-radius:5px; border:1px solid color-mix(in srgb,var(--note-subject-color,#b7a8b7) 25%,#9b939a 75%); background:rgba(255,255,255,.10); cursor:pointer; position:relative; }
-.quick-note-check:checked { background:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 42%,#6c646d 58%); border-color:color-mix(in srgb,var(--note-subject-color,#b7a8b7) 55%,#817980 45%); }
-.quick-note-check:checked::after { content:'✓'; position:absolute; inset:0; display:grid; place-items:center; font-size:10px; color:#fff; font-weight:800; }
-.quick-note-item-input { flex:1; min-width:0; border:0 !important; background:transparent !important; box-shadow:none !important; padding:4px 0 5px !important; color:#514a52 !important; font:500 11px/1.5 var(--font-body),sans-serif; }
-body:not(.light-mode) .quick-note-item-input { color:#eee8e5 !important; }
-.quick-note-item-input.done { text-decoration:line-through; opacity:.48; }
-.quick-note-item-remove { border:0; background:transparent; color:#8b838c; cursor:pointer; font-size:12px; padding:0 2px; opacity:.4; }
-body:not(.light-mode) .quick-note-item-remove { color:#d0c8ce; }
-.quick-note-item:hover .quick-note-item-remove { opacity:.8; }
-.quick-note-add { align-self:flex-start; border:0; background:transparent; color:#7e757e; cursor:pointer; font-size:9px; font-weight:700; padding:3px 0; }
-body:not(.light-mode) .quick-note-add { color:#d0c8ce; }
-.quick-note-progress { font-size:8px; color:#7a717a; opacity:.62; margin-left:4px; }
-body:not(.light-mode) .quick-note-progress { color:#d8d0d5; }
 .quick-note-collapsed { min-height:0 !important; height:auto !important; }
 .quick-note-collapsed .quick-note-paper { min-height:0; height:46px; padding-top:13px; }
 .quick-note-collapsed .quick-note-pin { display:none; }
-.quick-note-collapsed .quick-note-text, .quick-note-collapsed .quick-note-checklist, .quick-note-collapsed .quick-note-status { display:none; }
+
 </style>
+<style>.video-stage-dot{min-width:96px;height:30px;border-radius:999px;border:1px solid var(--muted);font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;padding:0 9px;line-height:1;transition:transform .15s,opacity .15s}.video-stage-dot:hover{transform:translateY(-1px);opacity:1}.video-stage-dot .stage-icon{font-size:12px}</style>
 </head>
 <body>
 
@@ -5226,10 +5212,10 @@ renderDashboard(); }, 400);
 
 <div class="modal-overlay" id="modal-bulk-add">
   <div class="modal" style="max-width:480px">
-    <h3>⚡ Bulk Add Topics</h3>
+    <h3 id="bulk-add-title">⚡ Bulk Add Topics</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="form-row"><label>Subject</label><select id="bulk-main-subject" onchange="updateBulkSubsubjects()"></select></div>
-      <div class="form-row"><label>Sub-subject</label><select id="bulk-topic-subject"></select></div>
+      <div class="form-row"><label>Content Type / Sub-subject</label><select id="bulk-topic-subject" onchange="updateBulkContentTypeUI()"></select><div id="bulk-type-hint" style="font-size:10px;color:var(--muted);margin-top:6px">📚 Regular study topics</div></div>
     </div>
 
     <div style="display:flex;gap:6px;margin:10px 0 14px;">
@@ -5242,7 +5228,7 @@ renderDashboard(); }, 400);
         For video lecture sets like <strong style="color:var(--dim)">Introduction to Income Tax_1</strong> through <strong style="color:var(--dim)">_20</strong> — fill in the base name and the number range, and every topic gets generated automatically.
       </div>
       <div class="form-row">
-        <label>Base Name</label>
+        <label id="bulk-base-name-label">Base Name</label>
         <input type="text" id="bulk-base-name" placeholder="e.g. Introduction to Income Tax" oninput="updateBulkPreview()">
       </div>
       <div style="display:flex;gap:10px;">
@@ -5274,14 +5260,14 @@ renderDashboard(); }, 400);
         Paste one topic name per line — handy when your lecture titles aren't a clean numbered sequence.
       </div>
       <div class="form-row">
-        <label>Topic Names (one per line)</label>
+        <label id="bulk-list-label">Topic / Lecture Names (one per line)</label>
         <textarea id="bulk-list-text" rows="8" placeholder="Introduction to Income Tax_1&#10;Introduction to Income Tax_2&#10;Gross Income Inclusions&#10;..." oninput="updateBulkPreview()" style="font-family:var(--font-mono);font-size:11px;"></textarea>
       </div>
       <div id="bulk-list-count" style="font-size:11px;color:var(--muted);"></div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn btn-primary" onclick="saveBulkTopics()">Add Topics</button>
+      <button id="bulk-add-submit" class="btn btn-primary" onclick="saveBulkTopics()">Add Items</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-bulk-add')">Cancel</button>
     </div>
   </div>
@@ -5693,35 +5679,207 @@ let editingCalEvent = null; // {dateStr, idx} when editing an existing session, 
 // ============================================================
 // PERSISTENCE
 // ============================================================
+// Fast path: localStorage is kept as the synchronous UI cache, preserving the
+// instant startup behavior of the known-good build. IndexedDB is a durable,
+// much larger secondary store. It NEVER blocks startup and it is only allowed
+// to replace the local cache when its revision is actually newer.
+const STATE_STORAGE_KEY = 'cpale_v2_state';
+const APP_DB_NAME = 'cpale_ready_app_v1';
+const APP_DB_VERSION = 1;
+const APP_DB_STATE_STORE = 'state';
+const APP_DB_SNAPSHOT_STORE = 'snapshots';
 let _storageWarningShown = false;
-function save() {
-  try {
-    localStorage.setItem('cpale_v2_state', JSON.stringify(state));
-  } catch (e) {
-    // Most likely a QuotaExceededError once years of history pile up in
-    // localStorage (~5–10MB browser limit). Data already entered stays safe
-    // in memory for this session, but won't survive a reload unless the
-    // person exports/saves a backup — surface that clearly instead of
-    // failing silently.
-    console.error('Save to localStorage failed:', e);
-    if (!_storageWarningShown) {
-      _storageWarningShown = true;
-      toast('⚠️ Storage is full — export a backup now (Settings → Backup) so nothing is lost.');
-      const indicator = document.getElementById('autosave-indicator');
-      if (indicator) { indicator.textContent = '⚠'; indicator.style.color = 'var(--danger)'; indicator.title = 'Storage full — export a backup!'; }
+let _persistenceRevision = 0;
+let _idbDb = null;
+let _idbOpenPromise = null;
+let _idbReady = false;
+let _pendingIdbSnapshot = null;
+let _pendingIdbFlush = false;
+let _hydrationStarted = false;
+let _storageEpoch = 0; // increments on authoritative import/reset so background hydration cannot resurrect old data
+
+function openAppDb() {
+  if (_idbDb) return Promise.resolve(_idbDb);
+  if (_idbOpenPromise) return _idbOpenPromise;
+  if (!('indexedDB' in window)) return Promise.reject(new Error('IndexedDB unavailable'));
+  _idbOpenPromise = new Promise((resolve,reject)=>{
+    let req;
+    try { req = indexedDB.open(APP_DB_NAME, APP_DB_VERSION); }
+    catch (e) { reject(e); return; }
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(APP_DB_STATE_STORE)) db.createObjectStore(APP_DB_STATE_STORE);
+      if (!db.objectStoreNames.contains(APP_DB_SNAPSHOT_STORE)) db.createObjectStore(APP_DB_SNAPSHOT_STORE, {keyPath:'ts'});
+    };
+    req.onsuccess = () => {
+      _idbDb = req.result;
+      _idbDb.onclose = () => { _idbDb = null; _idbOpenPromise = null; _idbReady = false; };
+      _idbDb.onversionchange = () => { try { _idbDb.close(); } catch(e) {} _idbDb = null; _idbOpenPromise = null; _idbReady = false; };
+      resolve(_idbDb);
+    };
+    req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+  }).finally(()=>{ _idbOpenPromise = null; });
+  return _idbOpenPromise;
+}
+
+function idbGetState() {
+  return openAppDb().then(db => new Promise((resolve,reject)=>{
+    const tx=db.transaction(APP_DB_STATE_STORE,'readonly');
+    const req=tx.objectStore(APP_DB_STATE_STORE).get('current');
+    req.onsuccess=()=>resolve(req.result || null);
+    req.onerror=()=>reject(req.error || new Error('IndexedDB read failed'));
+  }));
+}
+
+function idbPutState(snapshot) {
+  return openAppDb().then(db => new Promise((resolve,reject)=>{
+    const tx=db.transaction(APP_DB_STATE_STORE,'readwrite');
+    tx.objectStore(APP_DB_STATE_STORE).put(snapshot,'current');
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error || new Error('IndexedDB write failed'));
+    tx.onabort=()=>reject(tx.error || new Error('IndexedDB write aborted'));
+  }));
+}
+
+function idbDeleteState() {
+  return openAppDb().then(db => new Promise((resolve,reject)=>{
+    const tx=db.transaction(APP_DB_STATE_STORE,'readwrite');
+    tx.objectStore(APP_DB_STATE_STORE).delete('current');
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error || new Error('IndexedDB delete failed'));
+    tx.onabort=()=>reject(tx.error || new Error('IndexedDB delete aborted'));
+  }));
+}
+
+function nextPersistenceRevision() {
+  _persistenceRevision = Math.max(Date.now(), _persistenceRevision + 1);
+  return _persistenceRevision;
+}
+
+function queueIdbSnapshot(snapshot) {
+  _pendingIdbSnapshot = JSON.parse(JSON.stringify(snapshot));
+  if (!_idbReady || _pendingIdbFlush) return;
+  _pendingIdbFlush = true;
+  Promise.resolve().then(async () => {
+    try {
+      while (_pendingIdbSnapshot && _idbReady) {
+        const item = _pendingIdbSnapshot;
+        _pendingIdbSnapshot = null;
+        await idbPutState(item);
+      }
+    } catch (e) {
+      console.warn('IndexedDB state write skipped:', e);
+    } finally {
+      _pendingIdbFlush = false;
+      if (_pendingIdbSnapshot && _idbReady) queueIdbSnapshot(_pendingIdbSnapshot);
     }
+  });
+}
+
+function showStorageWarning() {
+  if (_storageWarningShown) return;
+  _storageWarningShown = true;
+  toast('⚠️ Browser cache is full — your data is being kept in the larger database. Export a backup when convenient.');
+}
+
+function save() {
+  const snapshot = JSON.parse(JSON.stringify(state));
+  snapshot.__persistenceRevision = nextPersistenceRevision();
+  state.__persistenceRevision = snapshot.__persistenceRevision;
+
+  try {
+    localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch (e) {
+    console.warn('localStorage save skipped:', e);
+    showStorageWarning();
   }
+
+  // IMPORTANT: before hydration finishes, never let the startup save overwrite
+  // a possibly newer IndexedDB copy. The latest snapshot is held in memory and
+  // flushed only after hydration has compared both stores.
+  queueIdbSnapshot(snapshot);
   scheduleAutoSave();
   scheduleAutoDriveBackup();
 }
+
+function hydrateFromIndexedDB() {
+  if (_hydrationStarted) return;
+  _hydrationStarted = true;
+  const hydrationEpoch = _storageEpoch;
+  idbGetState().then(saved => {
+    // An import/reset may have become authoritative while the async read was
+    // in flight. Never let this stale read overwrite that newer decision.
+    if (hydrationEpoch !== _storageEpoch) return;
+
+    const local = (() => {
+      try {
+        const r = localStorage.getItem(STATE_STORAGE_KEY);
+        return r ? JSON.parse(r) : null;
+      } catch(e) { return null; }
+    })();
+    const localRev = Number(local?.__persistenceRevision || state.__persistenceRevision || 0);
+    const savedRev = Number(saved?.__persistenceRevision || 0);
+
+    if (saved && typeof saved === 'object' && !Array.isArray(saved) && savedRev > localRev) {
+      state = { ...state, ...saved };
+      _persistenceRevision = savedRev;
+
+      ALL_SUBJECT_KEYS.forEach(key => {
+        if (!state.topics[key]) state.topics[key] = DEFAULT_TOPICS[key].topics.map((t,i)=>({id:key+'_'+i,name:t,status:0,confidence:0,dateStarted:'',dateEnded:''}));
+      });
+      if (!state.scores) state.scores=[];
+      if (!Array.isArray(state.practiceScores)) state.practiceScores=[];
+      if (!state.restDays) state.restDays=[0];
+      if (!state.studyDays) state.studyDays=[];
+      if (!Array.isArray(state.activityLog)) state.activityLog=[];
+      if (!Array.isArray(state.activityArchive)) state.activityArchive=[];
+      if (!state.videoSubjectNames || typeof state.videoSubjectNames!=='object') state.videoSubjectNames={};
+      if (!state.subjectNames || typeof state.subjectNames!=='object') state.subjectNames={};
+      if (!state.subjectColors || typeof state.subjectColors!=='object') state.subjectColors={};
+      compactActivityLog();
+      ensureBuiltInVideoLibraries();
+      Object.entries(state.subjectNames || {}).forEach(([key,name]) => { if(DEFAULT_TOPICS[key] && typeof name==='string' && name.trim()) DEFAULT_TOPICS[key].name=name.trim(); });
+      Object.entries(state.subjectColors || {}).forEach(([key,color]) => { if(SUBJECTS_META[key] && typeof color==='string' && color.trim()) SUBJECTS_META[key].color=color.trim(); });
+
+      try { renderDashboard(); } catch(e) {}
+      try { renderHistoryPage(); } catch(e) {}
+      try { renderCoach(); } catch(e) {}
+      try { refreshAllAvatars(); } catch(e) {}
+      try {
+        const lp=localStorage.getItem('cpale_last_page');
+        if(lp && lp!=='dashboard' && document.getElementById('page-'+lp)) showPage(lp);
+      } catch(e) {}
+      try { save(); } catch(e) {}
+    } else if (local && typeof local === 'object') {
+      queueIdbSnapshot(local);
+    }
+  }).catch(e => {
+    console.warn('IndexedDB hydration skipped:', e);
+  }).finally(() => {
+    _idbReady = true;
+    if (_pendingIdbSnapshot && hydrationEpoch === _storageEpoch) queueIdbSnapshot(_pendingIdbSnapshot);
+  });
+}
+
 function load() {
-  const raw = localStorage.getItem('cpale_v2_state');
+  const raw = localStorage.getItem(STATE_STORAGE_KEY);
   if (raw) {
     try {
       const loaded = JSON.parse(raw);
       state = { ...state, ...loaded };
+      // Sticky notes are permanently note-only. Legacy checklist/task payloads
+      // from older backups are stripped during startup so they cannot return.
+      (state.dashWidgets || []).forEach(w => {
+        if (w && (w.type === 'notes' || w.type === 'subject_notes')) {
+          delete w.checklists;
+          delete w.noteMode;
+        }
+      });
+      _persistenceRevision = Number(state.__persistenceRevision || 0);
     } catch(e) {}
   }
+  // Background hydration preserves the original instant startup path.
+  hydrateFromIndexedDB();
   ALL_SUBJECT_KEYS.forEach(key => {
     if (!state.topics[key]) {
       state.topics[key] = DEFAULT_TOPICS[key].topics.map((t, i) => ({
@@ -5744,9 +5902,8 @@ function load() {
   if (typeof state.groqApiKey !== 'string') state.groqApiKey = '';
   if (typeof state.coachPersona !== 'string') state.coachPersona = 'balanced';
   if (typeof state.coachPersonaCustom !== 'string') state.coachPersonaCustom = '';
-  // Long-term Koda memory is disabled. Purge legacy saved memory from older builds.
   if (Object.prototype.hasOwnProperty.call(state, 'kodaMemory')) {
-    try { delete state.kodaMemory; localStorage.setItem('cpale_v2_state', JSON.stringify(state)); } catch (e) {}
+    try { delete state.kodaMemory; } catch(e) {}
   }
 }
 
@@ -8138,16 +8295,9 @@ function renderWidgetHTML(w, i) {
     const subjectColor = isGeneral ? '#b9aa9a' : (SUBJECTS_META[activeSubject]?.color || '#b3a4b9');
     const title = '<span class="quick-note-category-dot" aria-hidden="true"></span><span>Quick Note</span><span style="font-size:8px;font-weight:650;opacity:.5;">'+escapeHtml(isGeneral?'General':subjectName)+'</span>';
     const subjectOptions = Object.keys(SUBJECTS_META).map(k => `<option value="${k}" ${k===activeSubject?'selected':''}>${escapeHtml(SUBJECTS_META[k]?.name || k)}</option>`).join('');
-    const items = Array.isArray(w.checklists?.[category]) ? w.checklists[category] : [];
-    const done = items.filter(x=>x.done).length;
-    const checklistHtml = `<div class="quick-note-checklist">
-      ${items.map((item,i)=>`<div class="quick-note-item">
-        <input class="quick-note-check" type="checkbox" ${item.done?'checked':''} onchange="toggleWidgetChecklistItem('${w.id}',${i},this.checked)">
-        <input class="quick-note-item-input ${item.done?'done':''}" data-note-item-id="${w.id}-${i}" value="${String(item.text||'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]))}" placeholder="Add a task…" oninput="setWidgetChecklistText('${w.id}',${i},this.value)" onkeydown="handleWidgetChecklistKey('${w.id}',${i},event)">
-        <button class="quick-note-item-remove" title="Remove" onclick="removeWidgetChecklistItem('${w.id}',${i})">×</button>
-      </div>`).join('')}
-      <button class="quick-note-add" onclick="addWidgetChecklistItem('${w.id}')">＋ Add checklist item${items.length ? `<span class="quick-note-progress">${done}/${items.length}</span>` : ''}</button>
-    </div>`;
+    // Sticky notes are note-only now. Ignore/remove any legacy checklist data.
+    if (w.checklists) delete w.checklists;
+    if (w.noteMode) delete w.noteMode;
     return `<div class="dash-widget ${collapsed?'quick-note-collapsed ':''}quick-note-widget" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}">
       ${b.editBar}
       <div class="quick-note-paper" style="--note-subject-color:${subjectColor}">
@@ -8160,11 +8310,10 @@ function renderWidgetHTML(w, i) {
               ${subjectOptions}
             </select>
             <button class="quick-note-btn" title="${collapsed?'Expand':'Minimize'}" onclick="toggleWidgetNotes('${w.id}')">${collapsed?'＋':'−'}</button>
-            <button class="quick-note-btn" title="Clear note and checklist" onclick="clearWidgetNotes('${w.id}')">✕</button>
+            <button class="quick-note-btn" title="Clear note" onclick="clearWidgetNotes('${w.id}')">✕</button>
           </div>
         </div>
         <textarea class="quick-note-text" data-note-id="${w.id}" oninput="queueWidgetNotesSave('${w.id}',this.value)" placeholder="${isGeneral?'Jot something down…':`Notes for ${escapeHtml(subjectName)}…`}">${noteText}</textarea>
-        ${checklistHtml}
         <span class="quick-note-status" id="note-status-${w.id}">Saved</span>
       </div>
     </div>`;
@@ -8689,40 +8838,7 @@ function queueWidgetNotesSave(id, val) {
   _noteSaveTimers[id] = setTimeout(() => { save(); if (status) setTimeout(() => status.classList.remove('show'), 500); }, 250);
 }
 
-function getNoteChecklist(w, category){
-  if (!w.checklists) w.checklists = {};
-  if (!Array.isArray(w.checklists[category])) w.checklists[category] = [];
-  return w.checklists[category];
-}
-function setWidgetNoteMode(id, mode){
-  const w=getWidgets().find(x=>x.id===id); if(!w) return;
-  w.noteMode = mode==='checklist' ? 'checklist' : 'note';
-  save(); renderDashboardWidgets();
-}
-function addWidgetChecklistItem(id){
-  const w=getWidgets().find(x=>x.id===id); if(!w) return;
-  const cat=getWidgetNoteCategory(w), items=getNoteChecklist(w,cat);
-  items.push({text:'',done:false}); save(); renderDashboardWidgets();
-  requestAnimationFrame(()=>{ const els=document.querySelectorAll(`[data-note-item-id^="${id}-"]`); els[els.length-1]?.focus(); });
-}
-function setWidgetChecklistText(id, index, value){
-  const w=getWidgets().find(x=>x.id===id); if(!w) return;
-  const cat=getWidgetNoteCategory(w), items=getNoteChecklist(w,cat); if(!items[index]) return;
-  items[index].text=value; queueWidgetNotesSave(id, value);
-}
-function toggleWidgetChecklistItem(id,index,checked){
-  const w=getWidgets().find(x=>x.id===id); if(!w) return;
-  const cat=getWidgetNoteCategory(w), items=getNoteChecklist(w,cat); if(!items[index]) return;
-  items[index].done=!!checked; save(); renderDashboardWidgets();
-}
-function removeWidgetChecklistItem(id,index){
-  const w=getWidgets().find(x=>x.id===id); if(!w) return;
-  const cat=getWidgetNoteCategory(w), items=getNoteChecklist(w,cat); items.splice(index,1);
-  save(); renderDashboardWidgets();
-}
-function handleWidgetChecklistKey(id,index,event){
-  if(event.key==='Enter'){ event.preventDefault(); const w=getWidgets().find(x=>x.id===id); if(!w) return; const cat=getWidgetNoteCategory(w),items=getNoteChecklist(w,cat); items.splice(index+1,0,{text:'',done:false}); save(); renderDashboardWidgets(); requestAnimationFrame(()=>document.querySelector(`[data-note-item-id="${id}-${index+1}"]`)?.focus()); }
-}
+
 function toggleWidgetNotes(id) {
   const w = getWidgets().find(x => x.id === id);
   if (!w) return;
@@ -8735,7 +8851,6 @@ function clearWidgetNotes(id) {
   const category = getWidgetNoteCategory(w);
   if (category === 'general') w.notes = '';
   else { if (!w.notesBySubject) w.notesBySubject = {}; w.notesBySubject[category] = ''; }
-  if (w.checklists) w.checklists[category] = [];
   save(); renderDashboardWidgets();
   requestAnimationFrame(() => document.querySelector('[data-note-id=\"'+id+'\"]')?.focus());
 }
@@ -10431,14 +10546,18 @@ function renderTracker() {
   const guideLevelEls = [1,2,3,4,5].map(n => document.getElementById('conf-guide-l'+n));
   if (isVideoSub) {
     confColHeaderEl.textContent = 'Watch Progress';
-    guideTitleEl.textContent = '🎥 Watch Progress Guide — What do the dots mean?';
-    guideSubEl.textContent = 'Track how thoroughly you\'ve gone through each lecture on a 1–5 scale. This replaces confidence rating for video content.';
-    guideLevelEls[0].textContent = 'Just started — barely into the lecture.';
-    guideLevelEls[1].textContent = 'Watched about half of it.';
-    guideLevelEls[2].textContent = 'Watched the full lecture once.';
-    guideLevelEls[3].textContent = 'Rewatched key parts and took notes.';
-    guideLevelEls[4].textContent = 'Fully reviewed — could re-explain it without rewatching.';
+    guideTitleEl.textContent = '🎥 Watch Progress Guide — Keep it simple';
+    guideSubEl.textContent = 'Video lectures use 3 simple stages. Older 1–2 values are treated as In Progress, and older 4–5 values are treated as Rewatched.';
+    guideLevelEls[0].textContent = 'In Progress — you have started the lecture.';
+    guideLevelEls[1].textContent = 'Watched Once — you finished the full lecture once.';
+    guideLevelEls[2].textContent = 'Rewatched — you reviewed key parts again.';
+    guideLevelEls[3].textContent = '';
+    guideLevelEls[4].textContent = '';
+    const guideRows = guideLevelEls.map(el => el?.closest('.conf-level-row')).filter(Boolean);
+    guideRows.forEach((row, idx) => { row.style.display = idx < 3 ? '' : 'none'; });
   } else {
+    guideLevelEls.forEach(el => { const row = el?.closest('.conf-level-row'); if (row) row.style.display = ''; });
+
     confColHeaderEl.textContent = 'Confidence';
     guideTitleEl.textContent = '🎯 Confidence Level Guide — What do the dots mean?';
     guideSubEl.textContent = 'Rate how well you understand each topic on a 1–5 scale. Be honest — this helps you prioritize review sessions.';
@@ -10453,18 +10572,38 @@ function renderTracker() {
   tbody.innerHTML = displayTopics.map((entry,displayIndex) => {
     const t = entry.topic;
     const i = entry.index;
-    const confDots = Array.from({length:5},(_,ci) => {
-      const filled = ci < t.confidence;
-      // Unfilled dots used to fill with var(--border), which is a very pale
-      // near-white in light mode and basically disappeared against the card.
-      // Render them as a clearly visible outlined (empty) circle instead.
-      const style = filled
-        ? `background:${confColors[t.confidence]};border-color:${confColors[t.confidence]}`
-        : `background:transparent;border-color:var(--muted)`;
-      const newVal = (t.confidence === ci+1) ? 0 : ci+1;
-      const tip = (t.confidence === ci+1) ? 'Click to reset' : (isVideoSub ? 'Watch level '+(ci+1) : 'Level '+(ci+1));
-      return `<span class="conf-dot" style="${style}" onclick="setConfidence('${currentTrackerSub}',${i},${newVal})" title="${tip}"></span>`;
-    }).join('');
+    let confDots;
+    if (isVideoSub) {
+      // Video lectures use exactly THREE user-facing watch stages.
+      // Legacy values are normalized: 1–2 => In Progress, 3 => Watched Once, 4–5 => Rewatched.
+      const rawLevel = Number(t.confidence) || 0;
+      const stage = rawLevel <= 0 ? 0 : rawLevel <= 2 ? 1 : rawLevel === 3 ? 2 : 3;
+      const videoStages = [
+        { value:1, label:'In Progress', icon:'◔' },
+        { value:2, label:'Watched Once', icon:'✓' },
+        { value:3, label:'Rewatched', icon:'↻' }
+      ];
+      confDots = videoStages.map(item => {
+        const active = stage === item.value;
+        const stageColors = {1:'var(--warn)',2:'var(--pass)',3:'var(--accent2)'};
+        const color = stageColors[item.value];
+        const style = active
+          ? `background:${color};border-color:${color};color:#fff;opacity:1`
+          : `background:transparent;border-color:var(--muted);color:var(--muted);opacity:.7`;
+        const newStage = active ? 0 : item.value;
+        return `<button type="button" class="conf-dot video-stage-dot" style="${style}" onclick="setVideoWatchStage('${currentTrackerSub}',${i},${newStage})" title="${active?'Click to reset':item.label}" aria-label="${item.label}"><span class="stage-icon">${item.icon}</span><span>${item.label}</span></button>`;
+      }).join('');
+    } else {
+      confDots = Array.from({length:5},(_,ci) => {
+        const filled = ci < t.confidence;
+        const style = filled
+          ? `background:${confColors[t.confidence]};border-color:${confColors[t.confidence]}`
+          : `background:transparent;border-color:var(--muted)`;
+        const newVal = (t.confidence === ci+1) ? 0 : ci+1;
+        const tip = (t.confidence === ci+1) ? 'Click to reset' : 'Level '+(ci+1);
+        return `<span class="conf-dot" style="${style}" onclick="setConfidence('${currentTrackerSub}',${i},${newVal})" title="${tip}"></span>`;
+      }).join('');
+    }
     const doneRow = t.status===2 ? 'opacity:0.6' : '';
     const showReorder = getTrackerPrefs().showReorder !== false;
     const reorderDisplay = showReorder ? '' : 'display:none';
@@ -10672,7 +10811,11 @@ function setTopicStatus(sKey, idx, val) {
   const v = parseInt(val);
   const topic = state.topics[sKey][idx];
   const previous = topic.status;
+  const isVideoTopic = DEFAULT_TOPICS[sKey]?.kind === 'video';
   topic.status = v;
+  // Video lectures use a simple 3-stage watch model.
+  // Started => In Progress (1); Completed => Watched Once (3).
+  if (isVideoTopic) topic.confidence = v === 2 ? 3 : v === 1 ? 1 : 0;
   const today = localDateStr();
   if (v !== previous && v > 0) {
     const subName = DEFAULT_TOPICS[sKey]?.name || sKey;
@@ -10699,8 +10842,48 @@ function setTopicDate(sKey, idx, field, value) {
   save(); renderTracker(); renderCoach();
 }
 
+function setVideoWatchStage(sKey, idx, stage) {
+  const topic = state.topics[sKey][idx];
+  if (DEFAULT_TOPICS[sKey]?.kind !== 'video') return;
+  const today = localDateStr();
+  const v = Number(stage) || 0;
+  // UI stages: 0 = not started, 1 = in progress, 2 = watched once, 3 = rewatched.
+  topic.confidence = v === 1 ? 1 : v === 2 ? 3 : v === 3 ? 4 : 0;
+  topic.status = v === 1 ? 1 : v >= 2 ? 2 : 0;
+  if (v >= 1 && !topic.dateStarted) topic.dateStarted = today;
+  if (v >= 2) {
+    if (!topic.dateEnded) topic.dateEnded = today;
+  } else {
+    topic.dateEnded = '';
+  }
+  if (v === 0) topic.dateStarted = '';
+  recordStudyDay(); checkAchievements(); save(); renderTracker(); renderDashboard(); renderCoach();
+}
+
 function setConfidence(sKey, idx, val) {
-  state.topics[sKey][idx].confidence = val; save(); renderTracker();
+  const topic = state.topics[sKey][idx];
+  const isVideoTopic = DEFAULT_TOPICS[sKey]?.kind === 'video';
+  if (isVideoTopic) {
+    // Preserve compatibility with any legacy callers that still pass the old 1–5 values.
+    const legacy = Number(val) || 0;
+    const stage = legacy <= 0 ? 0 : legacy <= 2 ? 1 : legacy === 3 ? 2 : 3;
+    return setVideoWatchStage(sKey, idx, stage);
+  }
+  topic.confidence = val;
+  if (isVideoTopic) {
+    if (val >= 3) topic.status = 2;
+    else if (val >= 1) topic.status = 1;
+    else topic.status = 0;
+    const today = localDateStr();
+    if (val >= 1 && !topic.dateStarted) topic.dateStarted = today;
+    if (val >= 3) {
+      if (!topic.dateEnded) topic.dateEnded = today;
+    } else {
+      topic.dateEnded = '';
+    }
+    if (val === 0) topic.dateStarted = '';
+  }
+  save(); renderTracker(); renderDashboard(); renderCoach();
 }
 
 function editTopicName(sKey, idx) {
@@ -10861,6 +11044,7 @@ function openBulkAddModal() {
   updateBulkSubsubjects();
   const preferredSub = (SUBJECTS_META[mainPreselect]?.subs||[]).includes(currentTrackerSub) ? currentTrackerSub : (SUBJECTS_META[mainPreselect]?.subs||[])[0];
   if (preferredSub) document.getElementById('bulk-topic-subject').value = preferredSub;
+  updateBulkContentTypeUI();
   document.getElementById('bulk-base-name').value = '';
   document.getElementById('bulk-start-num').value = 1;
   document.getElementById('bulk-end-num').value = 20;
@@ -10874,9 +11058,30 @@ function openBulkAddModal() {
 function updateBulkSubsubjects() {
   const mainKey = document.getElementById('bulk-main-subject').value;
   const subs = SUBJECTS_META[mainKey]?.subs || [];
-  document.getElementById('bulk-topic-subject').innerHTML = subs.map(k =>
-    `<option value="${k}">${DEFAULT_TOPICS[k]?.name || k}</option>`
-  ).join('');
+  document.getElementById('bulk-topic-subject').innerHTML = subs.map(k => {
+    const isVideo = DEFAULT_TOPICS[k]?.kind === 'video';
+    return `<option value="${k}">${isVideo ? '🎥 Video Lectures' : '📚 Topics'} — ${DEFAULT_TOPICS[k]?.name || k}</option>`;
+  }).join('');
+  updateBulkContentTypeUI();
+}
+
+function updateBulkContentTypeUI() {
+  const sKey = document.getElementById('bulk-topic-subject')?.value || '';
+  const isVideo = DEFAULT_TOPICS[sKey]?.kind === 'video';
+  const title = document.getElementById('bulk-add-title');
+  const hint = document.getElementById('bulk-type-hint');
+  const baseLabel = document.getElementById('bulk-base-name-label');
+  const listLabel = document.getElementById('bulk-list-label');
+  const baseInput = document.getElementById('bulk-base-name');
+  const listInput = document.getElementById('bulk-list-text');
+  if (title) title.textContent = isVideo ? '⚡ Bulk Add Video Lectures' : '⚡ Bulk Add Topics';
+  const submit = document.getElementById('bulk-add-submit');
+  if (submit) submit.textContent = isVideo ? 'Add Video Lectures' : 'Add Topics';
+  if (hint) hint.textContent = isVideo ? '🎥 Video lecture collection — these use Watch Progress instead of Confidence.' : '📚 Regular study topics — these use Confidence and count toward subject completion.';
+  if (baseLabel) baseLabel.textContent = isVideo ? 'Lecture Base Name' : 'Topic Base Name';
+  if (listLabel) listLabel.textContent = isVideo ? 'Lecture Names (one per line)' : 'Topic Names (one per line)';
+  if (baseInput) baseInput.placeholder = isVideo ? 'e.g. Introduction to Income Tax' : 'e.g. Chapter 1 — Taxation';
+  if (listInput) listInput.placeholder = isVideo ? 'Introduction to Income Tax_1\nIntroduction to Income Tax_2\n...' : 'General principles of taxation\nTaxes tax laws and tax administration\n...';
 }
 
 function setBulkMode(mode) {
@@ -10940,7 +11145,8 @@ function saveBulkTopics() {
   const mainKey=Object.keys(SUBJECTS_META).find(mk=>SUBJECTS_META[mk].subs.includes(sKey));
   if(mainKey){currentTrackerMain=mainKey;currentTrackerSub=sKey;currentSubjectManageTab=mainKey;}
   renderTracker(); if(document.getElementById('page-settings').classList.contains('active')) renderSettings();
-  toast(`Added ${added} lecture${added!==1?'s':''}${skipped?` (skipped ${skipped} duplicate${skipped!==1?'s':''})`:''}. Numbered groups kept together.`);
+  const itemLabel = isVideo ? 'video lecture' : 'topic';
+  toast(`Added ${added} ${itemLabel}${added!==1?'s':''}${skipped?` (skipped ${skipped} duplicate${skipped!==1?'s':''})`:''}. Numbered groups kept together.`);
 }
 
 // ============================================================
@@ -12333,21 +12539,26 @@ function timeAgo(ts) {
 // Kept small and capped — this is a short-lived safety net, not a version
 // history feature.
 function takeSafetySnapshot(label) {
+  const raw = JSON.stringify(state);
+  const snap = { ts: Date.now(), label, data: raw };
   try {
-    const raw = localStorage.getItem('cpale_v2_state');
-    if (!raw) return;
     let list = [];
     try { list = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || '[]'); } catch(e) {}
-    list.unshift({ ts: Date.now(), label, data: raw });
+    list.unshift(snap);
     list = list.slice(0, MAX_SNAPSHOTS);
     localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(list));
   } catch(e) {
-    // Snapshot storage failing (e.g. quota) shouldn't block the operation
-    // it was meant to protect — just proceed without the safety net.
-    console.error('Safety snapshot failed:', e);
+    console.warn('Local safety snapshot unavailable:', e);
   }
+  // Snapshot is mirrored independently so Undo still exists even when the main
+  // state has outgrown localStorage.
+  openAppDb().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(APP_DB_SNAPSHOT_STORE,'readwrite');
+    tx.objectStore(APP_DB_SNAPSHOT_STORE).put(snap);
+    tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error||new Error('snapshot write failed')); tx.onabort=()=>reject(tx.error||new Error('snapshot aborted'));
+  })).catch(e=>console.warn('IndexedDB safety snapshot unavailable:',e));
+  return snap;
 }
-
 function getLatestSnapshot() {
   try {
     const list = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || '[]');
@@ -12355,19 +12566,29 @@ function getLatestSnapshot() {
   } catch(e) { return null; }
 }
 
-function restoreSafetySnapshot() {
-  const snap = getLatestSnapshot();
+async function restoreSafetySnapshot() {
+  let snap = getLatestSnapshot();
+  if (!snap) {
+    try {
+      const db = await openAppDb();
+      snap = await new Promise((resolve,reject)=>{
+        const tx=db.transaction(APP_DB_SNAPSHOT_STORE,'readonly');
+        const req=tx.objectStore(APP_DB_SNAPSHOT_STORE).getAll();
+        req.onsuccess=()=>resolve((req.result||[]).sort((a,b)=>b.ts-a.ts)[0]||null);
+        req.onerror=()=>reject(req.error);
+      });
+    } catch(e) {}
+  }
   if (!snap) { toast('No snapshot to restore.'); return; }
   if (!confirm(`Restore your data from before "${snap.label}" (${timeAgo(snap.ts)})? This replaces what's currently loaded.`)) return;
   try {
-    const loaded = JSON.parse(snap.data);
-    state = { ...state, ...loaded };
+    const loaded=JSON.parse(snap.data);
+    state={...state,...loaded};
     save();
-    toast('↩ Restored previous data.');
-    location.reload();
-  } catch(e) {
-    toast('Snapshot was corrupted — could not restore.');
-  }
+    toast('↩ Restored '+snap.label);
+    try{ renderDashboard(); }catch(e){}
+    try{ renderHistoryPage(); }catch(e){}
+  } catch(e) { toast('Could not restore snapshot.'); }
 }
 
 // A backup is only worth trusting if it's shaped like this app's data.
@@ -12513,10 +12734,10 @@ function _fallbackDownload(blob) {
 }
 
 
-function importData(event) {
+async function importData(event) {
   const file=event.target.files[0]; if(!file) return;
   const reader=new FileReader();
-  reader.onload=e=>{
+  reader.onload=async e=>{
     let loaded;
     try {
       loaded=JSON.parse(e.target.result);
@@ -12533,19 +12754,66 @@ function importData(event) {
     if (!confirm(`This backup contains ${counts}. Importing will replace what's currently loaded. A snapshot of your current data will be saved first so this can be undone. Continue?`)) {
       event.target.value=''; return;
     }
-    takeSafetySnapshot('Import');
-    state={...state,...loaded}; save(); toast('✓ Data imported!'); renderDashboard(); setSidebarBackupStatus('✓ Restored ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+
+    // Import is an authoritative state replacement. Invalidate any in-flight
+    // background hydration so an older IndexedDB record cannot overwrite it.
+    _storageEpoch++;
+    _pendingIdbSnapshot = null;
+    _pendingIdbFlush = false;
+
+    const preImportSnapshot = takeSafetySnapshot('Import');
+    const imported = { ...state, ...loaded };
+    // Imported backups may contain legacy checklist/task fields. Keep the
+    // note text, but permanently remove task/checklist payloads.
+    (imported.dashWidgets || []).forEach(w => {
+      if (w && (w.type === 'notes' || w.type === 'subject_notes')) {
+        delete w.checklists;
+        delete w.noteMode;
+      }
+    });
+    delete imported.__persistenceRevision;
+    const now = Date.now();
+    const freshRevision = Math.max(now, Number(state.__persistenceRevision || 0) + 1, _persistenceRevision + 1);
+    imported.__persistenceRevision = freshRevision;
+    state = imported;
+    _persistenceRevision = freshRevision;
+
+    // Write the imported state to both stores synchronously where possible.
+    // The IndexedDB write is awaited so a reload cannot race the import.
+    try {
+      localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));
+    } catch(e) {
+      console.warn('Imported state exceeds localStorage; continuing with IndexedDB.', e);
+    }
+
+    try {
+      _idbReady = true;
+      await idbPutState(JSON.parse(JSON.stringify(state)));
+      _pendingIdbSnapshot = null;
+      toast('✓ Data imported and saved!');
+    } catch(e) {
+      console.error('Imported state could not be written to IndexedDB:', e);
+      queueIdbSnapshot(state);
+      toast('⚠️ Data imported, but the large database save could not be confirmed. Export a backup before reload.');
+    }
+
+    renderDashboard();
+    try { setSidebarBackupStatus('✓ Restored ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})); } catch(e) {}
     markBackupNow();
     event.target.value='';
   };
   reader.readAsText(file);
 }
 
-function resetAll() {
-  if (confirm('Reset ALL data? A snapshot will be saved first so this can be undone from Settings → Data if it was a mistake.')) {
-    takeSafetySnapshot('Reset All Data');
-    localStorage.removeItem('cpale_v2_state'); location.reload();
-  }
+async function resetAll() {
+  if (!confirm('Reset ALL data? A snapshot will be saved first so this can be undone from Settings → Data if it was a mistake.')) return;
+  _storageEpoch++;
+  _pendingIdbSnapshot = null;
+  _pendingIdbFlush = false;
+  takeSafetySnapshot('Reset All Data');
+  try { await openAppDb(); await idbDeleteState(); } catch(e) { console.warn('IndexedDB reset skipped:',e); }
+  localStorage.removeItem('cpale_v2_state');
+  location.reload();
 }
 
 // ============================================================
