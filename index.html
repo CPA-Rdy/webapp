@@ -5759,23 +5759,40 @@ function hasMeaningfulUserData(s) {
 }
 
 function save() {
-  try {
-    const serialized = JSON.stringify(state);
+  const serialized = JSON.stringify(state);
+  let primaryFailed = false;
 
-    // Keep a last-known-good copy. We intentionally do NOT replace it with an
-    // empty/default state, because that is exactly what we need it for if a
-    // future startup path accidentally clobbers `state`.
-    if (hasMeaningfulUserData(state)) {
-      localStorage.setItem(STATE_LAST_GOOD_KEY, serialized);
-    }
+  // Write the PRIMARY state key first, in its own try/catch. This is the
+  // key `load()` reads on every startup, so it must never be skipped —
+  // previously it sat *after* the last-known-good backup write in a single
+  // try block, so a QuotaExceededError on the backup write (easy to hit
+  // once video lectures / avatar photos / custom colors pile up) would
+  // throw before this line ever ran, silently discarding the real save.
+  try {
     localStorage.setItem(STATE_STORAGE_KEY, serialized);
   } catch (e) {
+    primaryFailed = true;
+    console.error('Save to localStorage failed:', e);
+  }
+
+  // Keep a last-known-good copy. We intentionally do NOT replace it with an
+  // empty/default state, because that is exactly what we need it for if a
+  // future startup path accidentally clobbers `state`. This is best-effort
+  // and must never be able to block the primary save above.
+  if (hasMeaningfulUserData(state)) {
+    try {
+      localStorage.setItem(STATE_LAST_GOOD_KEY, serialized);
+    } catch (e) {
+      console.error('Backup copy save failed:', e);
+    }
+  }
+
+  if (primaryFailed) {
     // Most likely a QuotaExceededError once years of history pile up in
     // localStorage (~5–10MB browser limit). Data already entered stays safe
     // in memory for this session, but won't survive a reload unless the
     // person exports/saves a backup — surface that clearly instead of
     // failing silently.
-    console.error('Save to localStorage failed:', e);
     if (!_storageWarningShown) {
       _storageWarningShown = true;
       toast('⚠️ Storage is full — export a backup now (Settings → Backup) so nothing is lost.');
@@ -12957,11 +12974,13 @@ function toast(msg) {
 // localStorage is synchronous, so this also catches changes made immediately
 // before a refresh/close that may not have gone through a normal click handler.
 window.addEventListener('beforeunload', function () {
-  try {
-    const serialized = JSON.stringify(state);
-    if (hasMeaningfulUserData(state)) localStorage.setItem(STATE_LAST_GOOD_KEY, serialized);
-    localStorage.setItem(STATE_STORAGE_KEY, serialized);
-  } catch (e) {}
+  const serialized = JSON.stringify(state);
+  // Primary key first and independently — see save() for why this order
+  // matters (a backup-copy quota error must never block the real save).
+  try { localStorage.setItem(STATE_STORAGE_KEY, serialized); } catch (e) {}
+  if (hasMeaningfulUserData(state)) {
+    try { localStorage.setItem(STATE_LAST_GOOD_KEY, serialized); } catch (e) {}
+  }
 });
 
 // ============================================================
