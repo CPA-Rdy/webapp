@@ -5716,10 +5716,59 @@ let editingCalEvent = null; // {dateStr, idx} when editing an existing session, 
 // ============================================================
 // PERSISTENCE
 // ============================================================
+const STATE_STORAGE_KEY = 'cpale_v2_state';
+const STATE_LAST_GOOD_KEY = 'cpale_v2_last_good_state';
 let _storageWarningShown = false;
+
+// A fresh install has lots of built-in topic data, so simply checking
+// whether `topics` exists cannot tell us whether a real user has accumulated
+// progress. Only treat the state as "meaningful" when it contains actual
+// user-entered/progress data. This prevents an accidental blank/default state
+// from replacing the last good copy during startup or an early script error.
+function hasMeaningfulUserData(s) {
+  if (!s || typeof s !== 'object') return false;
+  if (typeof s.name === 'string' && s.name.trim()) return true;
+  if (typeof s.examDate === 'string' && s.examDate) return true;
+  if (typeof s.quote === 'string' && s.quote.trim()) return true;
+  if (Array.isArray(s.scores) && s.scores.length) return true;
+  if (Array.isArray(s.practiceScores) && s.practiceScores.length) return true;
+  if (s.calEvents && typeof s.calEvents === 'object' && Object.keys(s.calEvents).length) return true;
+  if (Array.isArray(s.activityLog) && s.activityLog.length) return true;
+  if (Array.isArray(s.activityArchive) && s.activityArchive.length) return true;
+  if (Array.isArray(s.studyDays) && s.studyDays.length) return true;
+  if (s.customSubSubjects && Object.values(s.customSubSubjects).some(v => Array.isArray(v) && v.length)) return true;
+  if (s.removedBuiltinSubSubjects && Object.values(s.removedBuiltinSubSubjects).some(v => Array.isArray(v) && v.length)) return true;
+  if (s.movedBuiltinSubSubjects && Object.keys(s.movedBuiltinSubSubjects).length) return true;
+  if (s.subjectNames && Object.keys(s.subjectNames).length) return true;
+  if (s.subjectColors && Object.keys(s.subjectColors).length) return true;
+  if (s.avatarPhoto) return true;
+  if (s.geminiApiKey || s.groqApiKey) return true;
+
+  // Topic progress is the most important case: built-in topic definitions are
+  // present for everyone, but any non-default status/confidence/date means the
+  // candidate has actually accumulated progress.
+  if (s.topics && typeof s.topics === 'object') {
+    for (const arr of Object.values(s.topics)) {
+      if (!Array.isArray(arr)) continue;
+      for (const t of arr) {
+        if (t && (Number(t.status) > 0 || Number(t.confidence) > 0 || t.dateStarted || t.dateEnded)) return true;
+      }
+    }
+  }
+  return false;
+}
+
 function save() {
   try {
-    localStorage.setItem('cpale_v2_state', JSON.stringify(state));
+    const serialized = JSON.stringify(state);
+
+    // Keep a last-known-good copy. We intentionally do NOT replace it with an
+    // empty/default state, because that is exactly what we need it for if a
+    // future startup path accidentally clobbers `state`.
+    if (hasMeaningfulUserData(state)) {
+      localStorage.setItem(STATE_LAST_GOOD_KEY, serialized);
+    }
+    localStorage.setItem(STATE_STORAGE_KEY, serialized);
   } catch (e) {
     // Most likely a QuotaExceededError once years of history pile up in
     // localStorage (~5–10MB browser limit). Data already entered stays safe
@@ -5738,12 +5787,34 @@ function save() {
   scheduleAutoDriveBackup();
 }
 function load() {
-  const raw = localStorage.getItem('cpale_v2_state');
+  const raw = localStorage.getItem(STATE_STORAGE_KEY);
+  let loaded = null;
+
   if (raw) {
     try {
-      const loaded = JSON.parse(raw);
-      state = { ...state, ...loaded };
+      const candidate = JSON.parse(raw);
+      // A valid JSON object can still be an accidental blank/default state.
+      // Prefer the last-known-good copy when the current copy has no real user
+      // data but the recovery copy does.
+      if (candidate && typeof candidate === 'object' &&
+          (hasMeaningfulUserData(candidate) || !hasMeaningfulUserData(state))) {
+        loaded = candidate;
+      }
     } catch(e) {}
+  }
+
+  if (!loaded) {
+    try {
+      const recoveryRaw = localStorage.getItem(STATE_LAST_GOOD_KEY);
+      if (recoveryRaw) {
+        const recovery = JSON.parse(recoveryRaw);
+        if (hasMeaningfulUserData(recovery)) loaded = recovery;
+      }
+    } catch(e) {}
+  }
+
+  if (loaded) {
+    state = { ...state, ...loaded };
   }
   ALL_SUBJECT_KEYS.forEach(key => {
     if (!state.topics[key]) {
@@ -5787,7 +5858,7 @@ function load() {
   if (typeof state.coachPersonaCustom !== 'string') state.coachPersonaCustom = '';
   // Long-term Koda memory is disabled. Purge legacy saved memory from older builds.
   if (Object.prototype.hasOwnProperty.call(state, 'kodaMemory')) {
-    try { delete state.kodaMemory; localStorage.setItem('cpale_v2_state', JSON.stringify(state)); } catch (e) {}
+    try { delete state.kodaMemory; localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   }
 }
 
@@ -12398,7 +12469,7 @@ function timeAgo(ts) {
 // history feature.
 function takeSafetySnapshot(label) {
   try {
-    const raw = localStorage.getItem('cpale_v2_state');
+    const raw = localStorage.getItem(STATE_STORAGE_KEY);
     if (!raw) return;
     let list = [];
     try { list = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || '[]'); } catch(e) {}
@@ -12608,7 +12679,7 @@ function importData(event) {
 function resetAll() {
   if (confirm('Reset ALL data? A snapshot will be saved first so this can be undone from Settings → Data if it was a mistake.')) {
     takeSafetySnapshot('Reset All Data');
-    localStorage.removeItem('cpale_v2_state'); location.reload();
+    localStorage.removeItem(STATE_STORAGE_KEY); localStorage.removeItem(STATE_LAST_GOOD_KEY); location.reload();
   }
 }
 
@@ -12881,6 +12952,17 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>el.classList.remove('show'),2500);
 }
+
+// Persist one final synchronous snapshot when the document is unloading.
+// localStorage is synchronous, so this also catches changes made immediately
+// before a refresh/close that may not have gone through a normal click handler.
+window.addEventListener('beforeunload', function () {
+  try {
+    const serialized = JSON.stringify(state);
+    if (hasMeaningfulUserData(state)) localStorage.setItem(STATE_LAST_GOOD_KEY, serialized);
+    localStorage.setItem(STATE_STORAGE_KEY, serialized);
+  } catch (e) {}
+});
 
 // ============================================================
 // INIT
