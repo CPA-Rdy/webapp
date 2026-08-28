@@ -3326,7 +3326,7 @@ body:not(.light-mode) .quick-note-classifier { color:#f1ece9 !important; border-
 body:not(.light-mode) .quick-note-btn { color:#ece6e3; border-color:rgba(255,255,255,.10); background:rgba(255,255,255,.06); }
 body:not(.light-mode) .quick-note-btn:hover { background:rgba(255,255,255,.11); }
 .quick-note-paper select option { background:#ded7d0; color:#4f4851; }
-.quick-note-text { width:100%; height:calc(100% - 32px); min-height:96px; box-sizing:border-box; background:transparent !important; border:none !important; outline:none !important; resize:none; color:#4f4851 !important; padding:12px 2px 18px; font-family:"Segoe Print","Bradley Hand","Comic Sans MS",var(--font-body),sans-serif; font-size:12px; line-height:1.72; position:relative; z-index:2; }
+.quick-note-text { width:100%; height:calc(100% - 32px); min-height:96px; box-sizing:border-box; background:transparent !important; border:none !important; outline:none !important; resize:none; color:#4f4851 !important; padding:12px 2px 18px; font-family:"Segoe Print","Bradley Hand","Comic Sans MS",var(--font-body),sans-serif; font-size:12px; line-height:1.72; position:relative; z-index:20; touch-action:auto; -webkit-user-select:text; user-select:text; -webkit-tap-highlight-color:transparent; }
 .quick-note-text::placeholder { color:#716971; opacity:.48; }
 body:not(.light-mode) .quick-note-text { color:#f0eae7 !important; }
 body:not(.light-mode) .quick-note-text::placeholder { color:#c9c1c7; opacity:.52; }
@@ -8349,7 +8349,7 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
             <button class="quick-note-btn" title="Clear note" onclick="clearWidgetNotes('${w.id}')">✕</button>
           </div>
         </div>
-        <textarea class="quick-note-text" data-note-id="${w.id}" oninput="queueWidgetNotesSave('${w.id}',this.value)" placeholder="${isGeneral?'Jot something down…':`Notes for ${escapeHtml(subjectName)}…`}">${noteText}</textarea>
+        <textarea class="quick-note-text" data-note-id="${w.id}" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()" onfocus="this.setAttribute('data-editing','1')" oninput="queueWidgetNotesSave('${w.id}',this.value)" placeholder="${isGeneral?'Jot something down…':`Notes for ${escapeHtml(subjectName)}…`}">${noteText}</textarea>
         <span class="quick-note-status" id="note-status-${w.id}">Saved</span>
       </div>
     </div>`;
