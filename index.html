@@ -3326,7 +3326,7 @@ body:not(.light-mode) .quick-note-classifier { color:#f1ece9 !important; border-
 body:not(.light-mode) .quick-note-btn { color:#ece6e3; border-color:rgba(255,255,255,.10); background:rgba(255,255,255,.06); }
 body:not(.light-mode) .quick-note-btn:hover { background:rgba(255,255,255,.11); }
 .quick-note-paper select option { background:#ded7d0; color:#4f4851; }
-.quick-note-text { width:100%; height:calc(100% - 32px); min-height:96px; box-sizing:border-box; background:transparent !important; border:none !important; outline:none !important; resize:none; color:#4f4851 !important; padding:12px 2px 18px; font-family:"Segoe Print","Bradley Hand","Comic Sans MS",var(--font-body),sans-serif; font-size:12px; line-height:1.72; position:relative; z-index:20; touch-action:auto; -webkit-user-select:text; user-select:text; -webkit-tap-highlight-color:transparent; overscroll-behavior:contain; }
+.quick-note-text { width:100%; height:calc(100% - 32px); min-height:96px; box-sizing:border-box; background:transparent !important; border:none !important; outline:none !important; resize:none; color:#4f4851 !important; padding:12px 2px 18px; font-family:"Segoe Print","Bradley Hand","Comic Sans MS",var(--font-body),sans-serif; font-size:16px; -webkit-text-size-adjust:100%; -webkit-appearance:none; appearance:none; line-height:1.72; position:relative; z-index:20; touch-action:auto; -webkit-user-select:text; user-select:text; -webkit-tap-highlight-color:transparent; overscroll-behavior:contain; }
 .quick-note-text::placeholder { color:#716971; opacity:.48; }
 body:not(.light-mode) .quick-note-text { color:#f0eae7 !important; }
 body:not(.light-mode) .quick-note-text::placeholder { color:#c9c1c7; opacity:.52; }
@@ -4145,12 +4145,12 @@ renderDashboard(); }, 400);
           <th>Label</th>
           <th>Type</th>
           <th>Date</th>
-          <th>FAR</th><th>FAR%</th>
-          <th>AFAR</th><th>AFAR%</th>
-          <th>MAS</th><th>MAS%</th>
-          <th>AUDIT</th><th>AUDIT%</th>
-          <th>TAX</th><th>TAX%</th>
-          <th>RFBT</th><th>RFBT%</th>
+          <th data-subject="FAR">FAR</th><th data-subject="FAR" data-subject-percent="1">FAR%</th>
+          <th data-subject="AFAR">AFAR</th><th data-subject="AFAR" data-subject-percent="1">AFAR%</th>
+          <th data-subject="MAS">MAS</th><th data-subject="MAS" data-subject-percent="1">MAS%</th>
+          <th data-subject="AUDIT">AUDIT</th><th data-subject="AUDIT" data-subject-percent="1">AUDIT%</th>
+          <th data-subject="TAX">TAX</th><th data-subject="TAX" data-subject-percent="1">TAX%</th>
+          <th data-subject="RFBT">RFBT</th><th data-subject="RFBT" data-subject-percent="1">RFBT%</th>
           <th>Avg%</th>
           <th>Remark</th>
           <th class="tracker-actions-col"></th>
@@ -8356,7 +8356,7 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
           onclick="event.stopPropagation()"
           onmousedown="event.stopPropagation()"
           onmouseup="event.stopPropagation()"
-          onfocus="this.setAttribute('data-editing','1')"
+          inputmode="text" spellcheck="true" autocapitalize="sentences" autocomplete="off"
           oninput="updateWidgetNotesInMemory('${w.id}',this.value)"
           onblur="flushWidgetNotesSave('${w.id}',this.value)"
           placeholder="${isGeneral?'Jot something down…':`Notes for ${escapeHtml(subjectName)}…`}">${noteText}</textarea>
@@ -9433,6 +9433,14 @@ function renderPracticeScores(){
 }
 
 
+function scoreSignalEmoji(value){
+  const v = Number(value);
+  if (!Number.isFinite(v)) return '';
+  if (v >= 75) return '💡';
+  if (v >= 65) return '⚠️';
+  return '🚨';
+}
+
 function renderPracticeAnalytics(){
   const subjectEl=document.getElementById('practice-subject-chart');
   if(!subjectEl) return;
@@ -9455,6 +9463,8 @@ function renderPracticeAnalytics(){
   const avg=vals=>vals.reduce((a,b)=>a+b,0)/vals.length;
   const colorFor=v=>v>=75?'var(--pass)':v>=65?'var(--warn)':'var(--danger)';
   const subjectColor=k=>SUBJECTS_META[k]?.color||'var(--accent)';
+  const targetPct=Math.max(0,Math.min(100,Number(getExamTarget())||75));
+  const practiceTargetMarker=`<div title="Target: ${targetPct}%" style="position:absolute;left:${targetPct}%;top:-4px;height:24px;border-left:2px dashed color-mix(in srgb, var(--text) 62%, transparent);filter:drop-shadow(0 0 1px color-mix(in srgb, var(--text) 18%, transparent));pointer-events:none;z-index:3"></div>`;
 
   // ALL SUBJECTS: show a visual comparison of every subject with practice data.
   if(practiceFilterMain==='all'){
@@ -9467,8 +9477,8 @@ function renderPracticeAnalytics(){
       <div style="display:flex;flex-direction:column;gap:11px">
         ${rows.map(r=>{const c=colorFor(r.avg);const sc=subjectColor(r.key);return `<div style="display:grid;grid-template-columns:58px 1fr 82px;align-items:center;gap:9px">
           <div style="font-size:11px;font-weight:700;color:${sc}">${r.key}</div>
-          <div style="height:16px;background:var(--border);border-radius:99px;overflow:hidden"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px;transition:width .5s ease"></div></div>
-          <div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div>
+          <div style="height:16px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px;transition:width .5s ease"></div>${practiceTargetMarker}</div>
+          <div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${scoreSignalEmoji(r.avg)} ${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div>
         </div>`;}).join('')}
       </div>`;
     return;
@@ -9528,7 +9538,7 @@ function renderPracticeAnalytics(){
       <div style="padding:9px;border:1px solid var(--border);border-radius:8px"><div style="font-size:9px;color:var(--muted)">LOWEST</div><strong style="font-size:12px;color:${colorFor(worst)}">${worst.toFixed(1)}%</strong></div>
     </div>
     ${practiceFilterSub==='all' && subRows.length ? `<div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.05em">By Sub-subject</div>
-    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">${subRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:13px;background:var(--border);border-radius:99px;overflow:hidden"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div></div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div></div>`;}).join('')}</div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">${subRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:13px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div>${practiceTargetMarker}</div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${scoreSignalEmoji(r.avg)} ${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div></div>`;}).join('')}</div>` : ''}
     <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.05em">Topic Priority</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px">
       <button class="btn btn-sm ${practiceTopicPriorityFilter==='all'?'btn-primary':'btn-ghost'}" onclick="practiceTopicPriorityFilter='all';renderPracticeAnalytics()">All (${topicRowsAll.length})</button>
@@ -9536,7 +9546,7 @@ function renderPracticeAnalytics(){
       <button class="btn btn-sm ${practiceTopicPriorityFilter==='medium'?'btn-primary':'btn-ghost'}" onclick="practiceTopicPriorityFilter='medium';renderPracticeAnalytics()">🟡 Medium (${priorityCounts.medium})</button>
       <button class="btn btn-sm ${practiceTopicPriorityFilter==='low'?'btn-primary':'btn-ghost'}" onclick="practiceTopicPriorityFilter='low';renderPracticeAnalytics()">🟢 Low (${priorityCounts.low})</button>
     </div>
-    ${topicRows.length ? `<div style="display:flex;flex-direction:column;gap:8px">${topicRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:16px minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><span title="${r.priority.label}">${r.priority.icon}</span><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:12px;background:var(--border);border-radius:99px;overflow:hidden"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div></div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div></div>`;}).join('')}</div>`
+    ${topicRows.length ? `<div style="display:flex;flex-direction:column;gap:8px">${topicRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:16px minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><span title="${r.priority.label}">${r.priority.icon}</span><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:12px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div>${practiceTargetMarker}</div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div></div>`;}).join('')}</div>`
     : `<div style="color:var(--muted);font-size:11px;text-align:center;padding:12px 0">No topics in this priority tier for the current selection.</div>`}
     ${topicRowsHiddenCount>0 ? `<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px">+${topicRowsHiddenCount} more${practiceTopicPriorityFilter==='all'?' — filter by priority above to see the rest':' in this tier'}</div>` : ''}`;
 }
@@ -9931,6 +9941,16 @@ const SCORESHEET_PAGE_SIZE=20;
 
 function renderScoresheet() {
   const tbody = document.getElementById('score-tbody');
+  // Keep the Preboards & Exams table headers visually tied to the user's
+  // subject colors. This is intentionally applied at render time so custom
+  // colors from Settings are always reflected after changes/imports.
+  document.querySelectorAll('#scoresheet-table th[data-subject]').forEach(th => {
+    const key = th.getAttribute('data-subject');
+    const color = SUBJECTS_META[key]?.color || 'var(--text)';
+    th.style.color = color;
+    th.style.fontWeight = '800';
+    if (th.dataset.subjectPercent === '1') th.style.opacity = '0.8';
+  });
   const TYPE_COLORS = {
     'Preboard':'var(--accent2)', 'Monthly Quiz':'var(--pass)', 'Weekly Quiz':'var(--warn)',
     'Mock Exam':'var(--danger)'
@@ -10097,13 +10117,15 @@ function renderScoresheet() {
             const barColor = val >= 75 ? 'var(--pass)' : val >= 65 ? 'var(--warn)' : 'var(--danger)';
             return `<div style="display:grid;grid-template-columns:48px 1fr 48px;align-items:center;gap:8px">
               <div style="font-size:11px;font-weight:700;color:${color}">${key}</div>
-              <div style="height:14px;background:var(--border);border-radius:99px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)">
+              <div style="height:14px;background:var(--border);border-radius:99px;position:relative;overflow:visible;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)">
                 <div style="height:100%;width:${Math.max(0,Math.min(100,val)).toFixed(1)}%;background:${barColor};border-radius:99px;transition:width .5s ease"></div>
+                <div title="Target: ${state.examTarget || 75}%" style="position:absolute;left:${Math.max(0,Math.min(100,state.examTarget || 75))}%;top:-4px;height:22px;border-left:2px dashed color-mix(in srgb, var(--text) 62%, transparent);filter:drop-shadow(0 0 1px color-mix(in srgb, var(--text) 18%, transparent));pointer-events:none;z-index:3"></div>
               </div>
-              <div style="text-align:right;font-size:11px;font-weight:700;font-family:var(--font-mono);color:${barColor}">${val.toFixed(1)}%</div>
+              <div style="text-align:right;font-size:11px;font-weight:700;font-family:var(--font-mono);color:${barColor}">${scoreSignalEmoji(val)} ${val.toFixed(1)}%</div>
             </div>`;
           }).join('')}
-        </div>`;
+        </div>
+        <div style="margin-top:8px;font-size:9px;color:var(--dim);text-align:right;font-weight:600">- - - ${state.examTarget || 75}% target</div>`;
     }
   }
   renderScoreRadar();
