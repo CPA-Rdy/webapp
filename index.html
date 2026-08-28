@@ -3338,7 +3338,7 @@ body:not(.light-mode) .quick-note-status { color:#ded5db; }
 .quick-note-collapsed .quick-note-pin { display:none; }
 
 </style>
-<style>.video-stage-dot{min-width:96px;height:30px;border-radius:999px;border:1px solid var(--muted);font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;padding:0 9px;line-height:1;transition:transform .15s,opacity .15s}.video-stage-dot:hover{transform:translateY(-1px);opacity:1}.video-stage-dot .stage-icon{font-size:12px}</style>
+<style>.video-stage-dot{width:30px;height:26px;border-radius:8px;border-width:1px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;line-height:1}</style>
 </head>
 <body>
 
@@ -5867,14 +5867,6 @@ function load() {
     try {
       const loaded = JSON.parse(raw);
       state = { ...state, ...loaded };
-      // Sticky notes are permanently note-only. Legacy checklist/task payloads
-      // from older backups are stripped during startup so they cannot return.
-      (state.dashWidgets || []).forEach(w => {
-        if (w && (w.type === 'notes' || w.type === 'subject_notes')) {
-          delete w.checklists;
-          delete w.noteMode;
-        }
-      });
       _persistenceRevision = Number(state.__persistenceRevision || 0);
     } catch(e) {}
   }
@@ -7713,8 +7705,9 @@ function renderUpcomingSessions() {
 // "not started", not "weak").
 // ============================================================
 function getWeakTopics(limit) {
-  // Build per-topic average practice/drill score from state.practiceScores,
-  // keyed by "subjectKey|topicIdx" (only entries pinned to one specific topic).
+  // Weak Topics is deliberately about study topics only — video lectures
+  // have their own Watch Progress system and should never compete with
+  // regular topics in the weakness ranking.
   const practiceByTopic = {};
   (state.practiceScores || []).forEach(p => {
     if (p.topicIdx === null || p.topicIdx === undefined || !p.subjectKey) return;
@@ -7727,6 +7720,8 @@ function getWeakTopics(limit) {
   const rows = [];
   let totalTopics = 0;
   ALL_SUBJECT_KEYS.forEach(sKey => {
+    // Video-lecture collections are tracked separately via Watch Progress.
+    if (DEFAULT_TOPICS[sKey]?.kind === 'video') return;
     const topics = state.topics[sKey] || [];
     const mainSubj = DEFAULT_TOPICS[sKey]?.subject;
     if (!mainSubj) return;
@@ -7736,11 +7731,11 @@ function getWeakTopics(limit) {
       const key = sKey + '|' + i;
       const scores = practiceByTopic[key];
       const practicePct = scores && scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : null;
-      if (confPct === null && practicePct === null) return; // no signal at all — skip
+      if (confPct === null && practicePct === null) return;
 
       let combined, flag = null;
       if (confPct !== null && practicePct !== null) {
-        combined = confPct * 0.4 + practicePct * 0.6; // weight actual performance higher
+        combined = confPct * 0.4 + practicePct * 0.6;
         if (confPct - practicePct > 25) flag = { icon:'⚠️', label:'Overconfident' };
         else if (practicePct - confPct > 25) flag = { icon:'💡', label:'Underrated' };
       } else {
@@ -7748,74 +7743,111 @@ function getWeakTopics(limit) {
       }
 
       rows.push({
-        name: t.name, mainSubj, subjectKey: sKey, subjectName: DEFAULT_TOPICS[sKey]?.name || sKey,
-        confPct, practicePct, combined, flag, drillCount: scores ? scores.length : 0
+        name: t.name, mainSubj, subjectKey: sKey,
+        subjectName: DEFAULT_TOPICS[sKey]?.name || sKey,
+        confPct, practicePct, combined, flag,
+        drillCount: scores ? scores.length : 0
       });
     });
   });
 
   rows.sort((a,b) => a.combined - b.combined);
-  const weakRows = rows.filter(r => r.combined < 75); // only genuinely weak — matches the pass line used everywhere else
-  return { rows: weakRows.slice(0, limit || 10), coveredCount: rows.length, weakCount: weakRows.length, totalTopics };
+  const weakRows = rows.filter(r => r.combined < 75);
+  return { rows: weakRows.slice(0, limit || 18), coveredCount: rows.length, weakCount: weakRows.length, totalTopics };
+}
+
+const weakTopicFilters = {};
+
+function setWeakTopicFilter(widgetId, mainKey) {
+  weakTopicFilters[widgetId] = mainKey || 'ALL';
+  renderWeakTopics(widgetId);
 }
 
 function renderWeakTopics(widgetId) {
   const el = document.getElementById('dash-weak-topics-' + widgetId);
   const footerEl = document.getElementById('dash-weak-topics-footer-' + widgetId);
   if (!el) return;
-  const { rows, coveredCount, weakCount, totalTopics } = getWeakTopics(10);
+  const all = getWeakTopics(50);
+  const { rows: allRows, coveredCount, weakCount, totalTopics } = all;
+
+  const availableSubjects = [...new Set(allRows.map(r => r.mainSubj))];
+  const activeFilter = weakTopicFilters[widgetId] || 'ALL';
+  const rows = activeFilter === 'ALL' ? allRows : allRows.filter(r => r.mainSubj === activeFilter);
+  const filteredWeakCount = rows.length;
 
   if (!coveredCount) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Rate a topic\'s confidence in the Topic Tracker, or log a Practice/Drill score against a specific topic, and your weakest spots will show up here.</div>';
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px 0">Rate a topic's confidence in the Topic Tracker, or log a Practice/Drill score against a specific topic, and your weakest spots will show up here.</div>`;
     if (footerEl) footerEl.innerHTML = `
       <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">0 of ${totalTopics} topics have data yet — this fills in as you rate confidence or log drills.</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">0 of ${totalTopics} regular topics have data yet.</div>
         <button class="btn btn-ghost btn-sm" onclick="showPage('tracker')">↗ Rate topics in Tracker</button>
       </div>`;
     return;
   }
 
   if (!rows.length) {
-    // Data exists, but every rated/drilled topic is already at 75%+ — say so
-    // explicitly instead of leaving the list empty with no explanation.
     el.innerHTML = `<div style="color:var(--pass);font-size:12px;padding:8px 0;text-align:center">🎉 Nothing weak right now — every topic you've rated or drilled is at 75%+.</div>`;
     if (footerEl) footerEl.innerHTML = `
       <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${coveredCount} of ${totalTopics} topics have data (${totalTopics?Math.round(coveredCount/totalTopics*100):0}%) — rate or drill more to expand this.</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${coveredCount} of ${totalTopics} regular topics have data.</div>
         <button class="btn btn-ghost btn-sm" onclick="showPage('tracker')">↗ Rate more in Tracker</button>
       </div>`;
     return;
   }
 
   const colorFor = v => v===null ? 'var(--muted)' : v>=75?'var(--pass)':v>=50?'var(--warn)':'var(--danger)';
-  el.innerHTML = rows.map(r => {
-    const sc = SUBJECTS_META[r.mainSubj]?.color || 'var(--accent)';
-    const parts = [];
-    if (r.confPct !== null) parts.push(`<span title="Your confidence rating">🧠 ${r.confPct.toFixed(0)}%</span>`);
-    if (r.practicePct !== null) parts.push(`<span title="Avg score across ${r.drillCount} drill${r.drillCount===1?'':'s'}">🎯 ${r.practicePct.toFixed(0)}%</span>`);
-    return `<div class="reminder-item" style="align-items:flex-start">
-      <div class="reminder-dot" style="background:${colorFor(r.combined)};margin-top:4px"></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
-        <div style="font-size:10px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px">
-          <strong style="color:${sc}">${r.subjectName}</strong>${parts.length?' · '+parts.join(' · '):''}
+  const grouped = {};
+  rows.forEach(r => (grouped[r.mainSubj] ||= []).push(r));
+
+  const subjectButtons = [
+    `<button type="button" onclick="setWeakTopicFilter('${widgetId}','ALL')" style="border:1px solid ${activeFilter==='ALL'?'var(--accent)':'var(--border)'};background:${activeFilter==='ALL'?'color-mix(in srgb,var(--accent) 12%,transparent)':'transparent'};color:${activeFilter==='ALL'?'var(--accent2)':'var(--muted)'};padding:4px 8px;border-radius:999px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">All</button>`,
+    ...availableSubjects.map(k => {
+      const meta = SUBJECTS_META[k] || {};
+      const c = meta.color || 'var(--accent)';
+      const label = meta.name || k;
+      const active = activeFilter === k;
+      return `<button type="button" onclick="setWeakTopicFilter('${widgetId}','${k}')" title="Show weak topics for ${escapeHtml(label)}" style="border:1px solid ${active?c:'var(--border)'};background:${active?c+'18':'transparent'};color:${active?c:'var(--muted)'};padding:4px 8px;border-radius:999px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">${escapeHtml(label)}</button>`;
+    })
+  ].join('');
+
+  const filterBar = `<div style="display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none;white-space:nowrap">${subjectButtons}</div>`;
+
+  const filteredGrouping = Object.entries(grouped);
+  const body = filteredGrouping.map(([mainKey, subjectRows]) => {
+    const subjectMeta = SUBJECTS_META[mainKey] || {};
+    const subjectColor = subjectMeta.color || 'var(--accent)';
+    const subjectLabel = subjectMeta.name || mainKey;
+    const items = subjectRows.map(r => {
+      const parts = [];
+      if (r.confPct !== null) parts.push(`<span title="Your confidence rating">🧠 ${r.confPct.toFixed(0)}%</span>`);
+      if (r.practicePct !== null) parts.push(`<span title="Avg score across ${r.drillCount} drill${r.drillCount===1?'':'s'}">🎯 ${r.practicePct.toFixed(0)}%</span>`);
+      return `<button type="button" onclick="setTrackerMain('${r.mainSubj}');setTrackerSub('${r.subjectKey}');showPage('tracker')" style="display:flex;width:100%;text-align:left;align-items:flex-start;gap:9px;border:0;background:transparent;color:inherit;padding:7px 2px;cursor:pointer;border-radius:8px;">
+        <div class="reminder-dot" style="background:${colorFor(r.combined)};margin-top:5px;flex:0 0 7px"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.name)}</div>
+          <div style="font-size:9px;color:var(--muted);display:flex;gap:7px;flex-wrap:wrap;margin-top:2px">${parts.join(' · ')}</div>
+          ${r.flag ? `<div style="font-size:9px;margin-top:2px;color:${r.flag.icon==='⚠️'?'var(--danger)':'var(--pass)'}">${r.flag.icon} ${r.flag.label}</div>` : ''}
         </div>
-        ${r.flag ? `<div style="font-size:10px;margin-top:2px;color:${r.flag.icon==='⚠️'?'var(--danger)':'var(--pass)'}">${r.flag.icon} ${r.flag.label}</div>` : ''}
-      </div>
-      <div class="reminder-time" style="font-family:var(--font-mono);color:${colorFor(r.combined)}">${r.combined.toFixed(0)}%</div>
+        <div style="font-family:var(--font-mono);font-size:11px;font-weight:800;color:${colorFor(r.combined)}">${r.combined.toFixed(0)}%</div>
+      </button>`;
+    }).join('');
+    return `<div style="margin-bottom:10px">
+      <button type="button" onclick="setTrackerMain('${mainKey}');showPage('tracker')" style="display:flex;align-items:center;gap:7px;width:100%;border:0;background:transparent;color:${subjectColor};padding:5px 2px;cursor:pointer;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;text-align:left">
+        <span style="width:7px;height:7px;border-radius:50%;background:${subjectColor};box-shadow:0 0 0 3px ${subjectColor}22"></span>${escapeHtml(subjectLabel)}<span style="margin-left:auto;color:var(--muted);font-weight:600;text-transform:none">${subjectRows.length} weak</span>
+      </button>
+      <div style="border-left:2px solid ${subjectColor}22;padding-left:8px">${items}</div>
     </div>`;
   }).join('');
 
-  // Coverage footer — pinned to the bottom of the card (flex layout) so a
-  // short list doesn't just trail off into empty space. Doubles as an
-  // honest signal: a low count here means the ranking is still thin, not
-  // that you're doing great everywhere.
+  el.innerHTML = filterBar + (body || `<div style="color:var(--muted);font-size:11px;padding:12px 4px;text-align:center">No weak topics for this subject right now.</div>`);
+
   if (footerEl) {
     const pct = totalTopics ? Math.round((coveredCount/totalTopics)*100) : 0;
+    const scopeLabel = activeFilter === 'ALL' ? `${weakCount} weak` : `${filteredWeakCount} weak in ${escapeHtml((SUBJECTS_META[activeFilter]||{}).name || activeFilter)}`;
     footerEl.innerHTML = `
-      <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div style="font-size:10px;color:var(--muted)">${weakCount} weak · ${coveredCount} of ${totalTopics} rated/drilled (${pct}%)</div>
-        <button class="btn btn-ghost btn-sm" onclick="showPage('tracker')" style="font-size:10px;padding:3px 8px">↗ Rate more</button>
+      <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="font-size:9px;color:var(--muted)">${scopeLabel} · ${coveredCount}/${totalTopics} rated/drilled (${pct}%)</div>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('tracker')" style="font-size:9px;padding:3px 8px">↗ Open Tracker</button>
       </div>`;
   }
 }
@@ -7957,7 +7989,8 @@ const SIZE_PRESETS=[];
 function toggleWidgetLegend(id) {
   const el = document.getElementById('legend-'+id);
   if (!el) return;
-  el.style.display = (el.style.display === 'none' || !el.style.display) ? 'grid' : 'none';
+  const show = (el.style.display === 'none' || !el.style.display);
+  el.style.display = show ? (String(id).endsWith('-weak') ? 'block' : 'grid') : 'none';
 }
 
 function toggleLayoutEdit() {
@@ -8242,7 +8275,7 @@ function renderWidgetHTML(w, i) {
         <div class="section-title widget-title-row">${widgetTitleIcon('sessions')}<span>Upcoming Sessions</span></div>
         <button class="btn btn-ghost btn-sm" onclick="showPage('calendar')">View</button>
       </div>
-      <div id="dash-upcoming-sessions" style="font-size:12px;max-height:220px;overflow-y:auto;padding-right:4px;"></div>
+      <div id="dash-upcoming-sessions" style="font-size:12px;max-height:280px;overflow-y:auto;overflow-x:hidden;padding-right:6px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin;"></div>
     </div>`;
   }
 
@@ -8253,8 +8286,11 @@ function renderWidgetHTML(w, i) {
         <div class="section-title widget-title-row">${widgetTitleIcon('weak_topics')}<span>Weak Topics</span></div>
         <button onclick="toggleWidgetLegend('${w.id}-weak')" title="How is this ranked?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
       </div>
-      <div id="legend-${w.id}-weak" style="display:none;font-size:10px;color:var(--muted);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px">
-        Ranks topics you've actually rated or drilled — combining your confidence rating (Topic Tracker) with your average Practice/Drill score for that topic. ⚠️ means you're more confident than your scores support; 💡 means your scores are better than your confidence suggests.
+      <div id="legend-${w.id}-weak" style="display:none;font-size:11px;color:var(--muted);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px">
+        Only topics you've rated or practiced are shown here.
+We combine your Confidence rating and Practice/Drill score to find topics that need more work.
+⚠️ = your confidence is higher than your practice score.
+💡 = your practice score is higher than your confidence.
       </div>
       <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
         <div id="dash-weak-topics-${w.id}" style="font-size:12px;flex:1;overflow-y:auto;padding-right:4px;"></div>
@@ -9827,8 +9863,18 @@ function renderPracticeTrend(){
   const trendIcon = diff>=3?'📈':diff<=-3?'📉':'➡️';
   const trendLabel = diff>=3?'Improving':diff<=-3?'Declining':'Flat';
   const trendColor = diff>=3?'var(--pass)':diff<=-3?'var(--danger)':'var(--muted)';
+  // Emphasize the important parts of the plain-language insight so the
+  // takeaway is scannable at a glance instead of reading as one long white paragraph.
+  const emphasisMsg = msg
+    .replace(/trend(?:ing)? up/ig, '<span style="color:var(--pass);font-weight:800">$&</span>')
+    .replace(/dipped|declin(?:e|ed|ing)/ig, '<span style="color:var(--danger);font-weight:800">$&</span>')
+    .replace(/holding steady|stable|flat/ig, '<span style="color:var(--warn);font-weight:800">$&</span>')
+    .replace(/under the 65% conditional line/ig, '<span style="color:var(--danger);font-weight:800">$&</span>')
+    .replace(/above the 75% pass line|to the 75% pass line/ig, '<span style="color:var(--accent2);font-weight:800">$&</span>')
+    .replace(/(\d+(?:\.\d+)?%)/g, '<strong style="color:var(--text);font-weight:850">$1</strong>');
+
   insightEl.innerHTML = `
-    <div style="margin-bottom:10px">${msg}</div>
+    <div style="margin-bottom:10px;line-height:1.65">${emphasisMsg}</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px">
       <div style="padding:9px;border:1px solid var(--border);border-radius:8px"><div style="font-size:9px;color:var(--muted)">ENTRIES</div><strong style="font-size:13px">${pts.length}</strong></div>
       <div style="padding:9px;border:1px solid var(--border);border-radius:8px"><div style="font-size:9px;color:var(--muted)">RECENT AVG</div><strong style="font-size:13px;color:${recentAvg>=75?'var(--pass)':recentAvg>=65?'var(--warn)':'var(--danger)'}">${recentAvg.toFixed(0)}%</strong></div>
@@ -10548,13 +10594,25 @@ function renderTracker() {
     confColHeaderEl.textContent = 'Watch Progress';
     guideTitleEl.textContent = '🎥 Watch Progress Guide — Keep it simple';
     guideSubEl.textContent = 'Video lectures use 3 simple stages. Older 1–2 values are treated as In Progress, and older 4–5 values are treated as Rewatched.';
-    guideLevelEls[0].textContent = 'In Progress — you have started the lecture.';
-    guideLevelEls[1].textContent = 'Watched Once — you finished the full lecture once.';
-    guideLevelEls[2].textContent = 'Rewatched — you reviewed key parts again.';
-    guideLevelEls[3].textContent = '';
-    guideLevelEls[4].textContent = '';
-    const guideRows = guideLevelEls.map(el => el?.closest('.conf-level-row')).filter(Boolean);
-    guideRows.forEach((row, idx) => { row.style.display = idx < 3 ? '' : 'none'; });
+    const videoGuide = [
+      { label:'In Progress', color:'var(--warn)', text:'You have started the lecture, but haven\'t finished it yet.' },
+      { label:'Watched Once', color:'var(--pass)', text:'You finished the full lecture once.' },
+      { label:'Rewatched', color:'#8b5cf6', text:'You went back and reviewed the lecture again.' }
+    ];
+    guideLevelEls.forEach((el, idx) => {
+      const row = el?.closest('.conf-level-row');
+      if (!row) return;
+      if (idx < 3) {
+        const dot = row.querySelector('.conf-level-dot');
+        const label = row.querySelector('span[style*="font-weight:600"]');
+        if (dot) dot.style.background = videoGuide[idx].color;
+        if (label) { label.textContent = videoGuide[idx].label; label.style.color = videoGuide[idx].color; }
+        el.textContent = videoGuide[idx].text;
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
   } else {
     guideLevelEls.forEach(el => { const row = el?.closest('.conf-level-row'); if (row) row.style.display = ''; });
 
@@ -10585,13 +10643,13 @@ function renderTracker() {
       ];
       confDots = videoStages.map(item => {
         const active = stage === item.value;
-        const stageColors = {1:'var(--warn)',2:'var(--pass)',3:'var(--accent2)'};
+        const stageColors = {1:'var(--warn)',2:'var(--pass)',3:'#8b5cf6'};
         const color = stageColors[item.value];
         const style = active
           ? `background:${color};border-color:${color};color:#fff;opacity:1`
           : `background:transparent;border-color:var(--muted);color:var(--muted);opacity:.7`;
         const newStage = active ? 0 : item.value;
-        return `<button type="button" class="conf-dot video-stage-dot" style="${style}" onclick="setVideoWatchStage('${currentTrackerSub}',${i},${newStage})" title="${active?'Click to reset':item.label}" aria-label="${item.label}"><span class="stage-icon">${item.icon}</span><span>${item.label}</span></button>`;
+        return `<button type="button" class="conf-dot video-stage-dot" style="${style}" onclick="setVideoWatchStage('${currentTrackerSub}',${i},${newStage})" title="${active?'Click to reset':item.label}" aria-label="${item.label}">${item.icon}</button>`;
       }).join('');
     } else {
       confDots = Array.from({length:5},(_,ci) => {
@@ -12763,14 +12821,6 @@ async function importData(event) {
 
     const preImportSnapshot = takeSafetySnapshot('Import');
     const imported = { ...state, ...loaded };
-    // Imported backups may contain legacy checklist/task fields. Keep the
-    // note text, but permanently remove task/checklist payloads.
-    (imported.dashWidgets || []).forEach(w => {
-      if (w && (w.type === 'notes' || w.type === 'subject_notes')) {
-        delete w.checklists;
-        delete w.noteMode;
-      }
-    });
     delete imported.__persistenceRevision;
     const now = Date.now();
     const freshRevision = Math.max(now, Number(state.__persistenceRevision || 0) + 1, _persistenceRevision + 1);
@@ -14558,11 +14608,74 @@ function kodaConversationSignal(text) {
 }
 
 function kodaStyleFromUser(text) {
+  // Local Koda should follow the saved Koda settings, not copy slang from
+  // whatever the candidate happened to type. Personal Touch applies to both
+  // API and built-in responses.
   const raw = String(text || '');
-  const lower = raw === raw.toLowerCase();
-  const casual = /\b(bro|brooo|lol|lmao|😭|💀|T_T|yeah|yep|nah|wait)\b/i.test(raw);
-  const emoji = /[\u{1F300}-\u{1FAFF}]/u.test(raw);
-  return { lower, casual, emoji };
+  const personaKey = state.coachPersona || 'balanced';
+  const custom = String(state.coachPersonaCustom || '').trim();
+  const lower = /(?:lowercase|all lowercase|use lowercase)/i.test(custom) || personaKey === 'direct';
+  const casual = personaKey !== 'direct' || /(?:casual|relaxed|friendly|conversational)/i.test(custom);
+  const emoji = !/(?:no emojis|avoid emojis|keep emojis minimal|minimal emojis)/i.test(custom);
+  const nicknameMatch = custom.match(/(?:call me|address me as|refer to me as)\s+([A-Za-z0-9][A-Za-z0-9 _'’-]{0,30})/i);
+  const nickname = nicknameMatch ? nicknameMatch[1].trim().replace(/[.!,;:]+$/,'') : '';
+  return { lower, casual, emoji, personaKey, custom, nickname };
+}
+
+function kodaPersonalTouchHtml(text, userText='') {
+  let s = String(text || '');
+  const style = kodaStyleFromUser(userText);
+  if (!style.emoji) s = s.replace(/[\u{1F300}-\u{1FAFF}]|[\u2600-\u27BF]/gu, '');
+  if (style.lower && s) s = s.charAt(0).toLowerCase() + s.slice(1);
+  return s;
+}
+
+function kodaDiversifyLocalReply(reply, userText='') {
+  let s = kodaPersonalTouchHtml(reply, userText);
+  const style = kodaStyleFromUser(userText);
+  const signal = kodaConversationSignal(userText);
+  const turn = kodaConversation.turns.length;
+  if (!s || signal === 'ack' || signal === 'thanks' || signal === 'reconsider') return s;
+
+  // Vary delivery without changing the underlying facts. This keeps the
+  // offline brain from sounding like a single canned chatbot response.
+  const banks = {
+    progress: [
+      'The useful part of that picture is ',
+      'Looking at your tracker, the main takeaway is ',
+      'What stands out in your current progress is '],
+    subject: [
+      'For this subject, the clearest move is ',
+      'Looking at this subject specifically, ',
+      'Your current subject data points to this: '],
+    scores: [
+      'From the scores you have logged, ',
+      'The score history points to ',
+      'The useful signal in those scores is '],
+    motivation: [
+      'Here is the part worth acting on: ',
+      'The practical takeaway is ',
+      'Right now, I would keep it simple: '],
+    normal: [
+      'Based on your current study data, ',
+      'What stands out here is ',
+      'The practical answer from your tracker is ']
+  };
+  const key = signal === 'normal' ? (coachLastIntent === 'progress' ? 'progress' : coachLastIntent === 'scores' ? 'scores' : coachLastIntent === 'subject' ? 'subject' : coachLastIntent === 'motivation' ? 'motivation' : 'normal') : signal;
+  const bank = banks[key] || banks.normal;
+  const lead = bank[turn % bank.length];
+
+  // Avoid awkward duplication when the canned response already begins with
+  // the same idea or a direct greeting.
+  const plain = stripCoachHtml(s).toLowerCase();
+  if (plain.length > 35 && !/^(yo|hello|hey|good morning|good afternoon|good evening|because|yeah|yep|sure|for )/i.test(plain)) {
+    s = lead + s.charAt(0).toLowerCase() + s.slice(1);
+  }
+
+  if (style.nickname && /^(motivation|progress|subject|scores|normal)$/.test(key) && turn % 3 === 0) {
+    s = `<strong>${escapeHtml(style.nickname)}</strong>, ${s.charAt(0).toLowerCase()}${s.slice(1)}`;
+  }
+  return s;
 }
 
 function kodaCasualBridge(signal, style) {
@@ -14602,7 +14715,7 @@ function kodaLocalConversationReply(userText) {
     if (/^(got it|i get it)/i.test(q)) return style.casual ? 'yep 😭 exactly.' : 'exactly — you’ve got it.';
     return style.casual ? 'yeahhh 😭' : 'yeah.';
   }
-  if (signal === 'thanks') return style.casual ? 'anytime bro 😭 now go attack that topic.' : 'anytime — back to studying.';
+  if (signal === 'thanks') return style.casual ? 'anytime 😭 now go attack that topic.' : 'anytime — back to studying.';
 
   // Follow-up questions use the previous conversational state instead of being
   // treated as brand-new searches.
@@ -14687,13 +14800,13 @@ function kodaLooksLikeGenericFallback(reply) {
 
 function kodaLocalFirstReply(userText) {
   const conversationReply = kodaLocalConversationReply(userText);
-  if (conversationReply) return { reply: conversationReply, source: 'conversation' };
+  if (conversationReply) return { reply: kodaDiversifyLocalReply(conversationReply, userText), source: 'conversation' };
 
-  // Existing local engine remains the main deterministic knowledge layer.
-  // Its generic fallback is deliberately NOT considered an answer — that is
-  // the point where Groq/Gemini is allowed to help with genuinely open-ended text.
+  // Existing local engine remains the main deterministic knowledge layer, but
+  // its delivery is varied from turn to turn so the built-in coach does not
+  // feel like a static FAQ.
   const local = getCoachReply(userText);
-  if (local && !kodaLooksLikeGenericFallback(local)) return { reply: local, source: 'local' };
+  if (local && !kodaLooksLikeGenericFallback(local)) return { reply: kodaDiversifyLocalReply(local, userText), source: 'local' };
   return null;
 }
 
@@ -14775,6 +14888,33 @@ async function respondToCoach(text) {
     }
   }
 
+  // Avoid repetitive Koda answers across distinct clicks/messages. If an API
+  // returns an answer that is effectively the same as a recent Koda answer,
+  // prefer a fresh local, data-driven answer rather than showing the duplicate.
+  function _kodaNormalizeReply(v) {
+    return stripCoachHtml(String(v || '')).toLowerCase().replace(/[^a-z0-9%]+/g,' ').replace(/\s+/g,' ').trim();
+  }
+  const currentNorm = _kodaNormalizeReply(reply);
+  const recentReplies = coachChatHistory.filter(m => m.role === 'coach').slice(-3).map(m => _kodaNormalizeReply(m.text));
+  const repeated = currentNorm && recentReplies.some(prev => {
+    if (!prev) return false;
+    if (prev === currentNorm) return true;
+    const a = new Set(currentNorm.split(' ').filter(Boolean));
+    const b = new Set(prev.split(' ').filter(Boolean));
+    const overlap = [...a].filter(x => b.has(x)).length / Math.max(1, Math.min(a.size, b.size));
+    return overlap >= 0.92;
+  });
+  if (repeated) {
+    try {
+      const freshChip = kodaSuggestionSpecificReply(text);
+      const fresh = freshChip ? { reply: freshChip } : kodaLocalFirstReply(text);
+      if (fresh?.reply) {
+        const freshNorm = _kodaNormalizeReply(fresh.reply);
+        if (freshNorm && freshNorm !== currentNorm) reply = fresh.reply;
+      }
+    } catch (_) {}
+  }
+
   // Never render an empty assistant bubble. The local engine should normally
   // provide an answer; this final guard prevents a blank response if every
   // layer unexpectedly fails.
@@ -14806,7 +14946,9 @@ async function respondToCoach(text) {
 }
 
 function handleCoachSuggestion(text) {
-  respondToCoach(text);
+  const normalized = String(text || '').trim();
+  kodaConversation.lastSuggestion = normalized;
+  respondToCoach(normalized);
 }
 
 function sendCoachMessage() {
@@ -14951,7 +15093,7 @@ function kodaKoalaFact(){
   return KODA_KOALA_FACTS[Math.floor(Math.random()*KODA_KOALA_FACTS.length)];
 }
 
-const KODA_KOALA_PERSONALITY = `You are Koda, a koala-themed study companion. Your personality is calm, curious, observant, warm, quietly funny, and determined. Use subtle koala-themed touches sparingly: an occasional 🐨 or a light reference to resting, eucalyptus, or tree life when it fits naturally. Never role-play as an animal, never become childish, and never let personality reduce clarity or accuracy. You are still a serious study coach. You have your own recognizable personality even when no API is available.`;
+const KODA_KOALA_PERSONALITY = `You are Koda, a koala-themed study companion. Your personality is calm, curious, observant, warm, quietly funny, and determined. Use subtle koala-themed touches sparingly: an occasional 🐨 or a light reference to resting, eucalyptus, or tree life when it fits naturally. Never role-play as an animal, never become childish, and never let personality reduce clarity or accuracy. You are still a serious study coach. You have your own recognizable personality even when no API is available. Do not call the candidate bro, dude, buddy, or similar nicknames unless the candidate explicitly asked for that in Koda's Personal touch setting.`;
 
 const COACH_PERSONAS = {
   balanced: {
@@ -14993,7 +15135,7 @@ function buildCoachPrompt(userText) {
 
 VOICE MATCH — THIS IS IMPORTANT: The candidate talks casually and conversationally. Mirror that rhythm without copying them word-for-word. Use contractions, short transitions, occasional lowercase, and natural phrasing when it fits. Do not become academic or overly polished just because the topic is technical. Accuracy stays high; the delivery should feel like a quick study conversation.
 
-KODA RESPONSE DECISION RULE: First decide what the candidate actually needs, then give only that. If the question is simple, answer it directly and stop. If it is a technical concept, give the plain-English idea first, then the one connection or exam point that matters most. If the candidate seems confused, clarify the confusion instead of dumping background. If they ask for detail, steps, comparisons, examples, or a walkthrough, expand only as much as needed. Do not repeat the question. Do not restate the same point in different words. Do not add filler like “great question,” “sure,” or “here’s a detailed explanation” unless it genuinely fits the conversation.
+KODA RESPONSE DECISION RULE: First decide what the candidate actually needs, then give only that. If the question is simple, answer it directly and stop. If it is a technical concept, give the plain-English idea first, then the one connection or exam point that matters most. If the candidate seems confused, clarify the confusion instead of dumping background. If they ask for detail, steps, comparisons, examples, or a walkthrough, expand only as much as needed. Do not repeat the question. Do not restate the same point in different words. Do not add filler like “great question,” “sure,” or “here’s a detailed explanation” unless it genuinely fits the conversation. Never give the same generic answer to two different requests just because they share a broad intent. PERSONALITY CONSISTENCY: honor the saved Koda personality and Personal Touch settings exactly; do not infer a nickname or relationship from the candidate's slang. VARIETY: when the candidate asks materially similar questions on different turns, keep the facts anchored to the live data but vary the explanation, example, emphasis, or next action. Do not reuse the previous answer's wording unless explicitly asked to repeat it. Identify the exact request and its requested output before answering. Use the most relevant live data for that request. If two questions have the same broad intent, choose different evidence or a different actionable recommendation when their wording or purpose differs. If the candidate clicks a suggestion, answer that exact suggestion specifically; do not substitute a default progress response. Do not copy your immediately previous answer unless the candidate explicitly asks you to repeat or continue it.
 
 STUDY-BUDDY BEHAVIOR: When useful, connect the concept to the relevant subject or standard and tell the candidate what is actually worth remembering for the CPALE. Prefer natural phrasing like “basically…”, “the important part is…”, “this connects to ___ because…”, or “for the CPALE, I’d remember ___.” Do not dump source passages unless the candidate explicitly asks for exact wording or quotation.
 
@@ -15079,7 +15221,7 @@ async function generateCoachReplyGroq(userText) {
               { role: 'user', content: user }
             ],
             max_tokens: 420,
-            temperature: 0.35
+            temperature: 0.72
           }),
           signal: controller.signal
         });
@@ -15321,37 +15463,51 @@ function coachGetData() {
 // ── INTRO ────────────────────────────────────────────────────
 function getCoachIntroMessage() {
   const d = coachGetData();
+  const style = kodaStyleFromUser('');
   const noData = d.stats.completed === 0 && d.stats.inprog === 0;
   const hr = { morning:'Good morning', afternoon:'Good afternoon', evening:'Good evening' }[d.timeOfDay];
   const apiNote = '';
+  const nick = style.nickname ? ` ${escapeHtml(style.nickname)},` : '';
   if (noData) return `${hr}, <strong>${d.name}</strong>! 👋 I'm Koda, your Study Coach — I know your topics, scores, streak, and exam date. You haven't started yet. Ask me where to begin, or just type what's on your mind.${apiNote}`;
   const pct = Math.round(d.stats.pct);
-  return `${hr}, <strong>${d.name}</strong>! 👋 You're at <strong>${pct}%</strong> overall with a <strong>${d.streak.current}-day streak</strong>${d.daysLeft !== null ? ` and <strong>${d.daysLeft} days</strong> to go` : ''}. What do you want to know?${apiNote}`;
+  return `${hr}${nick} <strong>${d.name}</strong>! 👋 You're at <strong>${pct}%</strong> overall with a <strong>${d.streak.current}-day streak</strong>${d.daysLeft !== null ? ` and <strong>${d.daysLeft} days</strong> to go` : ''}. What do you want to know?${apiNote}`;
 }
 
 // ── SMART SUGGESTIONS (context-aware) ────────────────────────
 function getCoachSuggestions() {
   const d = coachGetData();
-  const pool = [];
+  const candidates = [];
 
-  if (d.stats.completed === 0) pool.push('Where should I start?', 'What is the CPALE?');
-  else pool.push('What should I study today?', 'How am I doing?');
-
-  if (!d.allSame) pool.push(`How is my ${d.weakest}?`);
-  if (d.daysLeft !== null) pool.push('Am I on track?');
-  if (d.latestPreboardAvg !== null) pool.push('How are my preboard scores?');
-  if (d.practiceValid.length > 0) pool.push('How are my practice scores?');
-  if (d.lowConfTopics.length > 0) pool.push('Show shaky topics');
-  if (d.streak.current === 0 && d.streak.longest > 0) pool.push('How do I rebuild my streak?');
-  pool.push('Give me a study tip', 'Motivate me');
-
-  // Prioritise context: if last topic was a subject, offer follow-up
-  if (coachLastTopic && MAIN_SUBJECTS.includes(coachLastTopic)) {
-    pool.unshift(`What topics are left in ${coachLastTopic}?`);
+  // Each chip is deliberately distinct so different clickable prompts do not
+  // collapse into the same answer.
+  if (d.stats.completed === 0) {
+    candidates.push(
+      { text:'Where should I start?', key:'start' },
+      { text:'What should I learn first?', key:'first' },
+      { text:'What can you do for me?', key:'help' }
+    );
+  } else {
+    candidates.push(
+      { text:'What should I study today?', key:'today' },
+      { text:'How am I doing overall?', key:'progress' }
+    );
   }
 
-  // Dedupe and limit
-  return [...new Set(pool)].slice(0, 4);
+  if (!d.allSame) candidates.push({ text:`How is my ${d.weakest}?`, key:'subject-progress' });
+  if (d.daysLeft !== null) candidates.push({ text:'Am I on track for the exam?', key:'pace' });
+  if (d.latestPreboardAvg !== null) candidates.push({ text:'What do my preboard scores tell me?', key:'preboard-insight' });
+  if (d.practiceValid.length > 0) candidates.push({ text:'Where are my practice scores weakest?', key:'practice-weak' });
+  if (d.lowConfTopics.length > 0) candidates.push({ text:'Show me my shakiest topics.', key:'weak-topics' });
+  if (d.streak.current === 0 && d.streak.longest > 0) candidates.push({ text:'How can I rebuild my streak?', key:'streak' });
+  candidates.push({ text:'Give me one useful study tip.', key:'tip' }, { text:'Give me a push to study.', key:'motivation' });
+
+  if (coachLastTopic && MAIN_SUBJECTS.includes(coachLastTopic)) {
+    candidates.unshift({ text:`What topics are left in ${coachLastTopic}?`, key:'subject-left' });
+  }
+
+  // De-dupe by semantic purpose, then limit the visible chips.
+  const seen = new Set();
+  return candidates.filter(s => !seen.has(s.key) && seen.add(s.key)).slice(0, 4).map(s => s.text);
 }
 
 // ── SUBJECT FULL NAMES ───────────────────────────────────────
@@ -15562,7 +15718,7 @@ function getCoachReplyLegacy(input) {
   if (/motivation|encourage|you think i|can i|am i gonna|will i|doubt|hard|stressed|worried/i.test(q)) {
     coachLastIntent = 'motivation';
     const streak = d.streak.current;
-    if (streak > 10) return style.casual ? `bro, you've built a <strong>${streak}-day streak</strong>. that's real consistency. keep it going.` : `You've built a <strong>${streak}-day streak</strong>, which shows strong consistency. Keep the routine going.`;
+    if (streak > 10) return style.casual ? `you've built a <strong>${streak}-day streak</strong>. that's real consistency. keep it going.` : `You've built a <strong>${streak}-day streak</strong>, which shows strong consistency. Keep the routine going.`;
     if (d.stats.completed > d.stats.total / 2) return style.casual ? `you're already past halfway at <strong>${pct}%</strong>. keep showing up and finish the remaining work.` : `You're already past halfway at <strong>${pct}%</strong>. Keep the routine consistent and finish the remaining topics.`;
     return style.casual ? `you're at <strong>${pct}%</strong> right now. it's still work, but you have a clear picture of what needs attention.` : `You're at <strong>${pct}%</strong> completion right now. The important thing is that you have a measurable starting point and can improve it with consistent study.`;
   }
@@ -20637,9 +20793,70 @@ function getRecommendationReply(nlp) {
 // ============================================================
 
 // Unified reply engine: enhanced NLP first, original Koda brain second.
+function kodaSuggestionSpecificReply(text) {
+  const clean = String(text || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const d = coachGetData();
+
+  // These are the actual clickable chips. Route them by exact purpose so two
+  // different chips can never collapse into the same generic intent answer.
+  if (clean === 'what should i study today?') {
+    return getWhatNextReply({ entities: { subjects: [] } });
+  }
+  if (clean === 'how am i doing overall?') {
+    return getProgressReply({ entities: { subjects: [] } });
+  }
+  if (/^how is my (far|afar|mas|audit|tax|rfbt)\??$/.test(clean)) {
+    const subject = clean.replace(/^how is my /, '').replace(/\?$/, '').toUpperCase();
+    return replySubjectDeep(subject, d);
+  }
+  if (clean === 'am i on track for the exam?') {
+    return getPaceReply({ entities: { subjects: [] } });
+  }
+  if (clean === 'what do my preboard scores tell me?') {
+    return getScoresReply({ entities: { subjects: [] } });
+  }
+  if (clean === 'where are my practice scores weakest?') {
+    return getWeakAreasReply({ entities: { subjects: [] } });
+  }
+  if (clean === 'show me my shakiest topics.') {
+    return getMasteryReply({ entities: { subjects: [] } });
+  }
+  if (clean === 'how can i rebuild my streak?') {
+    return getStreakReply ? getStreakReply({ entities: { subjects: [] } }) : getMotivationReply({ entities: { subjects: [] } });
+  }
+  if (clean === 'give me one useful study tip.') {
+    const tip = d.notStarted?.[d.weakest]?.[0] || d.lowConfTopics?.[0]?.name || null;
+    if (tip) return `A useful move right now: work on <strong>${escapeHtml(String(tip))}</strong> next, then test yourself without looking at your notes. That gives you evidence of whether the topic actually stuck.`;
+    return `Use a simple cycle: learn the idea, close the notes, explain it from memory, then answer a few questions. Let the mistakes tell you what to review.`;
+  }
+  if (clean === 'give me a push to study.') {
+    return getMotivationReply({ entities: { subjects: [] } });
+  }
+  if (clean === 'where should i start?') {
+    return getWhatNextReply({ entities: { subjects: [] } });
+  }
+  if (clean === 'what is the cpale?') {
+    return `<strong>CPALE</strong> is the Philippine licensure exam for accountants. I can help you use your tracker data to plan, review, and see where your preparation needs attention.`;
+  }
+  if (clean === 'what can you do for me?') {
+    return `I can read your current tracker data, compare subjects, look at scores and confidence, check video progress, review your pace toward the exam, and turn those signals into a concrete next step.`;
+  }
+  if (/^what topics are left in (far|afar|mas|audit|tax|rfbt)\??$/.test(clean)) {
+    const subject = clean.replace(/^what topics are left in /, '').replace(/\?$/, '').toUpperCase();
+    const nlp = { entities: { subjects: [subject] } };
+    return getTopicsLeftReply(nlp);
+  }
+  return null;
+}
+
 function getCoachReply(userText) {
   const text = String(userText || '').trim();
   if (!text) return getCoachDefaultReply();
+
+  // Exact chip routing comes first. This prevents clickable prompts from
+  // collapsing into broad intents such as progress/score/what-next.
+  const chipReply = kodaSuggestionSpecificReply(text);
+  if (chipReply) return chipReply;
 
   // Koda identity is always local and does not depend on an API.
   if (/^(?:hey\s+)?koda[!?.\s]*$/i.test(text) ||
@@ -20673,12 +20890,69 @@ function getCoachReply(userText) {
 }
 
 function getGenericHelpfulReplySafe(text) {
-  const normalized = String(text || '').toLowerCase();
+  const normalized = String(text || '').toLowerCase().trim();
+  const d = coachGetData();
+  const name = state.name ? escapeHtml(String(state.name).split(' ')[0]) : 'there';
+
+  // Even with no API key, Koda should do more than ask the user to rephrase.
+  // Use the live tracker as a lightweight local reasoning layer: identify the
+  // most likely topic/subject concern and return a concrete next step.
+  const subject = MAIN_SUBJECTS.find(s => {
+    const full = (SUBJECT_FULL[s] || '').toLowerCase();
+    return new RegExp('\\b' + s + '\\b', 'i').test(normalized) || normalized.includes(full);
+  });
+
   if (/^(hi|hey|hello|yo|sup|hiya|howdy)\b/i.test(normalized)) return getCoachDefaultReply();
-  if (/\b(help|what can you do|capabilit)\b/i.test(normalized)) {
-    return 'I can analyze your progress, subjects, scores, confidence, remaining topics, pace, schedule, and study materials. Tell me what you want to work on.';
+
+  if (/\b(help|what can you do|capabilit|how can you help)\b/i.test(normalized)) {
+    return `I can work offline from the data you've already logged, ${name}. Ask me about <strong>what to study next</strong>, a <strong>subject</strong>, <strong>weak topics</strong>, <strong>scores</strong>, <strong>confidence</strong>, <strong>videos</strong>, or your <strong>pace</strong>. No API key is required for those.`;
   }
-  return 'Tell me what you are working on and I’ll use your current study data to help.';
+
+  // Natural-language requests that may not match the enhanced intent table.
+  if (/\b(today|now|right now|tonight|this session)\b/.test(normalized) && /\b(study|review|do|work|focus)\b/.test(normalized)) {
+    return getWhatNextReply({ entities: { subjects: subject ? [subject] : [] } });
+  }
+
+  if (/\b(weak|struggling|worst|lowest|shaky|needs work)\b/.test(normalized)) {
+    return getWeakAreasReply({ entities: { subjects: subject ? [subject] : [] } });
+  }
+
+  if (/\b(score|scores|performance|doing|progress|how.*going|how.*doing|standing)\b/.test(normalized)) {
+    if (subject) return getProgressReply({ entities: { subjects: [subject] } });
+    return getScoresReply({ entities: { subjects: [] } });
+  }
+
+  if (/\b(video|lecture|lectures|watched|watching)\b/.test(normalized)) {
+    return getVideoReply({ entities: { subjects: subject ? [subject] : [] } });
+  }
+
+  if (/\b(calendar|schedule|session|sessions|tomorrow|upcoming)\b/.test(normalized)) {
+    return getScheduleReply({ entities: { subjects: subject ? [subject] : [] } });
+  }
+
+  if (/\b(how long|days left|deadline|exam|pace|on track)\b/.test(normalized)) {
+    return getPaceReply({ entities: { subjects: [] } });
+  }
+
+  if (/\b(confidence|mastery|confident|understand|understanding)\b/.test(normalized)) {
+    return getMasteryReply({ entities: { subjects: subject ? [subject] : [] } });
+  }
+
+  if (/\b(what next|next|recommend|recommendation|suggest|should i|priority|focus on)\b/.test(normalized)) {
+    return getWhatNextReply({ entities: { subjects: subject ? [subject] : [] } });
+  }
+
+  // One more useful offline fallback: summarize the current study picture.
+  if (d && d.stats && d.stats.total > 0) {
+    const weak = d.weakest || MAIN_SUBJECTS[0];
+    const left = Math.max(0, (d.subjStats[weak]?.total || 0) - (d.subjStats[weak]?.completed || 0));
+    const rated = d.overallMastery?.rated || 0;
+    const conf = rated ? ` Your average confidence is <strong>${d.overallMastery.avg.toFixed(1)}/5</strong> across ${rated} rated topics.` : '';
+    const videos = d.videoStats?.total ? ` You also have <strong>${d.videoStats.completed}/${d.videoStats.total}</strong> video lectures watched.` : '';
+    return `${name}, I don't have an API key to use right now, but I can still reason from your tracker. You're at <strong>${Math.round(d.stats.pct)}%</strong> overall completion, and <strong>${weak}</strong> is currently your lowest-coverage subject with <strong>${left}</strong> tracked topics left.${conf}${videos} Ask me what you should study next, and I'll make the recommendation from this data.`;
+  }
+
+  return `I can still help without an API, ${name}. Ask me about your <strong>progress</strong>, <strong>weak areas</strong>, <strong>scores</strong>, <strong>videos</strong>, <strong>schedule</strong>, or <strong>what to study next</strong>.`;
 }
 
 // Enhanced default reply with more personality
