@@ -99,6 +99,25 @@ body.light-mode .nav-item:hover {
   background: var(--hover);
 }
 
+/* SCORE SHEET — light-mode status colors (scoped so the rest of the app is unchanged) */
+body.light-mode #page-scoresheet {
+  --pass: #15803d;
+  --fail: #dc2626;
+  --cond: #b45309;
+  --warn: #b45309;
+  --danger: #dc2626;
+}
+
+/* SCORE TREND AXIS — explicit SVG label colors for reliable light-mode contrast. */
+#page-scoresheet .practice-trend-axis-label { fill: var(--text); }
+#page-scoresheet .practice-trend-axis-pass { fill: var(--pass); }
+#page-scoresheet .practice-trend-axis-warn { fill: var(--warn); }
+#page-scoresheet .practice-trend-x-label { fill: var(--muted); }
+body.light-mode #page-scoresheet .practice-trend-x-label { fill: #64748b !important; }
+body.light-mode #page-scoresheet .practice-trend-axis-label { fill: #334155 !important; }
+body.light-mode #page-scoresheet .practice-trend-axis-pass { fill: #15803d !important; }
+body.light-mode #page-scoresheet .practice-trend-axis-warn { fill: #b45309 !important; }
+
 body.light-mode #sidebar {
   box-shadow: 4px 0 20px rgba(30,35,60,0.05);
 }
@@ -400,6 +419,53 @@ body.light-mode #page-scoresheet .scoresheet-practice-freeze-target.scoresheet-p
   box-shadow: 0 10px 24px rgba(30,35,60,.12);
 }
 
+/* ---- DASHBOARD INFO POPOVER ---- */
+.widget-info-popover {
+  position: fixed; inset: 0; z-index: 10000; display: none;
+  pointer-events: none;
+}
+.widget-info-popover.open { display: block; }
+.widget-info-popover-backdrop {
+  display:none !important;
+}
+.widget-info-popover-card {
+  position: fixed; z-index: 1; width: min(320px, calc(100vw - 24px)); max-height: min(280px, calc(100vh - 24px));
+  overflow-y: auto; overscroll-behavior: contain;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, white 15%);
+  border-radius: 12px; padding: 13px 14px 12px; box-sizing: border-box;
+  box-shadow: 0 14px 34px rgba(0,0,0,.22);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  pointer-events: auto;
+}
+.widget-info-popover-card::before {content:'';position:absolute;width:10px;height:10px;background:color-mix(in srgb,var(--card) 88%,transparent);border-left:1px solid color-mix(in srgb,var(--border) 85%,white 15%);border-top:1px solid color-mix(in srgb,var(--border) 85%,white 15%);transform:rotate(45deg);left:var(--info-arrow-left,24px);top:-6px;pointer-events:none}
+.widget-info-popover-card.info-above::before {top:auto;bottom:-6px;transform:rotate(225deg)}
+.widget-info-popover-close {
+  position: absolute; top: 7px; right: 7px; width: 24px; height: 24px;
+  border: 1px solid var(--border); border-radius: 7px; background: color-mix(in srgb,var(--surface) 80%,transparent);
+  color: var(--muted); cursor: pointer; font-size: 12px;
+}
+.widget-info-popover-close:hover { color: var(--text); background: var(--surface); }
+.widget-info-popover-body { padding-right: 20px; color: var(--text); line-height: 1.55; font-size: 11px; }
+.widget-info-popover-body > :first-child { margin-top: 0 !important; }
+.widget-info-popover-body > :last-child { margin-bottom: 0 !important; }
+.widget-info-popover-body[style*="grid"] { display: grid; }
+
+@media (max-width: 600px) {
+  .widget-info-popover-card { width: min(310px, calc(100vw - 20px)); max-height: min(320px, calc(100vh - 20px)); padding: 12px 12px 11px; }
+}
+
+/* ---- FINAL POPOVER ANCHORING: keep info card attached to the clicked icon ---- */
+.widget-info-popover-local { position:fixed !important; inset:auto !important; width:0 !important; height:0 !important; display:none !important; pointer-events:none !important; z-index:2147483646 !important; overflow:visible !important; }
+.widget-info-popover-local.open { display:block !important; }
+.widget-info-popover-local .widget-info-popover-card { position:fixed !important; pointer-events:auto !important; overflow:hidden !important; }
+
+.widget-info-btn {
+  background:none; border:0; padding:1px 3px; margin:0; color:var(--muted); cursor:pointer;
+  font-size:11px; line-height:1; border-radius:5px; flex:0 0 auto;
+}
+.widget-info-btn:hover { color:var(--accent2); background:color-mix(in srgb,var(--accent) 8%,transparent); }
+
 /* ---- TABLE ---- */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th {
@@ -457,9 +523,20 @@ tr:hover td { background: rgba(124,106,247,0.03); }
 
 /* ---- STATUS ---- */
 .status-select { padding: 3px 8px; font-size: 11px; border-radius: 6px; width: auto; cursor: pointer; }
+.status-cycle {
+  appearance: none; -webkit-appearance: none; background: transparent;
+  border: 1px solid var(--border); font-family: inherit; font-weight: 600;
+  line-height: 1.2; white-space: nowrap;
+}
+.status-cycle:hover { transform: translateY(-1px); }
+.status-cycle:active { transform: translateY(0); }
 .status-0 { border-color: var(--border); color: var(--muted); }
 .status-1 { border-color: rgba(245,158,11,0.5); color: var(--warn); background: rgba(245,158,11,0.08); }
 .status-2 { border-color: rgba(52,211,153,0.5); color: var(--pass); background: rgba(52,211,153,0.08); }
+
+button.status-cycle.status-0 { border-color: var(--border) !important; color: var(--muted) !important; background: transparent !important; }
+button.status-cycle.status-1 { border-color: rgba(245,158,11,0.6) !important; color: var(--warn) !important; background: rgba(245,158,11,0.12) !important; }
+button.status-cycle.status-2 { border-color: rgba(52,211,153,0.6) !important; color: var(--pass) !important; background: rgba(52,211,153,0.12) !important; }
 /* The light-mode theme blocks below style every <select> with !important,
    which was silently wiping out the In Progress / Completed colors above.
    These higher-specificity rules (element + 2 classes) always win, in every
@@ -872,8 +949,30 @@ body.light-mode.theme-custom select.status-select.status-2 {
   transition: transform 0.1s ease;
 }
 .subject-quicknav-btn:hover { transform: translateY(-1px); }
+@media (hover:hover) and (pointer:fine) {
+  .settings-subject-menu-btn { cursor: default; }
+}
+@media (hover:none), (pointer:coarse) {
+  .settings-subject-menu-btn { cursor: pointer; }
+}
+
 .subject-quicknav-btn.active { box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
 .subject-quicknav-btn .qn-count { opacity: 0.65; font-weight: 500; margin-left: 4px; }
+.settings-subject-menu-wrap { position:relative; display:inline-block; }
+@media (hover:hover) and (pointer:fine) {
+  .settings-subject-menu-wrap::after { content:""; position:absolute; left:0; right:0; top:100%; height:10px; }
+  .settings-subject-menu-wrap:hover .settings-subject-submenu { display:block; }
+}
+.settings-subject-menu-btn { display:inline-flex; align-items:center; gap:5px; }
+.settings-subject-hamburger { width:12px; display:inline-flex; justify-content:center; font-size:10px; }
+.settings-subject-submenu { display:none; position:absolute; top:calc(100% + 2px); left:0; min-width:280px; max-width:min(360px,calc(100vw - 28px)); max-height:360px; overflow-y:auto; padding:8px; background:var(--card, var(--surface)); border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.28); z-index:60; }
+.settings-subject-menu-wrap.open .settings-subject-submenu { display:block; animation:fadein .12s ease; }
+.settings-submenu-group + .settings-submenu-group { margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
+.settings-submenu-group-title { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); padding:3px 5px 5px; }
+.settings-submenu-list { display:flex; flex-direction:column; gap:2px; }
+.settings-submenu-item { width:100%; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:7px 8px; border:1px solid transparent; background:transparent; color:var(--text); border-radius:7px; cursor:pointer; text-align:left; font:inherit; font-size:11px; }
+.settings-submenu-item:hover { background:color-mix(in srgb,var(--accent) 10%,transparent); border-color:color-mix(in srgb,var(--accent) 22%,var(--border)); }
+.settings-submenu-item > span:last-child { color:var(--muted); font-family:var(--font-mono); font-size:10px; white-space:nowrap; }
 .subsubject-type-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* ---- SUBJECT ACCORDION ---- */
@@ -893,6 +992,19 @@ body.light-mode.theme-custom select.status-select.status-2 {
 }
 .subject-group-body.open { display: block; }
 
+/* ---- SETTINGS SUBJECT NAV / SCROLL ---- */
+#subject-manage-list { min-height: 0; }
+.settings-subject-scroll { max-height: 420px; overflow-y: auto; padding: 10px 14px; overscroll-behavior: contain; scrollbar-width: thin; }
+.settings-subject-scroll::-webkit-scrollbar { width: 7px; }
+.settings-subject-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+.settings-subject-header { position: relative; }
+.settings-subject-hover { display:none; position:absolute; left:14px; top:calc(100% + 6px); z-index:60; min-width:260px; max-width:min(360px,calc(100vw - 32px)); max-height:280px; overflow-y:auto; background:color-mix(in srgb,var(--card) 92%,transparent); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:10px; box-shadow:0 14px 34px rgba(0,0,0,.28); padding:7px; }
+.settings-subject-header:hover .settings-subject-hover { display:block; }
+.settings-hover-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px; border-radius:7px; color:var(--text); font-size:10.5px; cursor:pointer; }
+.settings-hover-row:hover { background:color-mix(in srgb,var(--accent) 10%,var(--surface)); }
+.settings-hover-row .hover-meta { color:var(--muted); font-size:9px; white-space:nowrap; }
+@media (hover:none), (pointer:coarse) { .settings-subject-hover { display:none !important; } }
+
 /* ---- TRACKER SUBTABS ---- */
 .tracker-subtabs {
   display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
@@ -911,6 +1023,7 @@ body.light-mode.theme-custom select.status-select.status-2 {
 /* ---- SUB-SUBJECT DROPDOWN (used for both Topics and Video Lectures groups) ---- */
 .tracker-menu-dropdown { position: relative; display: inline-block; }
 .tracker-menu-btn { display: inline-flex; align-items: center; gap: 6px; }
+@media (hover: hover) and (pointer: fine) { .tracker-menu-btn { cursor: default; } }
 .tracker-menu-btn .hamburger-icon { font-size: 10px; line-height: 1; display: inline-block; transition: transform 0.15s; }
 .tracker-menu-btn.active .hamburger-icon, .tracker-menu-dropdown:has(.tracker-menu.open) .hamburger-icon { transform: rotate(180deg); }
 
@@ -956,6 +1069,83 @@ body.light-mode .tracker-menu-dropdown:has(.tracker-menu.open) .hamburger-icon {
 }
 .tracker-menu-item:hover { background: rgba(124,106,247,0.12); color: var(--text); }
 .tracker-menu-item.active { color: var(--accent2); background: rgba(124,106,247,0.1); font-weight: 600; }
+
+/* ---- SUBTOPIC HOVER PREVIEW (desktop only) ----
+   Gives a quick map of what is inside Topics / Video Lectures without
+   requiring a click. Touch devices keep the existing tap-to-open menu. */
+.tracker-hover-preview {
+  display:block;
+  visibility:hidden;
+  opacity:0;
+  pointer-events:none;
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  z-index:41;
+  width:min(300px, 72vw);
+  max-height:min(55vh,320px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:9px 10px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  box-shadow:0 12px 28px rgba(0,0,0,.18);
+  backdrop-filter:blur(8px);
+  transition:opacity .12s ease, visibility 0s linear .18s;
+}
+.tracker-menu-dropdown::after {
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  top:100%;
+  height:10px;
+  z-index:40;
+  pointer-events:none;
+}
+.tracker-menu-dropdown:hover::after,
+.tracker-menu-dropdown:focus-within::after { pointer-events:auto; }
+.tracker-menu-dropdown:hover > .tracker-hover-preview,
+.tracker-menu-dropdown:focus-within > .tracker-hover-preview {
+  visibility:visible;
+  opacity:1;
+  pointer-events:auto;
+  transition-delay:0s;
+}
+.tracker-hover-preview::before {
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  top:-10px;
+  height:10px;
+  pointer-events:auto;
+}
+.tracker-hover-preview-title {
+  font-size:9px; font-weight:800; letter-spacing:.9px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:7px;
+}
+.tracker-hover-preview-list { display:flex; flex-direction:column; gap:4px; }
+.tracker-hover-preview-row {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  width:100%; border:0; background:transparent; text-align:left;
+  padding:5px 6px; border-radius:7px; cursor:pointer;
+  color:inherit; font:inherit;
+}
+.tracker-hover-preview-row:hover { background:color-mix(in srgb,var(--accent) 7%,transparent); }
+.tracker-hover-preview::-webkit-scrollbar,.tracker-menu::-webkit-scrollbar{width:7px;}
+.tracker-hover-preview::-webkit-scrollbar-thumb,.tracker-menu::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+.tracker-hover-preview::-webkit-scrollbar-track,.tracker-menu::-webkit-scrollbar-track{background:transparent;}
+.tracker-hover-preview-name {
+  min-width:0; font-size:11px; white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; color:var(--text);
+}
+.tracker-hover-preview-pct { font-size:9px; font-family:var(--font-mono); color:var(--muted); flex:0 0 auto; }
+@media (hover:none), (pointer:coarse) {
+  .tracker-hover-preview { display:none !important; visibility:hidden !important; opacity:0 !important; pointer-events:none !important; }
+}
+
 
 /* ---- MAIN SUBJECT TABS (flat, clickable, icon-led — no nesting) ---- */
 .tracker-organize-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--border);border-radius:11px;background:linear-gradient(90deg,rgba(124,106,247,.08),transparent)}
@@ -3820,12 +4010,23 @@ body:not(.light-mode) .quick-note-status { color:#ded5db; }
   color:var(--text) !important;
   border-color:var(--border) !important;
 }
-.calendar-style-menu{position:fixed;z-index:2500;width:230px;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 45px rgba(20,25,50,.16)}
-.calendar-style-option{display:flex;align-items:center;gap:9px;width:100%;padding:9px;border:0;background:transparent;border-radius:10px;color:var(--text);cursor:pointer;text-align:left}
-.calendar-style-option:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
-.calendar-style-option .mini{width:28px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--surface);position:relative;overflow:hidden}
+.cal-style-anchor{position:relative;display:inline-flex;align-items:center;flex:0 0 auto;}
+.calendar-style-menu.cal-style-attached{position:absolute !important;top:calc(100% + 8px) !important;left:calc(50% - 40px) !important;right:auto !important;bottom:auto !important;transform:translateX(-50%) !important;z-index:2147483647 !important;width:250px !important;max-width:min(280px,calc(100vw - 24px)) !important;max-height:min(330px,70vh) !important;overflow-y:auto !important;box-sizing:border-box;}
+.calendar-style-menu.cal-style-attached.flip{top:auto !important;bottom:calc(100% + 8px) !important;transform:translateX(-50%) !important;}
+.calendar-style-menu.cal-style-attached::before{left:50% !important;transform:translateX(-50%) rotate(45deg) !important;top:-6px !important;}
+.calendar-style-menu.cal-style-attached.flip::before{top:auto !important;bottom:-6px !important;transform:translateX(-50%) rotate(225deg) !important;}
+.calendar-style-menu{position:fixed;z-index:2147483647;width:280px;max-width:calc(100vw - 16px);padding:10px;background:color-mix(in srgb,var(--card) 96%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 45px rgba(20,25,50,.22);pointer-events:auto;display:block;visibility:visible;opacity:1;box-sizing:border-box}
+.calendar-style-menu::before{content:'';position:absolute;top:-6px;width:12px;height:12px;background:var(--card);border-left:1px solid var(--border);border-top:1px solid var(--border);transform:rotate(45deg);left:var(--cal-arrow-left,24px)}
+.calendar-style-menu.flip::before{top:auto;bottom:-6px;transform:rotate(225deg)}
+
+.calendar-style-menu-attached { position:fixed !important; z-index:2147483647 !important; }
+.calendar-style-menu-attached::before { pointer-events:none; }
+.calendar-style-option{display:flex;align-items:center;gap:10px;width:100%;padding:10px 9px;border:1px solid transparent;background:transparent;border-radius:10px;color:var(--text);cursor:pointer;text-align:left;position:relative;z-index:1;touch-action:manipulation}
+.calendar-style-option:hover{background:color-mix(in srgb,var(--accent) 9%,transparent);border-color:color-mix(in srgb,var(--accent) 16%,transparent)}
+.calendar-style-option:active{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.calendar-style-option .mini{width:32px;height:24px;flex:0 0 32px;border-radius:6px;border:1px solid var(--border);background:var(--surface);position:relative;overflow:hidden}
 .calendar-style-option .mini:after{content:'';position:absolute;left:4px;right:4px;top:8px;height:2px;background:var(--accent);box-shadow:0 5px 0 var(--border)}
-.calendar-style-option strong{font-size:10px}.calendar-style-option small{display:block;font-size:8px;color:var(--muted);margin-top:1px}
+.calendar-style-option strong{font-size:10px}.calendar-style-option small{display:block;font-size:8px;color:var(--muted);margin-top:1px;line-height:1.3}
 /* Calendar style presets — real hooks on the actual generated cells
    (.cal-day-cell / .cal-grid-outer / .cal-week-cell / .cal-day-timeline / .cal-timeline-cell),
    controlled through CSS variables so month, week and day views all respond together. */
@@ -3848,6 +4049,20 @@ body:not(.light-mode) .quick-note-status { color:#ded5db; }
 #page-calendar.cal-style-spacious{--cal-radius:20px;--cal-gap:5px;--cal-cell-pad:16px 17px;--cal-cell-minh:130px;--cal-week-h:70px;--cal-timeline-h:60px;--cal-saturate:1;--cal-cell-shadow:0 3px 12px rgba(20,25,50,.08);}
 #page-calendar.cal-style-spacious .card{border-radius:20px;}
 #page-calendar.cal-style-spacious .cal-grid-outer,#page-calendar.cal-style-spacious .cal-day-timeline{border:none !important;}
+
+/* Strong, direct calendar style hooks — these override the generated inline calendar sizing. */
+#page-calendar.cal-style-compact .cal-grid-outer{border-radius:6px !important;gap:0 !important;}
+#page-calendar.cal-style-compact .cal-day-cell{min-height:60px !important;padding:3px 5px !important;}
+#page-calendar.cal-style-compact .cal-week-cell{height:34px !important;}
+#page-calendar.cal-style-compact .cal-timeline-hour,#page-calendar.cal-style-compact .cal-timeline-cell{height:30px !important;}
+#page-calendar.cal-style-comfortable .cal-grid-outer{border-radius:10px !important;gap:1px !important;}
+#page-calendar.cal-style-comfortable .cal-day-cell{min-height:92px !important;padding:8px 10px !important;}
+#page-calendar.cal-style-comfortable .cal-week-cell{height:54px !important;}
+#page-calendar.cal-style-comfortable .cal-timeline-hour,#page-calendar.cal-style-comfortable .cal-timeline-cell{height:46px !important;}
+#page-calendar.cal-style-spacious .cal-grid-outer{border-radius:20px !important;gap:5px !important;}
+#page-calendar.cal-style-spacious .cal-day-cell{min-height:130px !important;padding:16px 17px !important;}
+#page-calendar.cal-style-spacious .cal-week-cell{height:70px !important;}
+#page-calendar.cal-style-spacious .cal-timeline-hour,#page-calendar.cal-style-spacious .cal-timeline-cell{height:60px !important;}
 
 
 /* Distinct visual identities for each video-library achievement */
@@ -4229,15 +4444,6 @@ renderDashboard(); }, 400);
       </div>
       <div id="practice-score-filters" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"></div>
     </div>
-    <div class="card practice-table-card" style="margin-bottom:16px">
-      <div class="tracker-table-wrap practice-scroll-wrap" style="overflow:auto">
-        <table id="practice-scores-table">
-          <thead><tr><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Score</th><th>%</th><th>Result</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
-          <tbody id="practice-score-tbody"></tbody>
-        </table>
-      </div>
-      <div id="practice-pagination"></div>
-    </div>
     <div class="card" id="practice-analytics" style="margin-bottom:16px">
       <div class="section-title" style="margin-bottom:12px">Practice Performance</div>
       <div id="practice-subject-chart" style="padding:4px 0;"></div>
@@ -4248,6 +4454,15 @@ renderDashboard(); }, 400);
       <div id="practice-trend-insight" style="font-size:11.5px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.5"></div>
       <div id="practice-trend-chart" style="width:100%;min-height:230px;display:flex;align-items:center;"></div>
       <div id="practice-trend-legend" style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center"></div>
+    </div>
+    <div class="card practice-table-card" style="margin-bottom:16px">
+      <div class="tracker-table-wrap practice-scroll-wrap" style="overflow:auto">
+        <table id="practice-scores-table">
+          <thead><tr><th>Practice Set</th><th>Type</th><th>Subject</th><th>Sub-subject</th><th>Topic</th><th>Score</th><th>%</th><th>Result</th><th>Notes</th><th class="tracker-actions-col"></th></tr></thead>
+          <tbody id="practice-score-tbody"></tbody>
+        </table>
+      </div>
+      <div id="practice-pagination"></div>
     </div>
   </div>
 </div>
@@ -4311,7 +4526,7 @@ renderDashboard(); }, 400);
   </div>
   <div class="conf-guide" id="conf-guide-box" style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;" id="conf-guide-title">🎯 Confidence Level Guide — What do the dots mean?</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;" id="conf-guide-sub">Rate how well you understand each topic on a 1–5 scale. Be honest — this helps you prioritize review sessions.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;" id="conf-guide-sub">Rate how well you understand each topic from 1–5. This is your confidence in the topic itself — not how many times you watched a lecture.</div>
     <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--danger)"></div><span style="color:var(--danger);font-weight:600;min-width:60px">Level 1</span><span style="color:var(--dim)" id="conf-guide-l1">I read/heard it but can't explain it — total confusion.</span></div>
     <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--cond)"></div><span style="color:var(--cond);font-weight:600;min-width:60px">Level 2</span><span style="color:var(--dim)" id="conf-guide-l2">I have a rough idea but would struggle on exam questions.</span></div>
     <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--warn)"></div><span style="color:var(--warn);font-weight:600;min-width:60px">Level 3</span><span style="color:var(--dim)" id="conf-guide-l3">I understand the basics but need more practice and review.</span></div>
@@ -4355,7 +4570,7 @@ renderDashboard(); }, 400);
       <span id="cal-month-label" style="font-size:14px;font-weight:600;min-width:160px;text-align:center"></span>
       <button class="btn btn-ghost btn-sm" onclick="calNav(1)">Next →</button>
       <button class="btn btn-ghost btn-sm" onclick="calToday()">Today</button>
-      <button class="btn btn-ghost btn-sm" id="cal-style-btn" onclick="toggleCalendarStyleMenu(event)">✦ Style</button>
+      <span id="cal-style-anchor" class="cal-style-anchor"><button class="btn btn-ghost btn-sm" id="cal-style-btn" onclick="toggleCalendarStyleMenu(event)">✦ Style</button></span>
     </div>
   </div>
 
@@ -4401,7 +4616,7 @@ renderDashboard(); }, 400);
       </div>
     </div>
     <div class="form-row" id="cal-topic-row">
-      <label>Topic <span style="font-weight:400;color:var(--muted)">(optional — leave blank for exams, comprehensive review, or multi-topic sessions)</span></label>
+      <label id="cal-topic-label">Topic <span style="font-weight:400;color:var(--muted)">(optional — leave blank for exams, comprehensive review, or multi-topic sessions)</span></label>
       <select id="cal-topic-sel"></select>
     </div>
     <div class="form-row">
@@ -8014,12 +8229,73 @@ const SIZE_PRESETS=[];
 // Toggles one of the inline legend popovers embedded in the completion/score
 // widgets (e.g. "legend-w_completion-comp"). Grid display is used when shown
 // since these legends are laid out as a mini grid of label/value pairs.
-function toggleWidgetLegend(id) {
-  const el = document.getElementById('legend-'+id);
-  if (!el) return;
-  const show = (el.style.display === 'none' || !el.style.display);
-  el.style.display = show ? (String(id).endsWith('-weak') ? 'block' : 'grid') : 'none';
+function toggleWidgetLegend(id, anchorEl) {
+  const source = document.getElementById('legend-' + id);
+  if (!source) return;
+  let pop = document.getElementById('widget-info-popover');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'widget-info-popover';
+    pop.className = 'widget-info-popover widget-info-popover-local';
+    pop.setAttribute('role','dialog');
+    pop.setAttribute('aria-modal','false');
+    pop.innerHTML = '<div class="widget-info-popover-card"><button type="button" class="widget-info-popover-close" aria-label="Close">✕</button><div class="widget-info-popover-body"></div></div>';
+    pop.querySelector('.widget-info-popover-close').addEventListener('click', closeWidgetInfoPopover);
+    document.body.appendChild(pop);
+  }
+  const same = pop.classList.contains('open') && pop.dataset.sourceId === id;
+  if (same) { closeWidgetInfoPopover(); return; }
+  const anchor = anchorEl || document.querySelector(`[onclick*="toggleWidgetLegend('${id}')"]`);
+  if (!anchor) return;
+  pop.dataset.sourceId = id;
+  pop.querySelector('.widget-info-popover-body').innerHTML = source.innerHTML;
+  pop.classList.add('open');
+  const place = () => {
+    const card = pop.querySelector('.widget-info-popover-card');
+    if (!card) return;
+    const ar = anchor.getBoundingClientRect();
+    const gap = 7, margin = 10;
+    const cw = Math.min(360, Math.max(240, card.scrollWidth || 280));
+    const ch = Math.min(320, Math.max(70, card.scrollHeight || 120));
+    let left = ar.left + ar.width / 2 - cw / 2;
+    let top = ar.bottom + gap;
+    let above = false;
+    if (top + ch > window.innerHeight - margin && ar.top - gap - ch >= margin) {
+      top = ar.top - gap - ch;
+      above = true;
+    }
+    left = Math.max(margin, Math.min(left, window.innerWidth - cw - margin));
+    card.style.left = Math.round(left) + 'px';
+    card.style.top = Math.round(top) + 'px';
+    card.style.width = cw + 'px';
+    card.style.maxHeight = Math.min(320, window.innerHeight - margin*2) + 'px';
+    card.style.overflowY = 'auto';
+    const arrowLeft = Math.max(14, Math.min(cw - 22, (ar.left + ar.width/2) - left - 6));
+    card.style.setProperty('--info-arrow-left', Math.round(arrowLeft) + 'px');
+    card.classList.toggle('info-above', above);
+  };
+  requestAnimationFrame(place);
+  setTimeout(place, 0);
+  window.addEventListener('resize', place, {passive:true});
+  window.addEventListener('scroll', place, {passive:true, capture:true});
+  pop.__place = place;
 }
+
+function closeWidgetInfoPopover() {
+  const pop = document.getElementById('widget-info-popover');
+  if (!pop) return;
+  if (pop.__place) {
+    window.removeEventListener('resize', pop.__place);
+    window.removeEventListener('scroll', pop.__place, true);
+    pop.__place = null;
+  }
+  pop.classList.remove('open');
+  pop.dataset.sourceId = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeWidgetInfoPopover();
+});
 
 function toggleLayoutEdit() {
   layoutEditMode = !layoutEditMode;
@@ -8312,7 +8588,7 @@ function renderWidgetHTML(w, i) {
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <div class="section-title widget-title-row">${widgetTitleIcon('weak_topics')}<span>Weak Topics</span></div>
-        <button onclick="toggleWidgetLegend('${w.id}-weak')" title="How is this ranked?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
+        <button onclick="toggleWidgetLegend('${w.id}-weak', this)" title="How is this ranked?" class="widget-info-btn">ⓘ</button>
       </div>
       <div id="legend-${w.id}-weak" style="display:none;font-size:11px;color:var(--muted);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px">
         Only topics you've rated or practiced are shown here.
@@ -8471,11 +8747,8 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:flex-end;">
         <div>
-          <div class="section-title widget-title-row" style="margin-bottom:2px;">${widgetTitleIcon('completion_card')}<span>Overall Completion</span></div>
-          <div style="display:flex;align-items:center;gap:5px">
-            <span style="font-size:12px;font-weight:600;color:var(--accent3)">${getCompletionRank(stats.pct)}</span>
-            <button onclick="toggleWidgetLegend('${w.id}-comp')" title="What do these ranks mean?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
-          </div>
+          <div class="section-title widget-title-row" style="margin-bottom:2px;display:flex;align-items:center;gap:5px;">${widgetIconSvg('completion_card')}<span>Overall Completion</span><button onclick="toggleWidgetLegend('${w.id}-comp', this)" title="What do these ranks mean?" class="widget-info-btn">ⓘ</button></div>
+          <div style="font-size:12px;font-weight:600;color:var(--accent3)">${getCompletionRank(stats.pct)}</div>
         </div>
         <span style="font-family:var(--font-mono);font-size:16px;color:var(--text)">${stats.pct.toFixed(1)}%</span>
       </div>
@@ -8511,9 +8784,7 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
       <div><div class="stat-label">Highest Score</div><div class="stat-value" style="color:var(--pass)">${highAvg ? highAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">best avg</div></div>
       <div><div class="stat-label">Latest Remark</div><div style="margin-top:6px">${latestRemark?`<span class="badge ${remarkMap[latestRemark]}">${latestRemark}</span>`:'<span class="badge badge-none">No scores yet</span>'}</div></div>
       <div style="border-left:1px solid var(--border);padding-left:12px;">
-        <div class="stat-label" style="display:flex;align-items:center;gap:4px">Rank Tier 🏆
-          <button onclick="toggleWidgetLegend('${w.id}-rank')" title="What do these ranks mean?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
-        </div>
+        <div class="stat-label widget-title-row" style="display:flex;align-items:center;gap:4px">Rank Tier 🏆<button onclick="toggleWidgetLegend('${w.id}-rank', this)" title="What do these ranks mean?" class="widget-info-btn">ⓘ</button></div>
         <div class="rank-potential">${tier.tier}</div><div class="stat-sub">${tier.label||'no scores'}</div>
       </div>
       <div id="legend-${w.id}-rank" style="display:none;grid-column:1/-1;background:color-mix(in srgb, var(--accent) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent) 16%, var(--border));border-radius:8px;padding:8px 10px;grid-template-columns:1fr 1fr 1fr;gap:4px 12px;font-size:10px;">
@@ -8570,7 +8841,10 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;">
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div><div class="section-title widget-title-row" style="margin-bottom:2px">${widgetTitleIcon('mastery')}<span>Mastery</span></div><div style="font-size:9px;color:var(--muted)">Based on your confidence ratings, not just completion</div></div>
+        <div style="min-width:0">
+          <div class="section-title widget-title-row" style="margin-bottom:2px;display:flex;align-items:center;gap:5px">${widgetTitleIcon('mastery')}<span>Mastery</span><button onclick="toggleWidgetLegend('${w.id}-mastery', this)" title="What do these ranks mean?" class="widget-info-btn">ⓘ</button></div>
+          <div style="font-size:9px;color:var(--muted)">Based on your confidence ratings, not just completion</div>
+        </div>
       </div>
       <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
         <svg width="82" height="82" viewBox="0 0 82 82">
@@ -8585,10 +8859,6 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
         </div>
       </div>
       <div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap;margin-bottom:12px">${subRings}</div>
-      <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;align-items:center;gap:5px">
-        <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700">Mastery Ranks</span>
-        <button onclick="toggleWidgetLegend('${w.id}-mastery')" title="What do these ranks mean?" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0;line-height:1">ⓘ</button>
-      </div>
       <div id="legend-${w.id}-mastery" style="display:none;margin-top:7px;background:color-mix(in srgb, var(--accent2) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent2) 16%, var(--border));border-radius:8px;padding:8px 10px;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:9px;">
         ${MASTERY_TIERS.map(t => {
           const active = overall.rated && getMasteryLabel(overall.pct) === t.label;
@@ -9522,6 +9792,15 @@ function renderPracticeScores(){
 }
 
 
+function scoreStatusColor(value){
+  const v = Number(value);
+  if (!Number.isFinite(v)) return getComputedStyle(document.body).getPropertyValue('--muted').trim() || '#64748b';
+  const light = document.body.classList.contains('light-mode');
+  if (v >= 75) return light ? '#15803d' : '#34d399';
+  if (v >= 65) return light ? '#b45309' : '#f59e0b';
+  return light ? '#dc2626' : '#ef4444';
+}
+
 function scoreSignalEmoji(value){
   const v = Number(value);
   if (!Number.isFinite(v)) return '';
@@ -9558,8 +9837,22 @@ function renderPracticeAnalytics(){
   // ALL SUBJECTS: show a visual comparison of every subject with practice data.
   if(practiceFilterMain==='all'){
     const groups={};
-    all.forEach(({p,pct})=>{const key=p.mainSubject||'Other';(groups[key] ||= []).push(pct);});
-    const rows=Object.entries(groups).map(([key,vals])=>({key,avg:avg(vals),count:vals.length}))
+    all.forEach(({p,pct,i})=>{const key=p.mainSubject||'Other';(groups[key] ||= []).push({pct,i,date:p.date||''});});
+    const trendInfo = vals => {
+      const ordered = vals.slice().sort((a,b)=>{
+        if(!a.date && !b.date) return a.i-b.i;
+        if(!a.date) return 1; if(!b.date) return -1;
+        return a.date<b.date?-1:a.date>b.date?1:a.i-b.i;
+      });
+      if (ordered.length < 2) return {delta:null,label:'',color:'var(--muted)'};
+      let delta;
+      if (ordered.length >= 6) delta = avg(ordered.slice(-3).map(x=>x.pct)) - avg(ordered.slice(-6,-3).map(x=>x.pct));
+      else delta = ordered[ordered.length-1].pct - ordered[0].pct;
+      if (delta >= 2) return {delta,label:'improving',color:'var(--pass)'};
+      if (delta <= -2) return {delta,label:'declining',color:'var(--danger)'};
+      return {delta,label:'steady',color:'var(--muted)'};
+    };
+    const rows=Object.entries(groups).map(([key,items])=>({key,avg:avg(items.map(x=>x.pct)),count:items.length,trend:trendInfo(items)}))
       .sort((a,b)=>b.avg-a.avg);
     subjectEl.innerHTML=`
       <div style="font-size:10px;color:var(--muted);margin-bottom:12px">Average practice performance across all scored sets · ${all.length} scored ${all.length===1?'entry':'entries'}</div>
@@ -9567,7 +9860,7 @@ function renderPracticeAnalytics(){
         ${rows.map(r=>{const c=colorFor(r.avg);const sc=subjectColor(r.key);return `<div style="display:grid;grid-template-columns:58px 1fr 82px;align-items:center;gap:9px">
           <div style="font-size:11px;font-weight:700;color:${sc}">${r.key}</div>
           <div style="height:16px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px;transition:width .5s ease"></div>${practiceTargetMarker}</div>
-          <div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${scoreSignalEmoji(r.avg)} ${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div>
+          <div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${scoreStatusColor(r.avg)}">${scoreSignalEmoji(r.avg)} ${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span>${r.trend.delta===null?'':` <span title="${r.trend.label}" style="color:${r.trend.delta>=0?scoreStatusColor(75):scoreStatusColor(50)};font-size:9px">${r.trend.delta>=0?'↑':'↓'}${Math.abs(r.trend.delta).toFixed(1)}</span>`}</div>
         </div>`;}).join('')}
       </div>`;
     return;
@@ -9581,26 +9874,42 @@ function renderPracticeAnalytics(){
   const best=Math.max(...all.map(x=>x.pct));
   const worst=Math.min(...all.map(x=>x.pct));
 
+  const trendInfo = vals => {
+    const ordered = vals.slice().sort((a,b)=>{
+      if(!a.date && !b.date) return a.i-b.i;
+      if(!a.date) return 1; if(!b.date) return -1;
+      return a.date<b.date?-1:a.date>b.date?1:a.i-b.i;
+    });
+    if (ordered.length < 2) return {delta:null,label:'',color:'var(--muted)'};
+    let delta;
+    if (ordered.length >= 6) delta = avg(ordered.slice(-3).map(x=>x.pct)) - avg(ordered.slice(-6,-3).map(x=>x.pct));
+    else delta = ordered[ordered.length-1].pct - ordered[0].pct;
+    if (delta >= 2) return {delta,label:'Improving',color:'var(--pass)'};
+    if (delta <= -2) return {delta,label:'Declining',color:'var(--danger)'};
+    return {delta,label:'Steady',color:'var(--muted)'};
+  };
+
   const subGroups={};
-  all.forEach(({p,pct})=>{
+  all.forEach(({p,pct,i})=>{
     const key=p.subjectKey||'Uncategorized';
-    (subGroups[key] ||= {vals:[],name:DEFAULT_TOPICS[key]?.name||key});
+    (subGroups[key] ||= {vals:[],items:[],name:DEFAULT_TOPICS[key]?.name||key});
     subGroups[key].vals.push(pct);
+    subGroups[key].items.push({pct,i,date:p.date||''});
   });
-  const subRows=Object.entries(subGroups).map(([key,g])=>({key,name:g.name,avg:avg(g.vals),count:g.vals.length}))
+  const subRows=Object.entries(subGroups).map(([key,g])=>({key,name:g.name,avg:avg(g.vals),count:g.vals.length,trend:trendInfo(g.items)}))
     .sort((a,b)=>b.avg-a.avg);
 
   const topicGroups={};
-  all.forEach(({p,pct})=>{
+  all.forEach(({p,pct,i})=>{
     const key=p.topicName||'Comprehensive / Multiple Topics';
-    (topicGroups[key] ||= []).push(pct);
+    (topicGroups[key] ||= []).push({pct,i,date:p.date||''});
   });
   // Priority tier reuses the same score bands as the pass/conditional/needs-work
   // legend below, so "priority" and "result" always mean the same thing.
   const priorityTier = v => v<65 ? {key:'high',label:'High Priority',icon:'🔴',color:'var(--danger)'}
                             : v<75 ? {key:'medium',label:'Medium Priority',icon:'🟡',color:'var(--warn)'}
                             : {key:'low',label:'Low Priority',icon:'🟢',color:'var(--pass)'};
-  let topicRowsAll=Object.entries(topicGroups).map(([name,vals])=>({name,avg:avg(vals),count:vals.length}))
+  let topicRowsAll=Object.entries(topicGroups).map(([name,vals])=>({name,avg:avg(vals.map(x=>x.pct)),count:vals.length,trend:trendInfo(vals)}))
     .sort((a,b)=>a.avg-b.avg);
   topicRowsAll = topicRowsAll.map(r=>({...r, priority:priorityTier(r.avg)}));
 
@@ -9627,7 +9936,7 @@ function renderPracticeAnalytics(){
       <div style="padding:9px;border:1px solid var(--border);border-radius:8px"><div style="font-size:9px;color:var(--muted)">LOWEST</div><strong style="font-size:12px;color:${colorFor(worst)}">${worst.toFixed(1)}%</strong></div>
     </div>
     ${practiceFilterSub==='all' && subRows.length ? `<div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.05em">By Sub-subject</div>
-    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">${subRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:13px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div>${practiceTargetMarker}</div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${scoreSignalEmoji(r.avg)} ${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div></div>`;}).join('')}</div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">${subRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:13px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div>${practiceTargetMarker}</div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${scoreSignalEmoji(r.avg)} ${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span>${r.trend.delta===null?'':` <span title="${r.trend.label}" style="color:${r.trend.delta>=0?scoreStatusColor(75):scoreStatusColor(50)};font-size:9px">${r.trend.delta>=0?'↑':'↓'}${Math.abs(r.trend.delta).toFixed(1)}</span>`}</div></div>`;}).join('')}</div>` : ''}
     <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.05em">Topic Priority</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px">
       <button class="btn btn-sm ${practiceTopicPriorityFilter==='all'?'btn-primary':'btn-ghost'}" onclick="practiceTopicPriorityFilter='all';renderPracticeAnalytics()">All (${topicRowsAll.length})</button>
@@ -9635,7 +9944,7 @@ function renderPracticeAnalytics(){
       <button class="btn btn-sm ${practiceTopicPriorityFilter==='medium'?'btn-primary':'btn-ghost'}" onclick="practiceTopicPriorityFilter='medium';renderPracticeAnalytics()">🟡 Medium (${priorityCounts.medium})</button>
       <button class="btn btn-sm ${practiceTopicPriorityFilter==='low'?'btn-primary':'btn-ghost'}" onclick="practiceTopicPriorityFilter='low';renderPracticeAnalytics()">🟢 Low (${priorityCounts.low})</button>
     </div>
-    ${topicRows.length ? `<div style="display:flex;flex-direction:column;gap:8px">${topicRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:16px minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><span title="${r.priority.label}">${r.priority.icon}</span><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:12px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div>${practiceTargetMarker}</div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span></div></div>`;}).join('')}</div>`
+    ${topicRows.length ? `<div style="display:flex;flex-direction:column;gap:8px">${topicRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:16px minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><span title="${r.priority.label}">${r.priority.icon}</span><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:12px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div>${practiceTargetMarker}</div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span>${r.trend.delta===null?'':` <span title="${r.trend.label}" style="color:${r.trend.color};font-size:9px">${r.trend.delta>=0?'↑':'↓'}${Math.abs(r.trend.delta).toFixed(1)}</span>`}</div></div>`;}).join('')}</div>`
     : `<div style="color:var(--muted);font-size:11px;text-align:center;padding:12px 0">No topics in this priority tier for the current selection.</div>`}
     ${topicRowsHiddenCount>0 ? `<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px">+${topicRowsHiddenCount} more${practiceTopicPriorityFilter==='all'?' — filter by priority above to see the rest':' in this tier'}</div>` : ''}`;
 }
@@ -9894,10 +10203,16 @@ function renderPracticeTrend(){
   const linePoints = pts.map((p,i) => `${xScale(i)},${yScale(p.y)}`).join(' ');
   const areaPoints = `${xScale(0)},${PAD.top+chartH} ` + pts.map((p,i)=>`${xScale(i)},${yScale(p.y)}`).join(' ') + ` ${xScale(pts.length-1)},${PAD.top+chartH}`;
 
-  const gridLines = [65, 75, 85, 100].filter(v => v >= minY && v <= maxY).map(v =>
-    `<line x1="${PAD.left}" y1="${yScale(v)}" x2="${PAD.left+chartW}" y2="${yScale(v)}" stroke="${v===75?'rgba(52,211,153,0.3)':v===65?'rgba(245,158,11,0.25)':'rgba(255,255,255,0.05)'}" stroke-dasharray="${v===75||v===65?'4,3':'none'}" stroke-width="1"/>
-     <text x="${PAD.left-6}" y="${yScale(v)+4}" fill="${v===75?'var(--pass)':v===65?'var(--warn)':'var(--muted)'}" font-size="10.5" text-anchor="end" font-family="monospace">${v}%</text>`
-  ).join('');
+  // Give the Score Trend axis labels explicit light/dark classes. Some browsers
+  // do not consistently resolve CSS custom properties used directly in SVG
+  // presentation attributes, especially when the Scoresheet has theme-local
+  // variables. Class-based CSS keeps the chart labels readable in both modes.
+  const gridLines = [65, 75, 85, 100].filter(v => v >= minY && v <= maxY).map(v => {
+    const labelClass = v === 75 ? 'practice-trend-axis-pass' : v === 65 ? 'practice-trend-axis-warn' : 'practice-trend-axis-label';
+    const gridStroke = v === 75 ? 'rgba(52,211,153,0.3)' : v === 65 ? 'rgba(245,158,11,0.25)' : 'rgba(100,116,139,0.18)';
+    return `<line x1="${PAD.left}" y1="${yScale(v)}" x2="${PAD.left+chartW}" y2="${yScale(v)}" stroke="${gridStroke}" stroke-dasharray="${v===75||v===65?'4,3':'none'}" stroke-width="1"/>
+     <text class="${labelClass}" x="${PAD.left-6}" y="${yScale(v)+4}" font-size="10.5" text-anchor="end" font-family="monospace">${v}%</text>`;
+  }).join('');
 
   const showSubjectRing = practiceFilterMain === 'all';
   const dots = pts.map((p,i) => {
@@ -9921,7 +10236,7 @@ function renderPracticeTrend(){
     return `<g>
       <title>${subjPrefix}${p.label}${detailTag}${p.date ? ' · '+p.date : ''}: ${p.y.toFixed(1)}%</title>
       ${ring}${marker}
-      ${truncLabel ? `<text x="${cx}" y="${PAD.top+chartH+16}" fill="var(--muted)" font-size="9.5" text-anchor="middle" font-family="monospace">${truncLabel}</text>` : ''}
+      ${truncLabel ? `<text class="practice-trend-x-label" x="${cx}" y="${PAD.top+chartH+16}" fill="var(--muted)" font-size="9.5" text-anchor="middle" font-family="monospace">${truncLabel}</text>` : ''}
     </g>`;
   }).join('');
 
@@ -10257,7 +10572,7 @@ function onTargetSlide(v) {
   const latestEntry = entriesWithScores.length ? entriesWithScores[entriesWithScores.length - 1] : null;
   const valMap = {};
   keys.forEach(k => { valMap[k] = latestEntry ? latestEntry.c[k.toLowerCase()] : null; });
-  drawRadarChart(chartEl, examTargetPreview, latestEntry, valMap, keys);
+  drawRadarChart(chartEl, examTargetPreview, latestEntry, valMap, keys, {});
 
   const available = keys.filter(k => valMap[k] !== null);
   const rows = available.map(k => ({ k, v: valMap[k] }));
@@ -10324,9 +10639,9 @@ function saveExamTarget() {
   toast('Target saved!');
 }
 
-function drawRadarChart(chartEl, target, latestEntry, valMap, keys) {
+function drawRadarChart(chartEl, target, latestEntry, valMap, keys, prevMap={}) {
   // ---- Radar chart (SVG hexagon) ----
-  const W = 375, H = 375, cx = W/2, cy = H/2, R = 125;
+  const W = 440, H = 440, cx = W/2, cy = H/2, R = 155;
   const angleFor = i => (Math.PI * 2 * i / keys.length) - Math.PI/2;
   const ptFor = (i, val) => {
     const r = Math.max(0, Math.min(100, val)) / 100 * R;
@@ -10352,8 +10667,12 @@ function drawRadarChart(chartEl, target, latestEntry, valMap, keys) {
     const [x,y] = labelPtFor(i, R * 1.32);
     const meta = SUBJECTS_META[k];
     const val = valMap[k];
+    const prev = prevMap && prevMap[k] !== undefined ? prevMap[k] : null;
     const pctText = (val !== null && val !== undefined) ? val.toFixed(1)+'%' : '';
-    return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle"><tspan fill="${meta.color}" font-size="12" font-weight="700">${k}</tspan>${pctText ? `<tspan fill="var(--dim)" font-size="10.5" font-weight="600"> ${pctText}</tspan>` : ''}</text>`;
+    const delta = (val !== null && val !== undefined && prev !== null && prev !== undefined) ? val - prev : null;
+    const deltaText = delta === null ? '' : ` ${delta >= 0 ? '↑' : '↓'}${Math.abs(delta).toFixed(1)}`;
+    const deltaColor = delta === null ? 'var(--dim)' : (delta >= 2 ? 'var(--pass)' : delta <= -2 ? 'var(--danger)' : 'var(--muted)');
+    return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle"><tspan fill="${meta.color}" font-size="12" font-weight="700">${k}</tspan>${pctText ? `<tspan fill="var(--dim)" font-size="10.5" font-weight="600"> ${pctText}</tspan>` : ''}${deltaText ? `<tspan fill="${deltaColor}" font-size="9.5" font-weight="700">${deltaText}</tspan>` : ''}</text>`;
   }).join('');
   const targetPts = keys.map((k,i) => ptFor(i, target).join(',')).join(' ');
   const targetPoly = `<polygon points="${targetPts}" fill="none" stroke="var(--warn)" stroke-width="1.8" stroke-dasharray="5,4" opacity="0.9"/>`;
@@ -10372,7 +10691,7 @@ function drawRadarChart(chartEl, target, latestEntry, valMap, keys) {
       }).join('');
     }
   }
-  chartEl.innerHTML = `<svg width="100%" viewBox="-50 -38 ${W+100} ${H+83}" style="max-width:350px;overflow:visible">
+  chartEl.innerHTML = `<svg width="100%" viewBox="-56 -44 ${W+112} ${H+95}" style="max-width:430px;width:100%;overflow:visible">
     <defs>
       <radialGradient id="${gradId}">
         <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.38"/>
@@ -10417,7 +10736,7 @@ function renderScoreRadar(previewTarget) {
   // there's no per-subject view to switch into here, just this one snapshot.
   renderScoreOverview(target, latestEntry, strongest, weakest);
 
-  drawRadarChart(chartEl, target, latestEntry, valMap, keys);
+  drawRadarChart(chartEl, target, latestEntry, valMap, keys, prevMap);
 
   // ---- Editing mode: single consolidated target slider ----
   if (examTargetEditMode) {
@@ -10620,6 +10939,18 @@ function selectTrackerVideoSub(key) {
   setTrackerSub(key);
 }
 
+function hasFineHoverPointer(){
+  return window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+function toggleTrackerTopicGroupOnTouch(){
+  if (hasFineHoverPointer()) return;
+  toggleTrackerTopicGroup();
+}
+function toggleTrackerVideoGroupOnTouch(){
+  if (hasFineHoverPointer()) return;
+  toggleTrackerVideoGroup();
+}
+
 function toggleTrackerTopicGroup() {
   trackerTopicGroupCollapsed = !trackerTopicGroupCollapsed;
   trackerVideoGroupCollapsed = true; // only one dropdown open at a time
@@ -10690,10 +11021,21 @@ function renderTracker() {
         <span>${DEFAULT_TOPICS[k].name}</span><span style="font-size:10px;opacity:0.7">${ss.pct.toFixed(0)}%</span>
       </div>`;
     }).join('');
+    const topicPreview = topicSubs.map(k => {
+      const ss = getSubjectStats(k);
+      return `<button type="button" class="tracker-hover-preview-row" onclick="event.stopPropagation();selectTrackerTopicSub('${k}')" title="Open ${String(DEFAULT_TOPICS[k].name).replace(/&/g,'&amp;').replace(/'/g,'&#39;')}">
+        <span class="tracker-hover-preview-name">${escapeHtml(DEFAULT_TOPICS[k].name)}</span>
+        <span class="tracker-hover-preview-pct">${ss.pct.toFixed(0)}%</span>
+      </button>`;
+    }).join('');
     subTabsHTML += `<div class="tracker-menu-dropdown">
-      <button type="button" class="tracker-subtab tracker-menu-btn${currentIsTopic ? ' active' : ''}" onclick="event.stopPropagation();toggleTrackerTopicGroup()">
+      <button type="button" class="tracker-subtab tracker-menu-btn${currentIsTopic ? ' active' : ''}" onclick="event.stopPropagation();toggleTrackerTopicGroupOnTouch()">
         <span class="hamburger-icon">▾</span> 📚 ${currentIsTopic ? currentTopicLabel : 'Topics'} <span style="font-size:10px;opacity:0.7">(${topicSubs.length})</span>
       </button>
+      <div class="tracker-hover-preview" aria-hidden="true">
+        <div class="tracker-hover-preview-title">Topics in ${escapeHtml(SUBJECTS_META[currentTrackerMain].name)}</div>
+        <div class="tracker-hover-preview-list">${topicPreview}</div>
+      </div>
       <div class="tracker-menu${trackerTopicGroupCollapsed ? '' : ' open'}">${topicDropdownItems}</div>
     </div>`;
   }
@@ -10706,10 +11048,22 @@ function renderTracker() {
         <span>${label}</span><span style="font-size:10px;opacity:0.7">${ss.pct.toFixed(0)}%</span>
       </div>`;
     }).join('');
+    const videoPreview = videoSubs.map(k => {
+      const ss = getSubjectStats(k);
+      const label = DEFAULT_TOPICS[k].name.replace(/\s*-?\s*VID(?:EO)?\s*LEC(?:TURE)?S?\s*$/i, '').trim() || DEFAULT_TOPICS[k].name;
+      return `<button type="button" class="tracker-hover-preview-row" onclick="event.stopPropagation();selectTrackerVideoSub('${k}')" title="Open ${String(label).replace(/&/g,'&amp;').replace(/'/g,'&#39;')}">
+        <span class="tracker-hover-preview-name">${escapeHtml(label)}</span>
+        <span class="tracker-hover-preview-pct">${ss.pct.toFixed(0)}%</span>
+      </button>`;
+    }).join('');
     subTabsHTML += `<div class="tracker-menu-dropdown">
-      <button type="button" class="tracker-subtab tracker-menu-btn${currentIsVideo ? ' active' : ''}" onclick="event.stopPropagation();toggleTrackerVideoGroup()">
+      <button type="button" class="tracker-subtab tracker-menu-btn${currentIsVideo ? ' active' : ''}" onclick="event.stopPropagation();toggleTrackerVideoGroupOnTouch()">
         <span class="hamburger-icon">▾</span> 🎥 Video Lectures <span style="font-size:10px;opacity:0.7">(${videoSubs.length})</span>
       </button>
+      <div class="tracker-hover-preview" aria-hidden="true">
+        <div class="tracker-hover-preview-title">Video lectures in ${escapeHtml(SUBJECTS_META[currentTrackerMain].name)}</div>
+        <div class="tracker-hover-preview-list">${videoPreview}</div>
+      </div>
       <div class="tracker-menu${trackerVideoGroupCollapsed ? '' : ' open'}">${dropdownItems}</div>
     </div>`;
   }
@@ -10719,7 +11073,7 @@ function renderTracker() {
   const sInfo = DEFAULT_TOPICS[currentTrackerSub];
   const stats = getSubjectStats(currentTrackerSub);
   const color = SUBJECTS_META[currentTrackerMain].color;
-  const isVideoSub = sInfo && sInfo.kind === 'video';
+  const isVideoSub = Array.isArray(videoSubs) && videoSubs.includes(currentTrackerSub);
   const organizeBtn = document.getElementById('tracker-organize-btn');
   if (organizeBtn) organizeBtn.textContent = isVideoSub ? '🧩 Organize Lectures' : '🧩 Organize';
   document.getElementById('tracker-subject-info').innerHTML = `
@@ -10739,9 +11093,9 @@ function renderTracker() {
         </div>
       </div>
       <div style="display:flex;gap:20px;align-items:center">
-        <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--pass)">${stats.completed}</div><div style="font-size:10px;color:var(--muted)">Done</div></div>
-        <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--warn)">${stats.inprog}</div><div style="font-size:10px;color:var(--muted)">In Progress</div></div>
-        <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700">${stats.total}</div><div style="font-size:10px;color:var(--muted)">Total Topics</div></div>
+        <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--pass)">${stats.completed}</div><div style="font-size:10px;color:var(--muted)">${isVideoSub ? 'Watched Once' : 'Done'}</div></div>
+        <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--warn)">${stats.inprog}</div><div style="font-size:10px;color:var(--muted)">${isVideoSub ? 'In Progress' : 'In Progress'}</div></div>
+        <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:20px;font-weight:700">${stats.total}</div><div style="font-size:10px;color:var(--muted)">${isVideoSub ? 'Total Lectures' : 'Total Topics'}</div></div>
       </div>
     </div>`;
 
@@ -10760,41 +11114,45 @@ function renderTracker() {
   const guideTitleEl = document.getElementById('conf-guide-title');
   const guideSubEl = document.getElementById('conf-guide-sub');
   const guideLevelEls = [1,2,3,4,5].map(n => document.getElementById('conf-guide-l'+n));
-  if (isVideoSub) {
-    confColHeaderEl.textContent = 'Watch Progress';
-    guideTitleEl.textContent = '🎥 Watch Progress Guide — Keep it simple';
-    guideSubEl.textContent = 'Video lectures use 3 simple stages. Older 1–2 values are treated as In Progress, and older 4–5 values are treated as Rewatched.';
-    const videoGuide = [
-      { label:'In Progress', color:'var(--warn)', text:'You have started the lecture, but haven\'t finished it yet.' },
-      { label:'Watched Once', color:'var(--pass)', text:'You finished the full lecture once.' },
-      { label:'Rewatched', color:'#8b5cf6', text:'You went back and reviewed the lecture again.' }
-    ];
-    guideLevelEls.forEach((el, idx) => {
-      const row = el?.closest('.conf-level-row');
-      if (!row) return;
-      if (idx < 3) {
-        const dot = row.querySelector('.conf-level-dot');
-        const label = row.querySelector('span[style*="font-weight:600"]');
-        if (dot) dot.style.background = videoGuide[idx].color;
-        if (label) { label.textContent = videoGuide[idx].label; label.style.color = videoGuide[idx].color; }
-        el.textContent = videoGuide[idx].text;
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
-  } else {
-    guideLevelEls.forEach(el => { const row = el?.closest('.conf-level-row'); if (row) row.style.display = ''; });
+  const guideRows = guideLevelEls.map(el => el?.closest('.conf-level-row'));
+  const confGuide = [
+    { label:'Level 1', color:'var(--danger)', text:"I read/heard it but can't explain it — total confusion." },
+    { label:'Level 2', color:'var(--cond)', text:'I have a rough idea but would struggle on exam questions.' },
+    { label:'Level 3', color:'var(--warn)', text:'I understand the basics but need more practice and review.' },
+    { label:'Level 4', color:'var(--accent2)', text:"I'm quite confident — I can answer most questions on this topic." },
+    { label:'Level 5', color:'var(--pass)', text:'Fully mastered — I can teach this topic and ace any question.' }
+  ];
+  const videoGuide = [
+    { label:'In Progress', color:'var(--warn)', text:'You have started the lecture, but haven\'t finished it yet.' },
+    { label:'Watched Once', color:'var(--pass)', text:'You finished the full lecture once.' },
+    { label:'Rewatched', color:'#8b5cf6', text:'You went back and reviewed the lecture again.' }
+  ];
 
-    confColHeaderEl.textContent = 'Confidence';
-    guideTitleEl.textContent = '🎯 Confidence Level Guide — What do the dots mean?';
-    guideSubEl.textContent = 'Rate how well you understand each topic on a 1–5 scale. Be honest — this helps you prioritize review sessions.';
-    guideLevelEls[0].textContent = "I read/heard it but can't explain it — total confusion.";
-    guideLevelEls[1].textContent = 'I have a rough idea but would struggle on exam questions.';
-    guideLevelEls[2].textContent = 'I understand the basics but need more practice and review.';
-    guideLevelEls[3].textContent = "I'm quite confident — I can answer most questions on this topic.";
-    guideLevelEls[4].textContent = 'Fully mastered — I can teach this topic and ace any question.';
-  }
+  // Always reset the guide to the regular Topic Tracker confidence scale first.
+  // This prevents the video-lecture descriptions from leaking into regular
+  // topic mode after switching between Topic and Video Lecture sub-subjects.
+  confColHeaderEl.textContent = isVideoSub ? 'Watch Progress' : 'Confidence';
+  guideTitleEl.textContent = isVideoSub ? '🎥 Watch Progress Guide — Keep it simple' : '🎯 Confidence Level Guide — What do the dots mean?';
+  guideSubEl.textContent = isVideoSub
+    ? 'Video lectures use 3 simple stages: In Progress = started, Watched Once = finished once, Rewatched = reviewed again. Older 1–2 values become In Progress, and older 4–5 values become Rewatched.'
+    : 'Rate how well you understand each topic on a 1–5 scale. Be honest — this helps you prioritize review sessions.';
+
+  const activeGuide = isVideoSub ? videoGuide : confGuide;
+  guideLevelEls.forEach((el, idx) => {
+    const row = guideRows[idx];
+    if (!el || !row) return;
+    const dot = row.querySelector('.conf-level-dot');
+    const label = row.querySelector('span[style*="font-weight:600"]');
+    if (isVideoSub && idx >= videoGuide.length) {
+      row.style.display = 'none';
+      return;
+    }
+    const item = activeGuide[idx];
+    row.style.display = '';
+    if (dot) dot.style.background = item.color;
+    if (label) { label.textContent = item.label; label.style.color = item.color; }
+    el.textContent = item.text;
+  });
 
   const tbody = document.getElementById('tracker-tbody');
   tbody.innerHTML = displayTopics.map((entry,displayIndex) => {
@@ -10844,11 +11202,7 @@ function renderTracker() {
       <td style="color:var(--muted);font-size:11px;font-family:var(--font-mono)">${displayIndex+1}</td>
       <td style="font-size:13px;max-width:260px">${t.name}</td>
       <td>
-        <select class="status-select status-${t.status}" onchange="setTopicStatus('${currentTrackerSub}',${i},this.value)">
-          <option value="0" ${t.status===0?'selected':''}>○ Not Started</option>
-          <option value="1" ${t.status===1?'selected':''}>◉ In Progress</option>
-          <option value="2" ${t.status===2?'selected':''}>✓ Completed</option>
-        </select>
+        <button type="button" class="status-select status-cycle status-${t.status}" onclick="cycleTopicStatus('${currentTrackerSub}',${i})" title="Click to advance: Not Started → In Progress → Completed → Not Started" aria-label="${isVideoSub?'Video':'Topic'} status: ${t.status===0?'Not Started':t.status===1?'In Progress':'Completed'}. Click to advance status">${t.status===0?'○ Not Started':t.status===1?'◉ In Progress':'✓ Completed'}</button>
       </td>
       <td><div style="display:flex;gap:3px">${confDots}</div></td>
       <td><input type="date" class="tracker-date-input" value="${t.dateStarted || ''}" onchange="setTopicDate('${currentTrackerSub}',${i},'dateStarted',this.value)" style="font-size:11px;color:var(--muted);font-family:var(--font-mono);background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 4px;width:126px"></td>
@@ -11033,6 +11387,13 @@ function setTrackerSub(key) {
   saveUiSubState({ trackerMain: currentTrackerMain, trackerSub: currentTrackerSub });
   renderTracker();
   if (getWidgets().some(w => w.type === 'subject_notes')) renderDashboardWidgets();
+}
+
+function cycleTopicStatus(sKey, idx) {
+  const topic = state.topics[sKey]?.[idx];
+  if (!topic) return;
+  const next = topic.status === 0 ? 1 : topic.status === 1 ? 2 : 0;
+  setTopicStatus(sKey, idx, next);
 }
 
 function setTopicStatus(sKey, idx, val) {
@@ -11305,7 +11666,7 @@ function updateBulkContentTypeUI() {
   if (title) title.textContent = isVideo ? '⚡ Bulk Add Video Lectures' : '⚡ Bulk Add Topics';
   const submit = document.getElementById('bulk-add-submit');
   if (submit) submit.textContent = isVideo ? 'Add Video Lectures' : 'Add Topics';
-  if (hint) hint.textContent = isVideo ? '🎥 Video lecture collection — these use Watch Progress instead of Confidence.' : '📚 Regular study topics — these use Confidence and count toward subject completion.';
+  if (hint) hint.textContent = isVideo ? '🎥 Video lecture collection — use the 3-stage Watch Progress: In Progress → Watched Once → Rewatched. Watched Once and Rewatched count the lecture as completed.' : '📚 Regular study topics — these use Confidence and count toward subject completion.';
   if (baseLabel) baseLabel.textContent = isVideo ? 'Lecture Base Name' : 'Topic Base Name';
   if (listLabel) listLabel.textContent = isVideo ? 'Lecture Names (one per line)' : 'Topic Names (one per line)';
   if (baseInput) baseInput.placeholder = isVideo ? 'e.g. Introduction to Income Tax' : 'e.g. Chapter 1 — Taxation';
@@ -11392,7 +11753,7 @@ function renderCalendar() {
 function updateCalSubsubjects(selected, selectedTopicIdx) {
   const main = document.getElementById('cal-main-subject-sel').value;
   const subs = SUBJECTS_META[main]?.subs || [];
-  document.getElementById('cal-subject-sel').innerHTML = '<option value="">— No specific sub-subject (e.g. exam day) —</option>'+subs.map(k=>`<option value="${k}">${DEFAULT_TOPICS[k]?.name||k}</option>`).join('');
+  document.getElementById('cal-subject-sel').innerHTML = '<option value="">— No specific sub-subject (e.g. exam day) —</option>'+subs.map(k=>{ const isVideo=DEFAULT_TOPICS[k]?.kind==='video'; const kindLabel=isVideo?'🎥 VIDEO LECTURE':'📚 TOPIC'; return `<option value="${k}">${kindLabel} · ${DEFAULT_TOPICS[k]?.name||k}</option>`; }).join('');
   if (selected && subs.includes(selected)) document.getElementById('cal-subject-sel').value = selected;
   updateCalTopics(selectedTopicIdx);
 }
@@ -11442,7 +11803,11 @@ function renderCalView() {
 function updateCalTopics(selectedIdx) {
   const sKey = document.getElementById('cal-subject-sel').value;
   const topics = state.topics[sKey] || [];
-  document.getElementById('cal-topic-sel').innerHTML = '<option value="">— Comprehensive / Multiple Topics —</option>'+topics.map((t,i)=>`<option value="${i}">${i+1}. ${t.name}</option>`).join('');
+  const isVideo = !!(sKey && DEFAULT_TOPICS[sKey]?.kind === 'video');
+  const label = document.getElementById('cal-topic-label');
+  if (label) label.innerHTML = `${isVideo ? 'Lecture' : 'Topic'} <span style="font-weight:400;color:var(--muted)">(optional — leave blank for ${isVideo ? 'a subject-wide lecture session' : 'exams, comprehensive review, or multi-topic sessions'})</span>`;
+  const itemKindLabel = isVideo ? '🎥 LECTURE' : '📚 TOPIC';
+  document.getElementById('cal-topic-sel').innerHTML = `<option value="">— ${isVideo ? 'Comprehensive / Multiple Lectures' : 'Comprehensive / Multiple Topics'} —</option>`+topics.map((t,i)=>`<option value="${i}">${itemKindLabel} · ${i+1}. ${t.name}</option>`).join('');
   if (selectedIdx !== undefined && selectedIdx !== null && topics[selectedIdx]) document.getElementById('cal-topic-sel').value = selectedIdx;
 }
 
@@ -11461,6 +11826,19 @@ function calEventSubjectLabel(e) {
   if (e.subjectKey) return DEFAULT_TOPICS[e.subjectKey]?.name || e.subjectKey;
   const mk = calEventMainKey(e);
   return mk ? (SUBJECTS_META[mk]?.name || mk) : 'General';
+}
+
+function calEventKind(e) {
+  if (!e.subjectKey) return null;
+  const kind = DEFAULT_TOPICS[e.subjectKey]?.kind;
+  return kind === 'video' ? 'video' : 'topic';
+}
+
+function calEventKindBadge(e) {
+  const kind = calEventKind(e);
+  if (!kind) return '';
+  const video = kind === 'video';
+  return `<span style="display:inline-block;margin-left:5px;font-size:8px;font-weight:800;letter-spacing:.2px;color:${video?'#8b5cf6':'var(--accent2)'};background:${video?'rgba(139,92,246,.10)':'rgba(34,211,238,.08)'};border:1px solid ${video?'rgba(139,92,246,.22)':'rgba(34,211,238,.18)'};border-radius:999px;padding:1px 5px;text-transform:uppercase">${video?'🎥 Video':'📚 Topic'}</span>`;
 }
 
 // Color to use for an event's pills/borders, based on its main subject.
@@ -11599,7 +11977,7 @@ function renderCalGrid() {
     const eventPills = events.slice(0,3).map((e,i)=>{
       const color=calEventColor(e);
       const actIcon = e.activityType ? (calActivityById(e.activityType)?.icon||'') + ' ' : '';
-      return `<div draggable="true" ondragstart="calDragStart(event,'${dStr}',${i})" ondragend="calDragEnd()" style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;max-width:100%;cursor:grab;">${actIcon}${calEventDisplayName(e)}</div>`;
+      return `<div draggable="true" ondragstart="calDragStart(event,'${dStr}',${i})" ondragend="calDragEnd()" style="background:${color}20;border-left:2px solid ${color};color:${color};font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;margin-bottom:2px;max-width:100%;cursor:grab;">${actIcon}${calEventDisplayName(e)}${calEventKindBadge(e)}</div>`;
     }).join('');
     const moreLabel = events.length > 3 ? `<div style="font-size:9px;color:var(--muted);padding:0 2px">+${events.length-3} more</div>` : '';
 
@@ -11671,7 +12049,7 @@ function renderCalWeek() {
         const durH = Math.max(1, Math.round((e.duration||60)/52));
         const actIcon = e.activityType ? (calActivityById(e.activityType)?.icon||'') + ' ' : '';
         const subjLabel = calEventSubjectLabel(e);
-        return `<div draggable="true" ondragstart="calDragStart(event,'${dStr}',${idx})" ondragend="calDragEnd()" style="background:${color}25;border-left:3px solid ${color};padding:2px 5px;font-size:9px;border-radius:3px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;color:${color};font-weight:700;cursor:grab;">${actIcon}${subjLabel} · ${calEventDisplayName(e)}</div>`;
+        return `<div draggable="true" ondragstart="calDragStart(event,'${dStr}',${idx})" ondragend="calDragEnd()" style="background:${color}25;border-left:3px solid ${color};padding:2px 5px;font-size:9px;border-radius:3px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;color:${color};font-weight:700;cursor:grab;">${actIcon}${subjLabel} · ${calEventDisplayName(e)}${calEventKindBadge(e)}</div>`;
       }).join('');
       html += `<div class="cal-week-cell" style="background:${isToday?'rgba(124,106,247,0.03)':'var(--card)'};min-width:0;overflow:hidden;border-bottom:1px solid var(--border);border-left:1px solid var(--border);position:relative;cursor:pointer;padding:2px;transition:background 0.15s;" onclick="selectCalDay('${dStr}')" ondragover="calAllowDrop(event);this.style.outline='2px dashed var(--accent)'" ondragleave="this.style.outline='none'" ondrop="calDropOnSlot(event,'${dStr}',${hour})" onmouseenter="this.style.background='rgba(124,106,247,0.06)'" onmouseleave="this.style.background='${isToday?'rgba(124,106,247,0.03)':'var(--card)'}'">
         ${evContent}
@@ -11713,7 +12091,7 @@ function renderCalDay() {
         const durationPx = Math.max(Math.round((e.duration||60)/60*44), 20);
         const act = e.activityType ? calActivityById(e.activityType) : null;
         html += `<div class="cal-timeline-event" draggable="true" ondragstart="calDragStart(event,'${selectedCalDay}',${idx})" ondragend="calDragEnd()" style="background:${color}25;border-left:3px solid ${color};color:${color};top:2px;height:${durationPx}px;cursor:grab;" title="${act?act.label+' · ':''}${calEventDisplayName(e)}${e.duration ? ' · '+e.duration+'min' : ''}">
-          ${e.time} ${act?act.icon+' ':''}${calEventDisplayName(e)}
+          ${e.time} ${act?act.icon+' ':''}${calEventDisplayName(e)}${calEventKindBadge(e)}
         </div>`;
       });
     }
@@ -11728,7 +12106,7 @@ function renderCalDay() {
     unscheduled.forEach(({e, idx}) => {
       const color = calEventColor(e);
       html += `<div class="cal-timeline-event" draggable="true" ondragstart="calDragStart(event,'${selectedCalDay}',${idx})" ondragend="calDragEnd()" style="position:relative;background:${color}25;border-left:3px solid ${color};color:${color};margin-bottom:2px;height:auto;white-space:normal;cursor:grab;">
-        ${calEventDisplayName(e)} ${e.duration ? '<span style="font-weight:400;opacity:0.7">· '+e.duration+'min</span>' : ''}
+        ${calEventDisplayName(e)}${calEventKindBadge(e)} ${e.duration ? '<span style="font-weight:400;opacity:0.7">· '+e.duration+'min</span>' : ''}
       </div>`;
     });
     html += '</div>';
@@ -11821,7 +12199,7 @@ function renderCalDayEvents() {
     return `<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:8px;padding:10px;margin-bottom:7px;cursor:pointer;transition:background 0.15s" onclick="openEditCalEvent('${selectedCalDay}',${i})" onmouseenter="this.style.background='rgba(124,106,247,0.08)'" onmouseleave="this.style.background='var(--surface)'" title="Click to edit">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div style="font-size:12px;font-weight:600;color:${color}">${calEventSubjectLabel(e)}</div>
+          <div style="font-size:12px;font-weight:600;color:${color}">${calEventSubjectLabel(e)}${calEventKindBadge(e)}</div>
           <div style="font-size:12px;color:var(--text)">${calEventDisplayName(e)}</div>
           ${act?`<div style="display:inline-block;margin-top:3px;font-size:9px;font-weight:700;color:${color};background:${color}18;border-radius:99px;padding:2px 8px">${act.icon} ${act.label}</div>`:''}
           <div style="font-size:10px;color:var(--muted);margin-top:3px">${e.time ? e.time : 'Any time'}${e.duration ? ' · '+e.duration+'min' : ''}${e.notes?' · '+e.notes:''}</div>
@@ -11998,10 +12376,26 @@ window.addEventListener('resize', () => {
 });
 
 let currentSubjectManageTab = null;
+let currentSubjectManageSubSubject = null;
+let settingsOpenSubjectMenu = null;
+function toggleSettingsSubjectMenu(mainKey) {
+  settingsOpenSubjectMenu = settingsOpenSubjectMenu === mainKey ? null : mainKey;
+  currentSubjectManageTab = mainKey;
+  renderSettings();
+}
 let bulkManageMode = false;
 let bulkSelectedSubSubjects = new Set();
 function setSubjectManageTab(mainKey) {
   currentSubjectManageTab = mainKey;
+  currentSubjectManageSubSubject = null;
+  bulkManageMode = false;
+  bulkSelectedSubSubjects.clear();
+  renderSettings();
+}
+
+function selectSettingsSubSubject(mainKey, sk) {
+  currentSubjectManageTab = mainKey;
+  currentSubjectManageSubSubject = sk || null;
   bulkManageMode = false;
   bulkSelectedSubSubjects.clear();
   renderSettings();
@@ -12344,15 +12738,42 @@ function renderSettings() {
   // Koda is now using pure code-based conversation brain (no AI models needed!)
   console.log('✓ Koda ready with conversational code brain (free, fast, local)');
 
-  // Subject management with add/remove topics
+  // Subject management: one main subject at a time, with a nested hamburger
+  // that cleanly separates regular Topics from Video Lectures.
   if (!currentSubjectManageTab) currentSubjectManageTab = MAIN_SUBJECTS[0];
+  if (typeof settingsOpenSubjectMenu === 'undefined') settingsOpenSubjectMenu = currentSubjectManageTab;
   const quicknavEl = document.getElementById('subject-quicknav');
   if (quicknavEl) {
     quicknavEl.innerHTML = MAIN_SUBJECTS.map(mk => {
       const meta = SUBJECTS_META[mk];
       const ms = getMainSubjectStats(mk);
       const isActive = mk === currentSubjectManageTab;
-      return `<button type="button" class="subject-quicknav-btn${isActive?' active':''}" style="color:${isActive?'#fff':meta.color};background:${isActive?meta.color:'var(--surface)'};border-color:${meta.color}55" onclick="setSubjectManageTab('${mk}')">${mk}<span class="qn-count">${ms.completed}/${ms.total}</span></button>`;
+      const open = settingsOpenSubjectMenu === mk;
+      const subs = SUBJECTS_META[mk]?.subs || [];
+      const topicSubs = subs.filter(sk => !DEFAULT_TOPICS[sk] || DEFAULT_TOPICS[sk].kind !== 'video');
+      const videoSubs = subs.filter(sk => DEFAULT_TOPICS[sk] && DEFAULT_TOPICS[sk].kind === 'video');
+
+      const child = (sk, isVideo) => {
+        const it = DEFAULT_TOPICS[sk] || {};
+        const st = getSubjectStats(sk);
+        const safeName = escapeHtml(it.name || sk);
+        return `<button type="button" class="settings-submenu-item" onclick="event.stopPropagation();selectSettingsSubSubject('${mk}','${sk}');" title="Open ${safeName} in ${isVideo?'Video Lectures':'Topics'}"><span>${isVideo?'🎥':'📚'} <span>${safeName}</span></span><span>${st.completed}/${st.total}</span></button>`;
+      };
+
+      const group = (label, icon, items, isVideo) => items.length
+        ? `<div class="settings-submenu-group"><div class="settings-submenu-group-title">${icon} ${label}</div><div class="settings-submenu-list">${items.map(sk => child(sk,isVideo)).join('')}</div></div>`
+        : '';
+
+      return `<div class="settings-subject-menu-wrap${open ? ' open' : ''}">
+        <button type="button" class="subject-quicknav-btn settings-subject-menu-btn${isActive ? ' active' : ''}" style="color:${isActive?'#fff':meta.color};background:${isActive?meta.color:'var(--surface)'};border-color:${meta.color}55" onclick="if(window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches){toggleSettingsSubjectMenu('${mk}')}" aria-expanded="${open}" title="${escapeHtml(meta.name)} — Hover to preview; tap to open on touch devices">
+          <span class="settings-subject-hamburger">${open ? '▾' : '☰'}</span>${mk}<span class="qn-count">${ms.completed}/${ms.total}</span>
+        </button>
+        <div class="settings-subject-submenu" aria-hidden="${!open}">
+          ${group('Topics','📚',topicSubs,false)}
+          ${group('Video Lectures','🎥',videoSubs,true)}
+          ${(!topicSubs.length && !videoSubs.length) ? '<div style="padding:8px;color:var(--muted);font-size:10px">No sub-subjects yet.</div>' : ''}
+        </div>
+      </div>`;
     }).join('');
   }
 
@@ -12399,15 +12820,18 @@ function renderSettings() {
 
     const topicSubKeys = meta.subs.filter(sk => !DEFAULT_TOPICS[sk] || DEFAULT_TOPICS[sk].kind !== 'video');
     const videoSubKeys = meta.subs.filter(sk => DEFAULT_TOPICS[sk] && DEFAULT_TOPICS[sk].kind === 'video');
-    const subRows = topicSubKeys.map(subRow).join('');
-    const videoSection = videoSubKeys.length ? `
-      <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+    const selectedSk = currentSubjectManageSubSubject && meta.subs.includes(currentSubjectManageSubSubject) ? currentSubjectManageSubSubject : null;
+    const filteredTopicSubKeys = selectedSk ? topicSubKeys.filter(sk => sk === selectedSk) : topicSubKeys;
+    const filteredVideoSubKeys = selectedSk ? videoSubKeys.filter(sk => sk === selectedSk) : videoSubKeys;
+    const subRows = filteredTopicSubKeys.map(subRow).join('');
+    const videoSection = filteredVideoSubKeys.length ? `
+      <div id="settings-videos-${mk}" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <div style="font-size:11px;font-weight:700;color:var(--dim)">🎥 Video Lectures <span style="font-weight:400;color:var(--muted)">(separate from subject completion · total = lectures you've added)</span></div>
           <div style="font-size:11px;color:var(--muted)">${msVideo.completed}/${msVideo.total} (${msVideo.pct.toFixed(0)}%)</div>
         </div>
         <div class="progress-bar" style="height:6px;margin-bottom:10px"><div style="height:100%;width:${msVideo.pct.toFixed(1)}%;background:${meta.color};opacity:0.5;border-radius:99px;transition:width 0.5s"></div></div>
-        ${videoSubKeys.map(subRow).join('')}
+        ${filteredVideoSubKeys.map(subRow).join('')}
       </div>` : '';
 
     return `<div id="subj-block-${mk}" style="margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;scroll-margin-top:52px">
@@ -12418,13 +12842,14 @@ function renderSettings() {
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="font-size:11px;color:var(--muted)">${ms.completed}/${ms.total} (${ms.pct.toFixed(0)}%)</div>
+          ${selectedSk ? `<button class="btn btn-ghost btn-sm" onclick="selectSettingsSubSubject('${mk}',null)" title="Show all sub-subjects">← All sub-subjects</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="toggleBulkManageMode()" title="Select multiple sub-subjects (built-in or custom) to delete at once" style="font-size:11px;${bulkManageMode?`background:${meta.color};color:#fff;border-color:${meta.color}`:''}">${bulkManageMode ? '✕ Cancel Bulk' : '☑ Bulk Manage'}</button>
           ${bulkManageMode ? `<button class="btn btn-danger btn-sm" id="bulk-delete-selected-btn" onclick="bulkDeleteSelectedSubSubjects()" ${bulkSelectedSubSubjects.size===0?'disabled':''} style="font-size:11px">🗑 Delete Selected (${bulkSelectedSubSubjects.size})</button>` : ''}
           ${(state.removedBuiltinSubSubjects && state.removedBuiltinSubSubjects[mk] && state.removedBuiltinSubSubjects[mk].length) ? `<button class="btn btn-ghost btn-sm" onclick="restoreRemovedBuiltins('${mk}')" title="Bring back built-in sub-subjects you removed" style="font-size:11px">↺ Restore Built-ins (${state.removedBuiltinSubSubjects[mk].length})</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="promptAddSubSubject('${mk}')" title="Add a new sub-subject to ${mk}" style="font-size:11px;border-color:${meta.color};color:${meta.color}">+ Sub-subject</button>
         </div>
       </div>
-      <div style="padding:10px 14px">${subRows}${videoSection}</div>
+      <div class="settings-subject-scroll">${subRows}${videoSection}</div>
     </div>`;
   }).join('');
 }
@@ -16413,21 +16838,54 @@ setTimeout(()=>{ initCustomMood(); if (state.accentScheme === -1) updateCustomPr
 
   // Calendar visual presets — presentation only.
   window.toggleCalendarStyleMenu=function(ev){
-    ev.stopPropagation();
-    let m=document.getElementById('calendar-style-menu');
-    if(m){m.remove();return;}
-    m=document.createElement('div');m.id='calendar-style-menu';m.className='calendar-style-menu';
-    const presets=[['compact','Compact','Tight cells, fits more on screen'],['comfortable','Comfortable','Balanced default sizing'],['spacious','Spacious','Large cells, more breathing room']];
-    m.innerHTML='<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:var(--muted);padding:3px 7px 8px">CALENDAR STYLE</div>'+presets.map(([id,n,d])=>`<button class="calendar-style-option" onclick="setCalendarStyle('${id}')"><span class="mini"></span><span><strong>${n}</strong><small>${d}</small></span></button>`).join('');
-    document.body.appendChild(m);
-    const r=ev.currentTarget.getBoundingClientRect();m.style.top=(r.bottom+7)+'px';m.style.left=Math.max(8,Math.min(window.innerWidth-238,r.right-230))+'px';
-    setTimeout(()=>document.addEventListener('click',function close(){m.remove();document.removeEventListener('click',close);},{once:true}),0);
+    if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+    const existing=document.getElementById('calendar-style-menu');
+    if(existing){ existing.remove(); document.removeEventListener('pointerdown',window.__closeCalStyleMenu,true); window.__closeCalStyleMenu=null; return; }
+    const anchor=document.getElementById('cal-style-anchor');
+    const btn=document.getElementById('cal-style-btn');
+    if(!anchor || !btn) return;
+    const m=document.createElement('div');
+    m.id='calendar-style-menu';
+    m.className='calendar-style-menu cal-style-attached';
+    m.setAttribute('role','menu');
+    m.innerHTML='<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:var(--muted);padding:3px 7px 8px">CALENDAR STYLE</div>'+
+      [
+        ['compact','Compact','Tight cells — fits more on screen'],
+        ['comfortable','Comfortable','Balanced default sizing'],
+        ['spacious','Spacious','Larger cells — more breathing room']
+      ].map(([id,n,d])=>`<button type="button" class="calendar-style-option" role="menuitem" onclick="setCalendarStyle('${id}')"><span class="mini"></span><span style="min-width:0"><strong>${n}</strong><small>${d}</small></span></button>`).join('');
+    anchor.appendChild(m);
+
+    const place=()=>{
+      const r=anchor.getBoundingClientRect();
+      const h=Math.min(m.scrollHeight||190, Math.max(180, window.innerHeight*0.7));
+      const below=r.bottom + 8;
+      const above=r.top - 8;
+      const flip = below + h > window.innerHeight - 8 && above - h >= 8;
+      m.classList.toggle('flip',flip);
+      m.style.maxHeight=Math.min(330,Math.max(180,window.innerHeight-16))+'px';
+    };
+    requestAnimationFrame(place);
+    window.addEventListener('resize',place,{passive:true});
+    window.addEventListener('scroll',place,{passive:true,capture:true});
+    window.__closeCalStyleMenu=(e)=>{
+      if(e.target.closest('#calendar-style-menu') || e.target.closest('#cal-style-anchor')) return;
+      m.remove();
+      window.removeEventListener('resize',place);
+      window.removeEventListener('scroll',place,true);
+      document.removeEventListener('pointerdown',window.__closeCalStyleMenu,true);
+      window.__closeCalStyleMenu=null;
+    };
+    setTimeout(()=>document.addEventListener('pointerdown',window.__closeCalStyleMenu,true),0);
   };
+
   window.setCalendarStyle=function(style){
     const page=document.getElementById('page-calendar'); if(!page)return;
     page.classList.remove('cal-style-minimal','cal-style-soft','cal-style-focus','cal-style-colorful','cal-style-compact','cal-style-comfortable','cal-style-spacious'); page.classList.add('cal-style-'+style);
     try{localStorage.setItem('cpa-ready-calendar-style',style)}catch(e){}
     const m=document.getElementById('calendar-style-menu');if(m)m.remove();
+    if(typeof renderCalendar==='function') { try{ renderCalendar(); }catch(e){} }
+    if(typeof renderCalendarView==='function') { try{ renderCalendarView(); }catch(e){} }
   };
   function initCalStyle(){
     let st='comfortable';
@@ -16541,7 +16999,7 @@ body.light-mode h1,
 body.light-mode h2,
 body.light-mode h3,
 body.light-mode h4,
-body.light-mode strong,
+body.light-mode strong:not([style*="color:"]),
 body.light-mode label {
   color: #353c48 !important;
 }
