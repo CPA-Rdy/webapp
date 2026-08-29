@@ -4527,11 +4527,11 @@ renderDashboard(); }, 400);
   <div class="conf-guide" id="conf-guide-box" style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;" id="conf-guide-title">🎯 Confidence Level Guide — What do the dots mean?</div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px;" id="conf-guide-sub">Rate how well you understand each topic from 1–5. This is your confidence in the topic itself — not how many times you watched a lecture.</div>
-    <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--danger)"></div><span style="color:var(--danger);font-weight:600;min-width:60px">Level 1</span><span style="color:var(--dim)" id="conf-guide-l1">I read/heard it but can't explain it — total confusion.</span></div>
-    <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--cond)"></div><span style="color:var(--cond);font-weight:600;min-width:60px">Level 2</span><span style="color:var(--dim)" id="conf-guide-l2">I have a rough idea but would struggle on exam questions.</span></div>
-    <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--warn)"></div><span style="color:var(--warn);font-weight:600;min-width:60px">Level 3</span><span style="color:var(--dim)" id="conf-guide-l3">I understand the basics but need more practice and review.</span></div>
-    <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--accent2)"></div><span style="color:var(--accent2);font-weight:600;min-width:60px">Level 4</span><span style="color:var(--dim)" id="conf-guide-l4">I'm quite confident — I can answer most questions on this topic.</span></div>
-    <div class="conf-level-row" style="margin-bottom:0"><div class="conf-level-dot" style="background:var(--pass)"></div><span style="color:var(--pass);font-weight:600;min-width:60px">Level 5</span><span style="color:var(--dim)" id="conf-guide-l5">Fully mastered — I can teach this topic and ace any question.</span></div>
+    <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--danger)"></div><span class="conf-level-label" style="color:var(--danger);font-weight:600;min-width:60px">Level 1</span><span style="color:var(--dim)" id="conf-guide-l1">I read/heard it but can't explain it — total confusion.</span></div>
+    <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--cond)"></div><span class="conf-level-label" style="color:var(--cond);font-weight:600;min-width:60px">Level 2</span><span style="color:var(--dim)" id="conf-guide-l2">I have a rough idea but would struggle on exam questions.</span></div>
+    <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--warn)"></div><span class="conf-level-label" style="color:var(--warn);font-weight:600;min-width:60px">Level 3</span><span style="color:var(--dim)" id="conf-guide-l3">I understand the basics but need more practice and review.</span></div>
+    <div class="conf-level-row"><div class="conf-level-dot" style="background:var(--accent2)"></div><span class="conf-level-label" style="color:var(--accent2);font-weight:600;min-width:60px">Level 4</span><span style="color:var(--dim)" id="conf-guide-l4">I'm quite confident — I can answer most questions on this topic.</span></div>
+    <div class="conf-level-row" style="margin-bottom:0"><div class="conf-level-dot" style="background:var(--pass)"></div><span class="conf-level-label" style="color:var(--pass);font-weight:600;min-width:60px">Level 5</span><span style="color:var(--dim)" id="conf-guide-l5">Fully mastered — I can teach this topic and ace any question.</span></div>
   </div>
   <div class="card tracker-table-wrap" style="overflow:auto;">
     <table>
@@ -8253,6 +8253,13 @@ function toggleWidgetLegend(id, anchorEl) {
   const place = () => {
     const card = pop.querySelector('.widget-info-popover-card');
     if (!card) return;
+    // getBoundingClientRect() / window.innerWidth|Height are already in zoomed
+    // (visual) pixels, but this card sits inside the zoomed <html>, so any
+    // inline px we assign gets multiplied by the zoom factor AGAIN on render —
+    // the popover drifts further from the anchor the higher the text-size
+    // setting goes. Dividing by currentZoomFactor() before assigning cancels
+    // that out (same fix already used for the freeze-pane bars above).
+    const z = (typeof currentZoomFactor === 'function') ? currentZoomFactor() : 1;
     const ar = anchor.getBoundingClientRect();
     const gap = 7, margin = 10;
     const cw = Math.min(360, Math.max(240, card.scrollWidth || 280));
@@ -8265,13 +8272,13 @@ function toggleWidgetLegend(id, anchorEl) {
       above = true;
     }
     left = Math.max(margin, Math.min(left, window.innerWidth - cw - margin));
-    card.style.left = Math.round(left) + 'px';
-    card.style.top = Math.round(top) + 'px';
-    card.style.width = cw + 'px';
-    card.style.maxHeight = Math.min(320, window.innerHeight - margin*2) + 'px';
+    card.style.left = Math.round(left / z) + 'px';
+    card.style.top = Math.round(top / z) + 'px';
+    card.style.width = Math.round(cw / z) + 'px';
+    card.style.maxHeight = Math.round(Math.min(320, window.innerHeight - margin*2) / z) + 'px';
     card.style.overflowY = 'auto';
     const arrowLeft = Math.max(14, Math.min(cw - 22, (ar.left + ar.width/2) - left - 6));
-    card.style.setProperty('--info-arrow-left', Math.round(arrowLeft) + 'px');
+    card.style.setProperty('--info-arrow-left', Math.round(arrowLeft / z) + 'px');
     card.classList.toggle('info-above', above);
   };
   requestAnimationFrame(place);
@@ -11142,7 +11149,7 @@ function renderTracker() {
     const row = guideRows[idx];
     if (!el || !row) return;
     const dot = row.querySelector('.conf-level-dot');
-    const label = row.querySelector('span[style*="font-weight:600"]');
+    const label = row.querySelector('.conf-level-label');
     if (isVideoSub && idx >= videoGuide.length) {
       row.style.display = 'none';
       return;
@@ -13888,7 +13895,22 @@ function init() {
         currentTrackerSub = SUBJECTS_META[uiState.trackerMain].subs[0];
       }
     }
-    if (uiState.historyView) historyViewMode = uiState.historyView;
+    if (uiState.historyView) {
+      historyViewMode = uiState.historyView;
+      // Restoring the mode variable alone isn't enough — the List/Roadmap
+      // containers and their buttons also need to match, or the visible
+      // container stays stuck on its default (List) while renderHistoryPage()
+      // thinks it should be filling the other one. setHistoryViewMode() does
+      // this sync normally, but it also calls renderHistoryPage() itself,
+      // which we don't want to trigger yet during startup — so it's inlined
+      // here instead.
+      const listBtn=document.getElementById('history-view-list-btn'), rmBtn=document.getElementById('history-view-roadmap-btn');
+      const listWrap=document.getElementById('history-list-wrap'), rmWrap=document.getElementById('history-roadmap-wrap');
+      if(listBtn) listBtn.className = 'btn btn-sm ' + (historyViewMode==='list'?'btn-primary':'btn-ghost');
+      if(rmBtn) rmBtn.className = 'btn btn-sm ' + (historyViewMode==='roadmap'?'btn-primary':'btn-ghost');
+      if(listWrap) listWrap.style.display = historyViewMode==='list' ? '' : 'none';
+      if(rmWrap) rmWrap.style.display = historyViewMode==='roadmap' ? '' : 'none';
+    }
   } catch (e) {}
 
    renderDashboard();
