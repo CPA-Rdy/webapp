@@ -466,6 +466,26 @@ body.light-mode #page-scoresheet .scoresheet-practice-freeze-target.scoresheet-p
 }
 .widget-info-btn:hover { color:var(--accent2); background:color-mix(in srgb,var(--accent) 8%,transparent); }
 
+/* ---- DASHBOARD IMAGE WIDGET VIEWER ---- */
+.widget-image-viewer { position: fixed; inset: 0; z-index: 10050; display: none; }
+.widget-image-viewer.open { display: block; }
+.widget-image-viewer-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(2px); }
+.widget-image-viewer-card {
+  position: relative; z-index: 1; max-width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
+  margin: 16px auto; top: 50%; transform: translateY(-50%);
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 14px; box-sizing: border-box; box-shadow: 0 20px 48px rgba(0,0,0,.4);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.widget-image-viewer-img { max-width: 100%; max-height: min(70vh, 560px); border-radius: 10px; object-fit: contain; display: block; }
+.widget-image-viewer-close {
+  position: absolute; top: -12px; right: -12px; width: 30px; height: 30px;
+  border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--text);
+  font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+.widget-image-viewer-close:hover { color: var(--danger); }
+.widget-image-viewer-actions { display: flex; gap: 8px; }
+
 /* ---- TABLE ---- */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th {
@@ -866,14 +886,15 @@ body.light-mode.theme-custom select.status-select.status-2 {
 .settings-tab-panel.active > .card { max-width: none !important; margin-top: 0 !important; margin-bottom: 0 !important; width: 100%; height: 100%; box-sizing: border-box; }
 #settings-tab-ai.active { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); align-items: stretch; }
 #settings-tab-ai.active > .card { min-height: 0; }
-#settings-tab-subjects.active, #settings-tab-restdays.active, #settings-tab-appearance.active { grid-template-columns: minmax(0, 1fr); }
-#settings-tab-subjects.active > .card, #settings-tab-restdays.active > .card, #settings-tab-appearance.active > .card { width: 100%; }
+#settings-tab-subjects.active, #settings-tab-restdays.active { grid-template-columns: minmax(0, 1fr); }
+#settings-tab-subjects.active > .card, #settings-tab-restdays.active > .card { width: 100%; }
 #settings-tab-profile.active, #settings-tab-data.active, #settings-tab-about.active { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#settings-tab-appearance.active > .card.appearance-card-wide { grid-column: 1 / -1; }
 #settings-tabbar { width: 100%; }
 #settings-tabbar .settings-tab-btn { flex: 1 1 120px; min-width: 120px; text-align: center; }
 @media (max-width: 860px) {
   .settings-tab-panel.active { grid-template-columns: 1fr; }
-  #settings-tab-subjects.active > .card, #settings-tab-restdays.active > .card, #settings-tab-appearance.active > .card { width: 100%; }
+  #settings-tab-subjects.active > .card, #settings-tab-restdays.active > .card { width: 100%; }
 }
 
 .settings-tab-btn { opacity: 0.7; padding: 11px 20px !important; font-size: 15px !important; font-weight: 600; border-radius: 10px; }
@@ -1489,7 +1510,7 @@ body.light-mode .tracker-menu-dropdown:has(.tracker-menu.open) .hamburger-icon {
     font-size: 20px !important;
     line-height: 1.25 !important;
   }
-  #page-dashboard #dash-fixed-bar h2 span#dash-clause-span {
+  #page-dashboard #dash-fixed-bar p#dash-clause-span {
     font-size: 13px !important;
   }
   #page-dashboard #dash-fixed-bar > div:first-child {
@@ -3427,6 +3448,100 @@ function widgetTitleIcon(type){
 body.light-mode .widget-title-icon, body.light-mode .add-widget-card .aw-icon{box-shadow:0 6px 14px color-mix(in srgb,var(--wi-a) 15%,transparent),inset 0 1px 0 rgba(255,255,255,.36);}
 </style>
 
+<style id="streak-widget-fun-css">
+/* Streak widget — flame flair, visual only. */
+@keyframes streak-flame-flicker{
+  0%,100%{ transform:rotate(-3deg) scale(1); }
+  25%{ transform:rotate(2deg) scale(1.05); }
+  50%{ transform:rotate(-1deg) scale(0.98); }
+  75%{ transform:rotate(3deg) scale(1.04); }
+}
+@keyframes streak-number-glow{
+  0%,100%{ text-shadow:0 0 6px color-mix(in srgb,var(--warn) 45%,transparent); }
+  50%{ text-shadow:0 0 16px color-mix(in srgb,var(--warn) 75%,transparent); }
+}
+@keyframes streak-dot-pulse{
+  0%,100%{ box-shadow:0 0 5px color-mix(in srgb,var(--accent) 60%,transparent); }
+  50%{ box-shadow:0 0 11px color-mix(in srgb,var(--accent) 90%,transparent); }
+}
+@keyframes streak-bg-drift{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  50%{ transform:translate(3%,-3%) scale(1.06); }
+}
+.streak-widget-fun{ position:relative; }
+.streak-widget-fun::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(circle at 85% 15%, color-mix(in srgb,#f97316 16%,transparent), transparent 60%);
+  opacity:0;transition:opacity .3s ease;
+}
+.streak-widget-fun.is-active::before{ opacity:1; animation:streak-bg-drift 6s ease-in-out infinite; }
+.streak-widget-fun .streak-flame-wrap{ position:relative; z-index:1; }
+.streak-widget-fun.is-active .streak-flame-wrap{ animation:streak-flame-flicker 2.4s ease-in-out infinite; }
+.streak-widget-fun.is-active .streak-number-fun{ animation:streak-number-glow 2.4s ease-in-out infinite; }
+.streak-dot{ width:10px; height:10px; border-radius:3px; background:var(--border); transition:transform .15s ease; }
+.streak-dot.is-active{ background:linear-gradient(135deg,#f97316,#facc15); }
+.streak-dot.is-today{ background:linear-gradient(135deg,var(--accent),#5b8cff); animation:streak-dot-pulse 1.8s ease-in-out infinite; }
+.streak-widget-fun:hover .streak-dot.is-active{ transform:scale(1.15); }
+.streak-milestone-bar{ height:5px; border-radius:99px; background:var(--border); overflow:hidden; }
+.streak-milestone-fill{ height:100%; border-radius:99px; background:linear-gradient(90deg,#f97316,#facc15); transition:width .3s ease; }
+.streak-embers{ position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden; border-radius:inherit; }
+.streak-embers span{
+  position:absolute; bottom:-6px; width:4px; height:4px; border-radius:50%;
+  background:radial-gradient(circle,#facc15,#f97316); opacity:0;
+  animation:streak-ember-rise 4.5s ease-in infinite;
+}
+.streak-embers span:nth-child(1){ left:78%; animation-delay:0s; }
+.streak-embers span:nth-child(2){ left:85%; animation-delay:1.2s; }
+.streak-embers span:nth-child(3){ left:91%; animation-delay:2.4s; }
+.streak-embers span:nth-child(4){ left:82%; animation-delay:3.3s; }
+@keyframes streak-ember-rise{
+  0%{ transform:translateY(0) scale(1); opacity:0; }
+  15%{ opacity:.9; }
+  80%{ opacity:.35; }
+  100%{ transform:translateY(-70px) scale(0.4); opacity:0; }
+}
+</style>
+
+<style id="countdown-widget-fun-css">
+/* Days to CPALE — urgency-tinted flair, visual only. */
+.countdown-widget-fun{ --cd-a:#5b8cff; --cd-b:#7c6af7; position:relative; overflow:hidden; }
+.countdown-widget-fun::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 0%, color-mix(in srgb,var(--cd-a) 16%,transparent), transparent 65%);
+}
+.countdown-widget-fun.tier-chill{  --cd-a:#3b82f6; --cd-b:#5b8cff; }
+.countdown-widget-fun.tier-steady{ --cd-a:#8b5cf6; --cd-b:#a78bfa; }
+.countdown-widget-fun.tier-crunch{ --cd-a:#f59e0b; --cd-b:#facc15; }
+.countdown-widget-fun.tier-final{  --cd-a:#ef4444; --cd-b:#f97316; }
+.countdown-widget-fun.tier-examday{ --cd-a:#22c55e; --cd-b:#14b8a6; }
+.countdown-number-fun{ color:var(--cd-a); transition:color .3s ease; }
+.countdown-widget-fun.tier-final .countdown-number-fun,
+.countdown-widget-fun.tier-examday .countdown-number-fun{ animation:streak-number-glow 2.2s ease-in-out infinite; text-shadow:0 0 6px color-mix(in srgb,var(--cd-a) 45%,transparent); }
+.countdown-tier-pill{
+  display:inline-block; font-size:10.5px; font-weight:700; padding:4px 11px; border-radius:999px;
+  color:var(--cd-a); background:color-mix(in srgb,var(--cd-a) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--cd-a) 30%,transparent);
+}
+.countdown-embers{ position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden; border-radius:inherit; }
+.countdown-widget-fun.tier-final .countdown-embers span,
+.countdown-widget-fun.tier-examday .countdown-embers span{
+  position:absolute; bottom:-6px; width:4px; height:4px; border-radius:50%;
+  background:radial-gradient(circle,var(--cd-b),var(--cd-a)); opacity:0;
+  animation:streak-ember-rise 4.5s ease-in infinite;
+}
+.countdown-embers span:nth-child(1){ left:15%; animation-delay:0s; }
+.countdown-embers span:nth-child(2){ left:50%; animation-delay:1.5s; }
+.countdown-embers span:nth-child(3){ left:80%; animation-delay:3s; }
+</style>
+
+<style id="app-version-badge-css">
+.app-version-badge{
+  font-size:9px; font-weight:700; letter-spacing:.5px;
+  color:var(--muted); opacity:.6; margin-bottom:4px;
+  font-family:var(--font-mono, monospace);
+}
+</style>
+
 
 <style id="widget-badge-icons-final">
 /* Badge-style widget identity inspired by the Study History achievement badges. */
@@ -3787,6 +3902,7 @@ body:not(.light-mode) .quick-note-status { color:#ded5db; }
   </div>
 
   <div class="sidebar-bottom" onclick="showPage('settings')">
+    <div class="app-version-badge">v1.0</div>
     <div style="font-size:10px;color:var(--muted)">Exam date</div>
     <div id="sidebar-exam" style="font-size:12px;color:var(--accent2);font-weight:600;font-family:var(--font-mono)">—</div>
   </div>
@@ -4225,13 +4341,14 @@ renderDashboard(); }, 400);
 
 <div class="page active" id="page-dashboard">
   <!-- Fixed header bar: greeting + dashboard controls — always visible -->
-  <div id="dash-fixed-bar" style="position:static;width:100%;z-index:2;background:var(--bg);padding:10px 32px 8px;border-bottom:1px solid var(--border);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+  <div id="dash-fixed-bar" style="position:static;width:100%;z-index:2;background:var(--bg);padding:16px 32px 14px;border-bottom:1px solid var(--border);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div>
-        <h2 id="dash-name-heading" style="font-size:26px;font-weight:800;letter-spacing:-0.3px;line-height:1.45;">
-          <span id="dash-greeting-span"></span> <span id="dash-clause-span" style="font-size:16px;font-weight:600;color:var(--accent);"></span>
+        <h2 id="dash-name-heading" style="font-size:28px;font-weight:800;letter-spacing:-0.3px;line-height:1.3;">
+          <span id="dash-greeting-span"></span>
         </h2>
-        <p id="dash-quote-sub" style="color:var(--muted);font-size:12px;margin-top:3px;display:none;"></p>
+        <p id="dash-clause-span" style="font-size:15px;font-weight:500;color:var(--text);margin-top:6px;"></p>
+        <p id="dash-quote-sub" style="color:var(--muted);font-size:12.5px;font-style:italic;margin-top:12px;display:none;"></p>
         <div id="dash-coach-line" style="display:none;"></div>
       </div>
     </div>
@@ -4857,74 +4974,24 @@ renderDashboard(); }, 400);
   </div>
 
   <div id="settings-tab-appearance" class="settings-tab-panel">
-    <div class="card" style="max-width:640px">
-      <div class="section-title">Appearance</div>
+    <!-- Quick controls: mode + ready-made theme presets, together since both are one-click choices -->
+    <div class="card">
+      <div class="section-title">Mode &amp; Theme</div>
 
-      <div style="margin-bottom:20px">
-        <label style="margin-bottom:12px;display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">Theme</label>
-        <div id="color-scheme-picker" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
-      </div>
-
-      <hr class="divider">
-
-      <div style="margin-bottom:20px">
-        <label style="margin-bottom:4px;display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">Make Your Own Look</label>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6">No color theory needed. Pick a main color and a mood — the app builds the rest of the palette for you.</div>
-
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px">
-            <div>
-              <div style="font-size:11px;font-weight:800;letter-spacing:.7px;color:var(--dim)">1. CHOOSE YOUR MAIN COLOR</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px">This is the color people will notice most.</div>
-            </div>
-            <label for="custom-color-1" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <span id="cprev-hex1" style="font-size:10px;color:var(--dim);font-family:var(--font-mono)">#7c6af7</span>
-              <span id="cprev-swatch1" style="width:42px;height:34px;border-radius:9px;background:#7c6af7;border:1px solid var(--border);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)"></span>
-            </label>
-            <input type="color" id="custom-color-1" value="#7c6af7" oninput="updateCustomPreview()" style="width:44px;height:36px;padding:2px;border:1px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer">
-          </div>
-
-          <div style="font-size:10px;font-weight:800;letter-spacing:.7px;color:var(--dim);margin:12px 0 8px">2. PICK A MOOD</div>
-          <div id="custom-mood-picker" style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">
-            <button type="button" class="custom-mood-btn" data-mood="soft" title="quiet & airy" onclick="setCustomMood('soft')">☁️<span>Soft</span></button>
-            <button type="button" class="custom-mood-btn" data-mood="dreamy" title="blush & ethereal" onclick="setCustomMood('dreamy')">🌸<span>Dreamy</span></button>
-            <button type="button" class="custom-mood-btn" data-mood="fresh" title="mint & clean" onclick="setCustomMood('fresh')">🌿<span>Fresh</span></button>
-            <button type="button" class="custom-mood-btn" data-mood="warm" title="cozy & sunny" onclick="setCustomMood('warm')">☀️<span>Warm</span></button>
-            <button type="button" class="custom-mood-btn" data-mood="focus" title="crisp & grounded" onclick="setCustomMood('focus')">🌌<span>Focus</span></button>
-          </div>
-
-          <div style="margin-top:12px;padding:10px 11px;border-radius:12px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;gap:10px">
-            <div id="custom-preview-main" style="width:46px;height:24px;border-radius:7px;background:#7c6af7"></div>
-            <div id="custom-preview-support" style="width:46px;height:24px;border-radius:7px;background:#a78bfa"></div>
-            <div id="custom-preview-highlight" style="width:46px;height:24px;border-radius:7px;background:#34d399"></div>
-            <div style="font-size:10px;color:var(--muted);line-height:1.45"><strong id="custom-mood-live" style="color:var(--dim)">Mood: Soft</strong><br><span id="custom-mood-description">quiet, airy & gentle</span> — this choice changes the whole atmosphere, not just the palette.</div>
-          </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <label style="margin:0">Appearance Mode</label>
+        <div class="toggle" onclick="toggleDarkMode()">
+          <div class="toggle-switch" id="dark-mode-toggle"></div>
         </div>
-
-        <details style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0 12px;margin-bottom:10px">
-          <summary style="cursor:pointer;padding:11px 2px;font-size:10px;font-weight:800;letter-spacing:.8px;color:var(--dim)">ADVANCED: CHOOSE ALL 3 COLORS YOURSELF</summary>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 0 12px">
-            <label style="font-size:10px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px">Supporting color<input type="color" id="custom-color-2" value="#a78bfa" oninput="updateCustomPreview()" style="width:44px;height:32px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer"></label>
-            <label style="font-size:10px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px">Highlight color<input type="color" id="custom-color-3" value="#34d399" oninput="updateCustomPreview()" style="width:44px;height:32px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer"></label>
-          </div>
-        </details>
-
-        <div style="margin-top:8px;padding:9px 11px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-size:10px;color:var(--muted);line-height:1.6;">
-          💡 <strong style="color:var(--dim)">Tip:</strong> If you just want a pretty theme, choose one main color + a mood. The app will keep the colors gentle and coordinated.
-        </div>
-        <button class="btn btn-primary" style="width:100%;margin-top:12px;font-size:13px;letter-spacing:0.3px" onclick="applyCustomColors()">✦ Apply My Theme</button>
       </div>
 
-      <hr class="divider">
+      <label style="margin-bottom:12px;display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">Theme presets</label>
+      <div id="color-scheme-picker" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
+    </div>
 
-      <div style="margin-bottom:20px">
-        <label style="margin-bottom:4px;display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">Subject Colors</label>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">Set your own color for each subject — used across the tracker, dashboard rings, and scoresheet.</div>
-        <div id="subject-color-picker" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
-        <button class="btn btn-ghost btn-sm" onclick="resetAllSubjectColors()">↺ Reset All to Default</button>
-      </div>
-
-      <hr class="divider">
+    <!-- Typography: font family + size together, both text controls -->
+    <div class="card">
+      <div class="section-title">Typography</div>
 
       <div class="form-row">
         <label>Font Style</label>
@@ -4970,18 +5037,71 @@ renderDashboard(); }, 400);
         <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Tip: the top group are all similar modern sans-serif fonts, so switching between them can look subtle. Pick one from the other groups if you want a change that's obvious at a glance.</div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row" style="margin-bottom:0">
         <label>Font Size</label>
         <div id="font-size-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
         <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Scales text and spacing across the whole app — sidebar, tables, dashboard, everything — not just this page.</div>
       </div>
+    </div>
 
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <label style="margin:0">Appearance Mode</label>
-        <div class="toggle" onclick="toggleDarkMode()">
-          <div class="toggle-switch" id="dark-mode-toggle"></div>
+    <!-- Custom palette builder: the most involved control, spans both columns for room to breathe -->
+    <div class="card appearance-card-wide">
+      <div class="section-title">Make Your Own Look</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6">No color theory needed. Pick a main color and a mood — the app builds the rest of the palette for you.</div>
+
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px;align-items:start">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px">
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.7px;color:var(--dim)">1. CHOOSE YOUR MAIN COLOR</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">This is the color people will notice most.</div>
+            </div>
+            <label for="custom-color-1" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <span id="cprev-hex1" style="font-size:10px;color:var(--dim);font-family:var(--font-mono)">#7c6af7</span>
+              <span id="cprev-swatch1" style="width:42px;height:34px;border-radius:9px;background:#7c6af7;border:1px solid var(--border);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)"></span>
+            </label>
+            <input type="color" id="custom-color-1" value="#7c6af7" oninput="updateCustomPreview()" style="width:44px;height:36px;padding:2px;border:1px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer">
+          </div>
+
+          <div style="font-size:10px;font-weight:800;letter-spacing:.7px;color:var(--dim);margin:12px 0 8px">2. PICK A MOOD</div>
+          <div id="custom-mood-picker" style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">
+            <button type="button" class="custom-mood-btn" data-mood="soft" title="quiet & airy" onclick="setCustomMood('soft')">☁️<span>Soft</span></button>
+            <button type="button" class="custom-mood-btn" data-mood="dreamy" title="blush & ethereal" onclick="setCustomMood('dreamy')">🌸<span>Dreamy</span></button>
+            <button type="button" class="custom-mood-btn" data-mood="fresh" title="mint & clean" onclick="setCustomMood('fresh')">🌿<span>Fresh</span></button>
+            <button type="button" class="custom-mood-btn" data-mood="warm" title="cozy & sunny" onclick="setCustomMood('warm')">☀️<span>Warm</span></button>
+            <button type="button" class="custom-mood-btn" data-mood="focus" title="crisp & grounded" onclick="setCustomMood('focus')">🌌<span>Focus</span></button>
+          </div>
+
+          <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:0 12px;margin-top:12px">
+            <summary style="cursor:pointer;padding:11px 2px;font-size:10px;font-weight:800;letter-spacing:.8px;color:var(--dim)">ADVANCED: CHOOSE ALL 3 COLORS YOURSELF</summary>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 0 12px">
+              <label style="font-size:10px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px">Supporting color<input type="color" id="custom-color-2" value="#a78bfa" oninput="updateCustomPreview()" style="width:44px;height:32px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer"></label>
+              <label style="font-size:10px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px">Highlight color<input type="color" id="custom-color-3" value="#34d399" oninput="updateCustomPreview()" style="width:44px;height:32px;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer"></label>
+            </div>
+          </details>
+        </div>
+
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div style="padding:10px 11px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;gap:10px">
+            <div id="custom-preview-main" style="width:40px;height:24px;border-radius:7px;background:#7c6af7;flex:none"></div>
+            <div id="custom-preview-support" style="width:40px;height:24px;border-radius:7px;background:#a78bfa;flex:none"></div>
+            <div id="custom-preview-highlight" style="width:40px;height:24px;border-radius:7px;background:#34d399;flex:none"></div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.45"><strong id="custom-mood-live" style="color:var(--dim)">Mood: Soft</strong><br><span id="custom-mood-description">quiet, airy & gentle</span> — this choice changes the whole atmosphere, not just the palette.</div>
+          </div>
+          <div style="margin-top:10px;padding:9px 11px;background:var(--surface);border:1px solid var(--border);border-radius:9px;font-size:10px;color:var(--muted);line-height:1.6;">
+            💡 <strong style="color:var(--dim)">Tip:</strong> If you just want a pretty theme, choose one main color + a mood. The app will keep the colors gentle and coordinated.
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:auto;padding-top:10px;font-size:13px;letter-spacing:0.3px" onclick="applyCustomColors()">✦ Apply My Theme</button>
         </div>
       </div>
+    </div>
+
+    <!-- Subject colors: its own focused card -->
+    <div class="card appearance-card-wide">
+      <div class="section-title">Subject Colors</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">Set your own color for each subject — used across the tracker, dashboard rings, and scoresheet.</div>
+      <div id="subject-color-picker" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:10px"></div>
+      <button class="btn btn-ghost btn-sm" onclick="resetAllSubjectColors()">↺ Reset All to Default</button>
     </div>
   </div>
 
@@ -5080,7 +5200,7 @@ renderDashboard(); }, 400);
       </div>
       <div class="add-widget-card" onclick="addWidget('weak_topics')">
         <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="weak_topics" aria-hidden="true">🩹</span></div>
-        <div class="aw-name">Weak Topics</div>
+        <div class="aw-name">Priority Topics</div>
         <div class="aw-desc">Lowest confidence + drill score, combined</div>
       </div>
       <div class="add-widget-card" onclick="addWidget('video_bars')">
@@ -5140,11 +5260,6 @@ renderDashboard(); }, 400);
         <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="progress" aria-hidden="true">💫</span></div>
         <div class="aw-name">Progress Ring</div>
         <div class="aw-desc">Topic completion ring</div>
-      </div>
-      <div class="add-widget-card" onclick="addWidget('quote')">
-        <div class="aw-icon"><span class="widget-icon-emoji" data-widget-icon-type="quote" aria-hidden="true">💬</span></div>
-        <div class="aw-name">Motivational Quote</div>
-        <div class="aw-desc">Your saved quote</div>
       </div>
     </div>
     <button class="btn btn-ghost" onclick="closeModal('modal-add-widget')" style="width:100%;margin-top:14px">Cancel</button>
@@ -7751,58 +7866,58 @@ function dashboardMotivationLine(firstName) {
   // someone — say it plainly, with the number, regardless of what the
   // absolute level is yet.
   const improvingWithNumbers = [
-    `Nice — your recent scores are climbing! Keep that going, ${name}! 📈`,
-    `${name}, that's real movement: your last few attempts are trending up. Whatever you changed, keep doing it! 🔥`,
-    `Your last few scores are trending up — good work, ${name}! 🎉`,
+    `Your recent scores are climbing — whatever you're doing, keep at it.`,
+    `That's real movement: your last few attempts are trending up.`,
+    `Nice, ${name} — your scores are actually going up. That's the hard part done.`,
   ];
   // Struggling and paired with a close exam date — still direct, but the
   // number stays out of it. The point isn't to restate the score, it's
   // to point at what to do with the days that are left.
   const strugglingExamNear = [
-    `${name}, recent scores haven't landed where you want yet, and the exam is getting close. ${daysStudied > 0 ? `You've already put in ${daysStudied} day${daysStudied === 1 ? '' : 's'} this week` : 'Time to get back to it'} — that effort is what turns this around. 💪`,
-    `The exam is close and recent scores are rough, ${name} — but that's exactly what the remaining days are for. Focus on your weakest topics first!`,
-    `${name}, this is the stretch that matters most: exam's near, and you know which topics still need work. ${studiedNote ? studiedNote + '!' : 'Start today!'}`,
+    `Recent scores haven't landed where you want yet, and the exam's getting close. ${daysStudied > 0 ? `You've put in ${daysStudied} day${daysStudied === 1 ? '' : 's'} this week already` : 'Worth getting back into it today'} — that's what turns this around.`,
+    `Exam's close and the scores are rough right now, ${name}. That's exactly what the remaining days are for — hit your weakest topics first.`,
+    `This is the stretch that matters most: you know which topics still need work. ${studiedNote ? studiedNote + '.' : "Start there today."}`,
   ];
   // Struggling, no exam pressure yet — plain, kind, and pointed at what
   // they've actually done instead of the number they're unhappy with.
   const struggling = [
-    `${name}, recent scores aren't where you want them yet — that's normal this early. ${studiedNote ? studiedNote + ', which is what actually moves the needle!' : "Log a study day and it'll start moving!"}`,
-    `A rough stretch of scores doesn't erase the work you've put in, ${name}! ${topicsNote ? topicsNote + '. ' : ''}Keep going — you've got this! 🌱`,
-    `${name}, the subjects giving you trouble now are just telling you where to focus next — nothing more!`,
+    `Scores aren't where you want them yet — that's pretty normal this early. ${studiedNote ? studiedNote + ", and that's what actually moves the needle." : "Log a study day and it'll start shifting."}`,
+    `A rough stretch of scores doesn't erase the work you've put in. ${topicsNote ? topicsNote + '. ' : ''}Keep going.`,
+    `The subjects giving you trouble right now are just telling you where to focus next — nothing more.`,
   ];
   // Exam close, scores fine or no data yet — practical countdown framing.
   const examImminent = [
-    `⏳ ${examDays} days to CPALE, ${name}! ${topicsNote ? topicsNote + ' — ' : ''}stay steady, not frantic, from here.`,
-    `${name}, you're ${examDays} days out! ${studiedNote ? studiedNote + '.' : 'Keep the routine going!'} That's the whole game now.`,
-    `${examDays} days left, ${name} — enough time to review well if you keep the pace you're on! 💪`,
+    `${examDays} days to CPALE. ${topicsNote ? topicsNote + ' — ' : ''}steady, not frantic, from here.`,
+    `You're ${examDays} days out. ${studiedNote ? studiedNote + '.' : 'Keep the routine going.'} That's the whole game now.`,
+    `${examDays} days left — enough time to review well if you keep the pace you're on.`,
   ];
   const examApproaching = [
-    `${examDays} days until your exam, ${name}. ${topicsNote ? topicsNote + ' — ' : ''}good time to tighten up your weaker subjects!`,
-    `${name}, ${examDays} days out! ${studiedNote ? studiedNote + '.' : 'A steady routine from here makes the biggest difference.'}`,
-    `${examDays} days to go, ${name} — plenty of runway if you keep showing up! 🚀`,
+    `${examDays} days until your exam. ${topicsNote ? topicsNote + ' — ' : ''}good time to tighten up your weaker subjects.`,
+    `${examDays} days out, ${name}. ${studiedNote ? studiedNote + '.' : 'A steady routine from here makes the biggest difference.'}`,
+    `${examDays} days to go — plenty of runway if you keep showing up.`,
   ];
 
   // Streak-based fallback, still progress-first: lead with what they've
   // built (streak, topics done) rather than what's left.
   const noStreakYet = [
-    topicsNote ? `${name}, no active streak right now, but ${topicsNote.toLowerCase()}! Pick it back up today.` : `Ready when you are, ${name} — log a study day to get moving! 🚀`,
-    streak.longest > 0 ? `Your best streak so far is ${streak.longest} day${streak.longest === 1 ? '' : 's'}, ${name} — you've done this before, you can start it again! 🔥` : `Every streak starts at zero, ${name}. Today's a good day to begin!`,
+    topicsNote ? `No active streak right now, but ${topicsNote.toLowerCase()}. Pick it back up today.` : `Ready when you are — log a study day to get moving.`,
+    streak.longest > 0 ? `Your best streak so far is ${streak.longest} day${streak.longest === 1 ? '' : 's'} — you've done this before, you can start it again.` : `Every streak starts at zero. Today's a good day to begin.`,
   ];
   const day1 = [
-    `Day 1, ${name} — that's the hardest one done! 🎉`,
-    `Nice start, ${name}! One day logged, one day closer.`,
+    `Day 1 done — that's the hardest one.`,
+    `Nice start. One day logged, one day closer.`,
   ];
   const building = [
-    `${streak.current}-day streak, ${name}${topicsNote ? ` — ${topicsNote.toLowerCase()}` : ''}! Keep it up! 🔥`,
-    `${name}, ${streak.current} days in a row now! That consistency is doing more than it feels like.`,
+    `${streak.current} days in a row now${topicsNote ? ` — ${topicsNote.toLowerCase()}` : ''}. Keep it up.`,
+    `${streak.current} days in a row — that consistency is doing more than it feels like.`,
   ];
   const strongLoggedToday = [
-    `${streak.current}-day streak, ${name} — solid! ${topicsNote ? topicsNote + '!' : ''} 🔥`,
-    `${name}, ${streak.current} days straight! This is what a real routine looks like. 💪`,
+    `${streak.current}-day streak — solid. ${topicsNote ? topicsNote + '.' : ''}`,
+    `${streak.current} days straight. This is what a real routine looks like.`,
   ];
   const strongAtRisk = [
-    `${name}, your streak is at ${streak.current} days but you haven't logged today yet — don't let it slip now! ⚡`,
-    `${streak.current} days built, ${name}! Log today before it resets.`,
+    `Your streak's at ${streak.current} days but you haven't logged today yet — don't let it slip now.`,
+    `${streak.current} days built. Log today before it resets.`,
   ];
 
   // Priority: not-yet-passing scores paired with a near exam date is the
@@ -7835,14 +7950,18 @@ function renderDashboard() {
   const greetEl = document.getElementById('dash-greeting-span');
   if (greetEl) greetEl.textContent = `${greeting}, ${firstName}! 👋`;
   const clauseEl = document.getElementById('dash-clause-span');
-  if (clauseEl) clauseEl.textContent = dashboardInsightLine(firstName);
+  if (clauseEl) {
+    const clauseText = dashboardInsightLine(firstName);
+    // Highlight the day-count portion (e.g. "2 days", "5-day streak") in accent color.
+    clauseEl.innerHTML = clauseText.replace(/(\d+[\s-]?days?)/i, '<strong style="color:var(--accent)">$1</strong>');
+  }
   // The user's own custom quote (Settings) is their own words, so it stays
   // on its own small line beneath rather than getting folded into the
   // generated sentence above — only shown when they've actually set one.
   const quoteSubEl = document.getElementById('dash-quote-sub');
   if (quoteSubEl) {
     const quoteText = String(state.quote || '').trim();
-    quoteSubEl.textContent = quoteText || DEFAULT_MOTIVATIONAL_QUOTE;
+    quoteSubEl.textContent = `"${quoteText || DEFAULT_MOTIVATIONAL_QUOTE}"`;
     quoteSubEl.style.display = '';
   }
   document.getElementById('sidebar-name').textContent = name;
@@ -8000,9 +8119,16 @@ function getWeakTopics(limit) {
 }
 
 const weakTopicFilters = {};
+const weakTopicPriorityFilters = {};
+const weakPriorityTier = v => v<50 ? 'high' : 'medium'; // rows here are already <75
 
 function setWeakTopicFilter(widgetId, mainKey) {
   weakTopicFilters[widgetId] = mainKey || 'ALL';
+  renderWeakTopics(widgetId);
+}
+
+function setWeakTopicPriorityFilter(widgetId, tier) {
+  weakTopicPriorityFilters[widgetId] = tier || 'ALL';
   renderWeakTopics(widgetId);
 }
 
@@ -8015,32 +8141,11 @@ function renderWeakTopics(widgetId) {
 
   const availableSubjects = [...new Set(allRows.map(r => r.mainSubj))];
   const activeFilter = weakTopicFilters[widgetId] || 'ALL';
-  const rows = activeFilter === 'ALL' ? allRows : allRows.filter(r => r.mainSubj === activeFilter);
+  const activePriority = weakTopicPriorityFilters[widgetId] || 'ALL';
+  const priorityCounts = { high: allRows.filter(r=>weakPriorityTier(r.combined)==='high').length, medium: allRows.filter(r=>weakPriorityTier(r.combined)==='medium').length };
+  let rows = activeFilter === 'ALL' ? allRows : allRows.filter(r => r.mainSubj === activeFilter);
+  if (activePriority !== 'ALL') rows = rows.filter(r => weakPriorityTier(r.combined) === activePriority);
   const filteredWeakCount = rows.length;
-
-  if (!coveredCount) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px 0">Rate a topic's confidence in the Topic Tracker, or log a Practice/Drill score against a specific topic, and your weakest spots will show up here.</div>`;
-    if (footerEl) footerEl.innerHTML = `
-      <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">0 of ${totalTopics} regular topics have data yet.</div>
-        <button class="btn btn-ghost btn-sm" onclick="showPage('tracker')">↗ Rate topics in Tracker</button>
-      </div>`;
-    return;
-  }
-
-  if (!rows.length) {
-    el.innerHTML = `<div style="color:var(--pass);font-size:12px;padding:8px 0;text-align:center">🎉 Nothing weak right now — every topic you've rated or drilled is at 75%+.</div>`;
-    if (footerEl) footerEl.innerHTML = `
-      <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${coveredCount} of ${totalTopics} regular topics have data.</div>
-        <button class="btn btn-ghost btn-sm" onclick="showPage('tracker')">↗ Rate more in Tracker</button>
-      </div>`;
-    return;
-  }
-
-  const colorFor = v => v===null ? 'var(--muted)' : v>=75?'var(--pass)':v>=50?'var(--warn)':'var(--danger)';
-  const grouped = {};
-  rows.forEach(r => (grouped[r.mainSubj] ||= []).push(r));
 
   const subjectButtons = [
     `<button type="button" onclick="setWeakTopicFilter('${widgetId}','ALL')" style="border:1px solid ${activeFilter==='ALL'?'var(--accent)':'var(--border)'};background:${activeFilter==='ALL'?'color-mix(in srgb,var(--accent) 12%,transparent)':'transparent'};color:${activeFilter==='ALL'?'var(--accent2)':'var(--muted)'};padding:4px 8px;border-radius:999px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">All</button>`,
@@ -8052,8 +8157,48 @@ function renderWeakTopics(widgetId) {
       return `<button type="button" onclick="setWeakTopicFilter('${widgetId}','${k}')" title="Show weak topics for ${escapeHtml(label)}" style="border:1px solid ${active?c:'var(--border)'};background:${active?c+'18':'transparent'};color:${active?c:'var(--muted)'};padding:4px 8px;border-radius:999px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">${escapeHtml(label)}</button>`;
     })
   ].join('');
+  const priorityButtons = [
+    {k:'ALL', label:`All (${allRows.length})`},
+    {k:'high', label:`🔴 High (${priorityCounts.high})`},
+    {k:'medium', label:`🟡 Medium (${priorityCounts.medium})`}
+  ].map(({k,label}) => {
+    const active = activePriority === k;
+    return `<button type="button" onclick="setWeakTopicPriorityFilter('${widgetId}','${k}')" style="border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'color-mix(in srgb,var(--accent) 12%,transparent)':'transparent'};color:${active?'var(--accent2)':'var(--muted)'};padding:4px 8px;border-radius:999px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">${label}</button>`;
+  }).join('');
+  const filterBar = `<div style="display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 6px">${priorityButtons}</div><div style="display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none;white-space:nowrap">${subjectButtons}</div>`;
 
-  const filterBar = `<div style="display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none;white-space:nowrap">${subjectButtons}</div>`;
+  if (!coveredCount) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px 0">Rate a topic's confidence in the Topic Tracker, or log a Practice/Drill score against a specific topic, and your weakest spots will show up here.</div>`;
+    if (footerEl) footerEl.innerHTML = `
+      <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">0 of ${totalTopics} regular topics have data yet.</div>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('tracker')">↗ Rate topics in Tracker</button>
+      </div>`;
+    return;
+  }
+
+  if (!allRows.length) {
+    el.innerHTML = `<div style="color:var(--pass);font-size:12px;padding:8px 0;text-align:center">🎉 Nothing weak right now — every topic you've rated or drilled is at 75%+.</div>`;
+    if (footerEl) footerEl.innerHTML = `
+      <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${coveredCount} of ${totalTopics} regular topics have data.</div>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('tracker')">↗ Rate more in Tracker</button>
+      </div>`;
+    return;
+  }
+
+  if (!rows.length) {
+    el.innerHTML = filterBar + `<div style="color:var(--muted);font-size:12px;padding:12px 4px;text-align:center">No topics match this filter.</div>`;
+    if (footerEl) footerEl.innerHTML = `
+      <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${coveredCount} of ${totalTopics} regular topics have data.</div>
+      </div>`;
+    return;
+  }
+
+  const colorFor = v => v===null ? 'var(--muted)' : v>=75?'var(--pass)':v>=50?'var(--warn)':'var(--danger)';
+  const grouped = {};
+  rows.forEach(r => (grouped[r.mainSubj] ||= []).push(r));
 
   const filteredGrouping = Object.entries(grouped);
   const body = filteredGrouping.map(([mainKey, subjectRows]) => {
@@ -8110,7 +8255,7 @@ let cropStartX, cropStartY, cropEndX, cropEndY, cropDragging = false;
 const DEFAULT_WIDGETS = [
   { id:'w_countdown2', type:'countdown',       cols:2,  rows:12 },
   { id:'w_completion', type:'completion_card', cols:10, rows:12 },
-  { id:'w_scorecards', type:'score_stat_cards',cols:12, rows:10 },
+  { id:'w_scorecards', type:'score_stat_cards',cols:12, rows:12 },
   { id:'w_subjbars',   type:'subject_bars',    cols:12, rows:50 },
   { id:'w_weeklyfoot', type:'weekly_footprint', cols:12, rows:28 },
 ];
@@ -8124,6 +8269,10 @@ function resetDashboardToDefault() {
 function getWidgets() {
   if (!state.dashWidgets || !Array.isArray(state.dashWidgets) || state.dashWidgets.length === 0)
     state.dashWidgets = DEFAULT_WIDGETS.map(w => ({...w}));
+
+  // The standalone quote widget duplicated the header's own quote line, so
+  // it's been retired — drop it from any existing saved layouts.
+  state.dashWidgets = state.dashWidgets.filter(w => w.type !== 'quote');
 
   state.dashWidgets.forEach(w => {
     // migrate old col system
@@ -8158,7 +8307,7 @@ function addWidget(type) {
   // (openWidgetImageEdit) any time to fill or replace the photo; resize it
   // like any other widget via the drag handles.
   if (type==='image')           { d.cols=4;  d.rows=24; d.dataUrl=null; }
-  if (type==='score_stat_cards') { d.cols=12; d.rows=10; }
+  if (type==='score_stat_cards') { d.cols=12; d.rows=12; }
   if (type==='streak')          { d.cols=6;  d.rows=12; }
   if (type==='completion_card') { d.cols=6;  d.rows=12; }
   if (type==='subject_bars')    { d.cols=12; d.rows=30; }
@@ -8229,6 +8378,14 @@ const SIZE_PRESETS=[];
 // Toggles one of the inline legend popovers embedded in the completion/score
 // widgets (e.g. "legend-w_completion-comp"). Grid display is used when shown
 // since these legends are laid out as a mini grid of label/value pairs.
+function setScoreWidgetView(widgetId, view) {
+  const w = getWidgets().find(x => x.id === widgetId);
+  if (!w) return;
+  w.scoreView = view;
+  save();
+  renderDashboardWidgets();
+}
+
 function toggleWidgetLegend(id, anchorEl) {
   const source = document.getElementById('legend-' + id);
   if (!source) return;
@@ -8594,14 +8751,11 @@ function renderWidgetHTML(w, i) {
     return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;">
       ${b.editBar}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div class="section-title widget-title-row">${widgetTitleIcon('weak_topics')}<span>Weak Topics</span></div>
-        <button onclick="toggleWidgetLegend('${w.id}-weak', this)" title="How is this ranked?" class="widget-info-btn">ⓘ</button>
+        <div class="section-title widget-title-row">${widgetTitleIcon('weak_topics')}<span>Priority Topics</span></div>
+        <button onclick="toggleWidgetLegend('${w.id}-weak', this)" title="What do these mean?" class="widget-info-btn">ⓘ</button>
       </div>
       <div id="legend-${w.id}-weak" style="display:none;font-size:11px;color:var(--muted);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px">
-        Only topics you've rated or practiced are shown here.
-We combine your Confidence rating and Practice/Drill score to find topics that need more work.
-⚠️ = your confidence is higher than your practice score.
-💡 = your practice score is higher than your confidence.
+        🔴 under 50% &nbsp; 🟡 50–75% &nbsp;·&nbsp; 🧠 confidence &nbsp; 🎯 practice
       </div>
       <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
         <div id="dash-weak-topics-${w.id}" style="font-size:12px;flex:1;overflow-y:auto;padding-right:4px;"></div>
@@ -8615,7 +8769,7 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
       // object-fit:cover fills the whole tile with no empty space — the
       // photo crops to match whatever shape the tile is, like a tablet
       // home-screen widget, rather than letterboxing to fit the full image.
-      return `<div class="dash-widget" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}cursor:pointer;background:var(--surface);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:14px;" onclick="${layoutEditMode?'':''} openWidgetImageEdit('${w.id}')">
+      return `<div class="dash-widget" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}cursor:pointer;background:var(--surface);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:14px;" onclick="${layoutEditMode?'':''} openWidgetImageView('${w.id}')">
         ${b.editBar}
         <img src="${w.dataUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;">
         ${w.label?`<div style="position:absolute;bottom:0;left:0;right:0;z-index:2;background:linear-gradient(transparent,rgba(0,0,0,0.65));padding:20px 12px 10px;font-size:12px;color:white;font-weight:600;border-radius:0 0 14px 14px">${w.label}</div>`:''}
@@ -8679,11 +8833,26 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
   }
   if (w.type === 'countdown') {
     const days = countdownDays();
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+    let tierClass = '', tierLabel = '', weekBit = '', dayOfWeekBit = '';
+    if (days !== null) {
+      const weeks = Math.floor(days/7), remDays = days%7;
+      weekBit = days>=7 ? `${weeks}w ${remDays}d left` : `${days} day${days===1?'':'s'} left`;
+      const examD = new Date(state.examDate+'T00:00:00');
+      dayOfWeekBit = 'Falls on a ' + examD.toLocaleDateString('en-US',{weekday:'long'});
+      if (days===0)      { tierClass='tier-examday'; tierLabel='🎓 Exam day — you got this'; }
+      else if (days<=6)  { tierClass='tier-final';   tierLabel='🚨 This is it — final stretch'; }
+      else if (days<=29) { tierClass='tier-crunch';  tierLabel='⚡ Crunch time'; }
+      else if (days<=89) { tierClass='tier-steady';  tierLabel='📈 Building momentum'; }
+      else               { tierClass='tier-chill';   tierLabel='🧭 Plenty of runway'; }
+    }
+    return `<div class="dash-widget card countdown-widget-fun ${tierClass}" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;">
       ${b.editBar}
-      <div class="widget-title-row" style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">${widgetTitleIcon('countdown')}<span>Days to CPALE</span></div>
-      <div style="font-family:var(--font-mono);font-size:clamp(36px,6vw,64px);font-weight:800;color:var(--accent2);line-height:1">${days!==null?days:'—'}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:8px">${state.examDate||'Set exam date in Settings'}</div>
+      <div class="countdown-embers" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="widget-title-row" style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;position:relative;z-index:1">${widgetTitleIcon('countdown')}<span>Days to CPALE</span></div>
+      <div class="countdown-number-fun" style="font-family:var(--font-mono);font-size:clamp(36px,6vw,64px);font-weight:800;line-height:1;position:relative;z-index:1">${days!==null?days:'—'}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;position:relative;z-index:1">${state.examDate||'Set exam date in Settings'}</div>
+      ${days!==null ? `<div class="countdown-tier-pill" style="position:relative;z-index:1;margin-top:10px">${tierLabel}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;position:relative;z-index:1">${weekBit} · ${dayOfWeekBit}</div>` : ''}
     </div>`;
   }
 
@@ -8725,41 +8894,63 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
   if (w.type === 'streak') {
     const streak = calcStreak();
     const today = new Date();
+    const isActive = streak.current > 0;
     const dots = Array.from({length:14},(_,i)=>{
       const d = new Date(today); d.setDate(today.getDate()-(13-i));
       const ds = localDateStr(d);
       const isToday = i===13;
       const active = streak.days.includes(ds);
-      return `<div style="width:10px;height:10px;border-radius:3px;background:${isToday?'var(--accent)':active?'var(--warn)':'var(--border)'};${isToday?'box-shadow:0 0 6px var(--accent)':''}"></div>`;
+      const cls = 'streak-dot' + (isToday ? ' is-today' : active ? ' is-active' : '');
+      return `<div class="${cls}"></div>`;
     }).join('');
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    const milestones = [3,7,14,30,60,100];
+    const nextMilestone = milestones.find(m => m > streak.current) || null;
+    const prevMilestone = nextMilestone ? (milestones[milestones.indexOf(nextMilestone)-1] || 0) : streak.current;
+    const milestoneProgress = nextMilestone ? Math.min(100, ((streak.current-prevMilestone)/(nextMilestone-prevMilestone))*100) : 100;
+    const daysToGo = nextMilestone ? Math.max(0, nextMilestone - streak.current) : 0;
+    const tierMsg = streak.current===0 ? 'Start a streak today' :
+      streak.current<3 ? 'Building momentum' :
+      streak.current<7 ? 'Keep it up!' :
+      streak.current<14 ? '🔥 One week strong' :
+      streak.current<30 ? '⚡ Two weeks unstoppable' :
+      streak.current<60 ? '🏆 A month of consistency' :
+      '👑 Absolute legend';
+    const embers = isActive ? `<div class="streak-embers" aria-hidden="true"><span></span><span></span><span></span><span></span></div>` : '';
+    return `<div class="dash-widget card streak-widget-fun${isActive?' is-active':''}" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       ${b.editBar}
-      <div class="widget-title-icon" style="width:44px;height:44px;flex-basis:44px;font-size:22px;border-radius:12px">${widgetIconSvg('streak')}</div>
-      <div style="flex:1">
-        <div style="font-family:var(--font-mono);font-size:32px;font-weight:800;color:var(--warn);line-height:1">${streak.current}</div>
+      ${embers}
+      <div class="streak-flame-wrap widget-title-icon" style="width:44px;height:44px;flex-basis:44px;font-size:22px;border-radius:12px">${widgetIconSvg('streak')}</div>
+      <div style="flex:1;position:relative;z-index:1">
+        <div class="streak-number-fun" style="font-family:var(--font-mono);font-size:32px;font-weight:800;color:var(--warn);line-height:1">${streak.current}</div>
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px">Day Streak</div>
         <div style="display:flex;gap:3px;margin-top:8px;flex-wrap:wrap">${dots}</div>
       </div>
-      <div style="text-align:right;min-width:70px">
+      <div style="text-align:right;min-width:70px;position:relative;z-index:1">
         <div style="font-size:10px;color:var(--muted)">Best</div>
         <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--dim)">${streak.longest}</div>
         <div style="font-size:10px;color:var(--muted)">days</div>
+      </div>
+      <div style="flex-basis:100%;width:100%;margin-top:4px;padding-top:10px;border-top:1px solid var(--border);position:relative;z-index:1">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--muted);margin-bottom:5px">
+          <span>${escapeHtml(tierMsg)}</span>
+          <span>${nextMilestone ? `${daysToGo}d to ${nextMilestone}` : '🏁 max tier'}</span>
+        </div>
+        <div class="streak-milestone-bar"><div class="streak-milestone-fill" style="width:${milestoneProgress}%"></div></div>
       </div>
     </div>`;
   }
 
   if (w.type === 'completion_card') {
     const stats = getAllTopicStats();
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:12px;display:flex;flex-direction:column;justify-content:center;">
+    const r = 34, circ = 2 * Math.PI * r;
+    const dash = (stats.pct / 100) * circ;
+    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:12px 14px;display:flex;flex-direction:column;justify-content:center;">
       ${b.editBar}
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:flex-end;">
-        <div>
-          <div class="section-title widget-title-row" style="margin-bottom:2px;display:flex;align-items:center;gap:5px;">${widgetIconSvg('completion_card')}<span>Overall Completion</span><button onclick="toggleWidgetLegend('${w.id}-comp', this)" title="What do these ranks mean?" class="widget-info-btn">ⓘ</button></div>
-          <div style="font-size:12px;font-weight:600;color:var(--accent3)">${getCompletionRank(stats.pct)}</div>
-        </div>
-        <span style="font-family:var(--font-mono);font-size:16px;color:var(--text)">${stats.pct.toFixed(1)}%</span>
+      <div style="display:flex;justify-content:space-between;margin-bottom:1px;align-items:flex-start;">
+        <div class="section-title widget-title-row" style="margin-bottom:1px;display:flex;align-items:center;gap:5px;">${widgetIconSvg('completion_card')}<span>Overall Completion</span><button onclick="toggleWidgetLegend('${w.id}-comp', this)" title="What do these ranks mean?" class="widget-info-btn">ⓘ</button></div>
       </div>
-      <div id="legend-${w.id}-comp" style="display:none;background:color-mix(in srgb, var(--accent3) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent3) 16%, var(--border));border-radius:8px;padding:8px 10px;margin-bottom:10px;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:10px;">
+      <div style="font-size:11px;font-weight:600;color:var(--accent3);margin-bottom:7px;">${getCompletionRank(stats.pct)}</div>
+      <div id="legend-${w.id}-comp" style="display:none;background:color-mix(in srgb, var(--accent3) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent3) 16%, var(--border));border-radius:8px;padding:8px 10px;margin-bottom:8px;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:10px;">
         <div style="display:flex;justify-content:space-between;"><span>CPALE Master</span><strong style="color:var(--accent3)">100%</strong></div>
         <div style="display:flex;justify-content:space-between;"><span>Peak Ready</span><strong style="color:var(--accent2)">80–99%</strong></div>
         <div style="display:flex;justify-content:space-between;"><span>Advanced</span><strong style="color:var(--pass)">60–79%</strong></div>
@@ -8767,11 +8958,28 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
         <div style="display:flex;justify-content:space-between;"><span>Novice</span><strong style="color:var(--cond)">20–39%</strong></div>
         <div style="display:flex;justify-content:space-between;"><span>Beginner</span><strong style="color:var(--muted)">0–19%</strong></div>
       </div>
-      <div class="progress-bar" style="height:8px;margin-bottom:10px;"><div class="progress-fill" style="width:${stats.pct}%"></div></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center;">
-        <div><div style="font-size:10px;color:var(--pass)">✓ Done</div><div style="font-family:var(--font-mono);font-size:16px;font-weight:700">${stats.completed}</div></div>
-        <div><div style="font-size:10px;color:var(--warn)">◉ In Prog</div><div style="font-family:var(--font-mono);font-size:16px;font-weight:700">${stats.inprog}</div></div>
-        <div><div style="font-size:10px;color:var(--muted)">○ Left</div><div style="font-family:var(--font-mono);font-size:16px;font-weight:700">${stats.notstarted}</div></div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
+          <svg width="80" height="80" viewBox="0 0 80 80" style="transform:rotate(-90deg)">
+            <circle cx="40" cy="40" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/>
+            <circle cx="40" cy="40" r="${r}" fill="none" stroke="var(--pass)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${dash} ${circ}"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:15px;font-weight:800;color:var(--text)">${stats.pct.toFixed(1)}%</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">
+            <span style="color:var(--pass)">✓ Done</span>
+            <span style="font-family:var(--font-mono);font-weight:700;font-size:13px">${stats.completed}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">
+            <span style="color:var(--warn)">◉ In Progress</span>
+            <span style="font-family:var(--font-mono);font-weight:700;font-size:13px">${stats.inprog}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">
+            <span style="color:var(--muted)">○ Left</span>
+            <span style="font-family:var(--font-mono);font-weight:700;font-size:13px">${stats.notstarted}</span>
+          </div>
+        </div>
       </div>
     </div>`;
   }
@@ -8785,13 +8993,67 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
     const latestRemark = latest ? calcEntry(latest).remark : null;
     const remarkMap = { PASSED:'badge-pass', FAILED:'badge-fail', CONDITIONAL:'badge-cond' };
     const tier = getPassingRankTier(scoreData, highAvg);
-    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:center;">
+    const view = ['overall','drills'].includes(w.scoreView) ? w.scoreView : 'overall';
+    const tabBtn = (v,label) => `<button onclick="setScoreWidgetView('${w.id}','${v}')" class="btn btn-sm ${view===v?'btn-primary':'btn-ghost'}" style="font-size:10px;padding:3px 9px;">${label}</button>`;
+    const tabBar = `<div style="display:flex;gap:4px;margin-bottom:9px;">${tabBtn('overall','Preboards')}${tabBtn('drills','Drills')}</div>`;
+    const subjBarRow = (label, avg) => {
+      const color = avg===null ? 'var(--muted)' : avg>=75 ? 'var(--pass)' : avg>=65 ? 'var(--cond)' : 'var(--danger)';
+      return `<div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:44px;font-size:10.5px;color:var(--muted);font-weight:600;">${label}</span>
+        <div class="progress-bar" style="flex:1;height:5px;"><div class="progress-fill" style="width:${avg||0}%;background:${color}"></div></div>
+        <span style="width:42px;text-align:right;font-family:var(--font-mono);font-size:11px;font-weight:700;color:${color}">${avg!==null?avg.toFixed(1)+'%':'—'}</span>
+      </div>`;
+    };
+    const compactSubjRow = (label, avg) => {
+      const color = avg===null ? 'var(--muted)' : avg>=75 ? 'var(--pass)' : avg>=65 ? 'var(--cond)' : 'var(--danger)';
+      return `<div style="display:flex;align-items:center;gap:6px;">
+        <span style="width:34px;font-size:9.5px;color:var(--muted);font-weight:600;">${label}</span>
+        <div class="progress-bar" style="flex:1;height:4px;"><div class="progress-fill" style="width:${avg||0}%;background:${color}"></div></div>
+        <span style="width:32px;text-align:right;font-family:var(--font-mono);font-size:10px;font-weight:700;color:${color}">${avg!==null?avg.toFixed(0)+'%':'—'}</span>
+      </div>`;
+    };
+
+    if (view === 'drills') {
+      const drillEntries = state.practiceScores || [];
+      const valid = drillEntries.map(p => ({...p, pct: (p.score!==null && p.max) ? Math.min(100, Math.max(0, p.score/p.max*100)) : null})).filter(p=>p.pct!==null);
+      const drillAvg = valid.length ? valid.reduce((a,b)=>a+b.pct,0)/valid.length : null;
+      const bySubj = {};
+      MAIN_SUBJECTS.forEach(mk => bySubj[mk] = []);
+      valid.forEach(p => { if (bySubj[p.mainSubject]) bySubj[p.mainSubject].push(p.pct); });
+      const rows = MAIN_SUBJECTS.map(mk => {
+        const vals = bySubj[mk];
+        const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+        return subjBarRow(mk.toUpperCase(), avg);
+      }).join('');
+      return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:12px 14px;">
+        ${b.editBar}
+        <div class="stat-label widget-title-row" style="margin-bottom:2px;">${widgetTitleIcon('score_stat_cards')}<span>Avg Score</span></div>
+        ${tabBar}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:11px;color:var(--muted);">
+          <span>${valid.length} scored drill${valid.length===1?'':'s'}</span>
+          <span style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:${drillAvg===null?'var(--muted)':drillAvg>=75?'var(--pass)':drillAvg>=65?'var(--cond)':'var(--danger)'}">${drillAvg!==null?drillAvg.toFixed(1)+'%':'—'} avg</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">${rows}</div>
+      </div>`;
+    }
+
+    const subjects = [['far','FAR'],['afar','AFAR'],['mas','MAS'],['audit','AUDIT'],['tax','TAX'],['rfbt','RFBT']];
+    const subjGrid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;margin-top:10px;padding-top:9px;border-top:1px solid var(--border);">${subjects.map(([key,label]) => {
+      const vals = scoreData.map(s=>s[key]).filter(v=>v!==null);
+      const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+      return compactSubjRow(label, avg);
+    }).join('')}</div>`;
+
+    return `<div class="dash-widget card" ${b.colAttr} data-id="${w.id}" style="${b.gridStyle}padding:12px 14px;">
       ${b.editBar}
-      <div><div class="stat-label widget-title-row">${widgetTitleIcon('score_stat_cards')}<span>Avg Score</span></div><div class="stat-value" style="color:var(--accent2)">${overallAvg ? overallAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">all exams</div></div>
-      <div><div class="stat-label">Highest Score</div><div class="stat-value" style="color:var(--pass)">${highAvg ? highAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">best avg</div></div>
-      <div><div class="stat-label">Latest Remark</div><div style="margin-top:6px">${latestRemark?`<span class="badge ${remarkMap[latestRemark]}">${latestRemark}</span>`:'<span class="badge badge-none">No scores yet</span>'}</div></div>
-      <div style="border-left:1px solid var(--border);padding-left:12px;">
-        <div class="stat-label widget-title-row" style="display:flex;align-items:center;gap:4px">Rank Tier 🏆<button onclick="toggleWidgetLegend('${w.id}-rank', this)" title="What do these ranks mean?" class="widget-info-btn">ⓘ</button></div>
+      <div class="stat-label widget-title-row" style="margin-bottom:2px;">${widgetTitleIcon('score_stat_cards')}<span>Avg Score</span></div>
+      ${tabBar}
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:center;">
+      <div><div class="stat-value" style="color:var(--accent2)">${overallAvg ? overallAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">all exams</div></div>
+      <div><div class="stat-label">Highest</div><div class="stat-value" style="color:var(--pass)">${highAvg ? highAvg.toFixed(1)+'%' : '—'}</div><div class="stat-sub">best avg</div></div>
+      <div><div class="stat-label">Latest</div><div style="margin-top:4px">${latestRemark?`<span class="badge ${remarkMap[latestRemark]}">${latestRemark}</span>`:'<span class="badge badge-none">—</span>'}</div></div>
+      <div style="border-left:1px solid var(--border);padding-left:10px;">
+        <div class="stat-label widget-title-row" style="display:flex;align-items:center;gap:4px">Rank 🏆<button onclick="toggleWidgetLegend('${w.id}-rank', this)" title="What do these ranks mean?" class="widget-info-btn">ⓘ</button></div>
         <div class="rank-potential">${tier.tier}</div><div class="stat-sub">${tier.label||'no scores'}</div>
       </div>
       <div id="legend-${w.id}-rank" style="display:none;grid-column:1/-1;background:color-mix(in srgb, var(--accent) 6%, transparent);border:1px solid color-mix(in srgb, var(--accent) 16%, var(--border));border-radius:8px;padding:8px 10px;grid-template-columns:1fr 1fr 1fr;gap:4px 12px;font-size:10px;">
@@ -8802,6 +9064,8 @@ We combine your Confidence rating and Practice/Drill score to find topics that n
         <div style="display:flex;justify-content:space-between;"><span>Conditional</span><strong style="color:var(--cond)">65–74%</strong></div>
         <div style="display:flex;justify-content:space-between;"><span>Below Pass</span><strong style="color:var(--danger)">&lt;65%</strong></div>
       </div>
+      </div>
+      ${subjGrid}
     </div>`;
   }
 
@@ -9295,6 +9559,40 @@ function closeMobileNoteEditor(commit){
   if (overlay) overlay.style.display = 'none';
   document.body.style.overflow = '';
 }
+
+function openWidgetImageView(id) {
+  if (layoutEditMode) return;
+  const w = getWidgets().find(x => x.id === id);
+  if (!w || !w.dataUrl) { openWidgetImageEdit(id); return; }
+  let ov = document.getElementById('widget-image-viewer');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'widget-image-viewer';
+    ov.className = 'widget-image-viewer';
+    ov.innerHTML = `
+      <div class="widget-image-viewer-backdrop"></div>
+      <div class="widget-image-viewer-card">
+        <button type="button" class="widget-image-viewer-close" aria-label="Close">✕</button>
+        <img class="widget-image-viewer-img" src="" alt="">
+        <div class="widget-image-viewer-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-role="change">🖼️ Change photo</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector('.widget-image-viewer-backdrop').addEventListener('click', closeWidgetImageView);
+    ov.querySelector('.widget-image-viewer-close').addEventListener('click', closeWidgetImageView);
+  }
+  ov.dataset.widgetId = id;
+  ov.querySelector('.widget-image-viewer-img').src = w.dataUrl;
+  const changeBtn = ov.querySelector('[data-role="change"]');
+  changeBtn.onclick = () => { closeWidgetImageView(); openWidgetImageEdit(id); };
+  ov.classList.add('open');
+}
+function closeWidgetImageView() {
+  const ov = document.getElementById('widget-image-viewer');
+  if (ov) ov.classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeWidgetImageView(); });
 
 function openWidgetImageEdit(id) {
   if (layoutEditMode) return;
@@ -9944,7 +10242,14 @@ function renderPracticeAnalytics(){
     </div>
     ${practiceFilterSub==='all' && subRows.length ? `<div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.05em">By Sub-subject</div>
     <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">${subRows.map(r=>{const c=colorFor(r.avg);return `<div style="display:grid;grid-template-columns:minmax(120px,1.3fr) 1fr 76px;align-items:center;gap:8px"><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name}</div><div style="height:13px;background:var(--border);border-radius:99px;position:relative;overflow:visible"><div style="height:100%;width:${r.avg.toFixed(1)}%;background:${c};border-radius:99px"></div>${practiceTargetMarker}</div><div style="text-align:right;font-size:10px;font-family:var(--font-mono);color:${c}">${scoreSignalEmoji(r.avg)} ${r.avg.toFixed(1)}% <span style="color:var(--muted)">(${r.count})</span>${r.trend.delta===null?'':` <span title="${r.trend.label}" style="color:${r.trend.delta>=0?scoreStatusColor(75):scoreStatusColor(50)};font-size:9px">${r.trend.delta>=0?'↑':'↓'}${Math.abs(r.trend.delta).toFixed(1)}</span>`}</div></div>`;}).join('')}</div>` : ''}
-    <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.05em">Topic Priority</div>
+    <div style="display:flex;align-items:center;gap:5px;margin-bottom:9px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Topic Priority</div>
+      <button onclick="toggleWidgetLegend('practice-priority', this)" title="What do these mean?" class="widget-info-btn">ⓘ</button>
+    </div>
+    <div id="legend-practice-priority" style="display:none;font-size:11px;color:var(--muted);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:11px">
+      Based on average practice score only.<br>
+      🔴 under 65% &nbsp; 🟡 65–75% &nbsp; 🟢 75%+
+    </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px">
       <button class="btn btn-sm ${practiceTopicPriorityFilter==='all'?'btn-primary':'btn-ghost'}" onclick="practiceTopicPriorityFilter='all';renderPracticeAnalytics()">All (${topicRowsAll.length})</button>
       <button class="btn btn-sm ${practiceTopicPriorityFilter==='high'?'btn-primary':'btn-ghost'}" onclick="practiceTopicPriorityFilter='high';renderPracticeAnalytics()">🔴 High (${priorityCounts.high})</button>
@@ -17165,18 +17470,102 @@ window.addEventListener('resize', refreshSettingsTabFreeze);
 .widget-title-icon .widget-icon-emoji { font-size:15px !important; }
 .add-widget-card .aw-icon .widget-icon-emoji { font-size:22px !important; }
 
-/* ── Dashboard header: always participates in document flow ── */
+/* ── Dashboard header: stays pinned to top while scrolling ── */
 #page-dashboard #dash-fixed-bar {
-  position: static !important;
+  position: sticky !important;
+  top: 0 !important;
   width: 100% !important;
-  top: auto !important;
   left: auto !important;
   right: auto !important;
   bottom: auto !important;
   margin: 0 !important;
-  z-index: 2 !important;
+  z-index: 5 !important;
 }
-#page-dashboard #dash-fixed-bar + div[style*="height"] { height: 0 !important; }
+
+/* ============================================================
+   APP-WIDE AESTHETIC PASS — soft, painterly "Ghibli" feel across
+   the whole app (not just the dashboard), in BOTH dark and light
+   mode. Every color here comes from theme CSS vars, so it adapts
+   automatically to whichever theme/custom color/font the user
+   picks. This block is intentionally last in the stylesheet and
+   uses !important on the few properties earlier light-mode-only
+   patches also set !important on (background/border-color/
+   box-shadow) so this pass wins consistently in both modes
+   instead of being overridden by older mode-specific rules.
+   ============================================================ */
+:root, body { --gw-a: color-mix(in srgb, var(--accent) 55%, var(--accent3)); }
+
+/* Cards, everywhere: gentle two-tone tint instead of a flat fill */
+.card, .stat-card, .dash-widget.card, .add-widget-card {
+  background:
+    radial-gradient(60% 55% at 88% -8%, color-mix(in srgb, var(--accent3) 12%, transparent), transparent 70%),
+    radial-gradient(70% 60% at -10% 110%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
+    var(--card) !important;
+  border: 1px solid color-mix(in srgb, var(--gw-a) 14%, var(--border)) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 1px 1px rgba(0,0,0,0.04),
+    0 14px 28px -20px color-mix(in srgb, var(--gw-a) 24%, rgba(20,20,30,0.28)) !important;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s cubic-bezier(.22,1,.36,1);
+}
+.card:hover, .stat-card:hover, .add-widget-card:hover {
+  box-shadow:
+    0 2px 3px rgba(0,0,0,0.05),
+    0 18px 34px -20px color-mix(in srgb, var(--gw-a) 32%, rgba(20,20,30,0.32)) !important;
+  border-color: color-mix(in srgb, var(--gw-a) 26%, var(--border)) !important;
+}
+
+/* Dashboard widgets get the extra playful touches: rounder corners,
+   a faint paper-grain, and a soft floating lift on hover. */
+#page-dashboard .dash-widget.card, #page-dashboard .stat-card, #page-dashboard .add-widget-card {
+  border-radius: 20px !important;
+}
+#page-dashboard .dash-widget.card {
+  background-image:
+    radial-gradient(60% 55% at 88% -8%, color-mix(in srgb, var(--accent3) 16%, transparent), transparent 70%),
+    radial-gradient(70% 60% at -10% 110%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E") !important;
+  background-color: var(--card) !important;
+  background-blend-mode: normal, normal, overlay;
+  overflow: hidden;
+}
+#page-dashboard .dash-widget.card:hover, #page-dashboard .stat-card:hover, #page-dashboard .add-widget-card:hover {
+  transform: translateY(-2px) scale(1.012);
+}
+#page-dashboard.layout-edit-mode .dash-widget.card:hover,
+#page-dashboard .layout-edit-mode .dash-widget.card:hover { transform: none; }
+#page-dashboard .stat-value { color: color-mix(in srgb, var(--text) 82%, var(--accent2) 18%); }
+#page-dashboard .widget-title-icon, #page-dashboard .aw-icon {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 14px color-mix(in srgb, var(--accent3) 30%, transparent);
+}
+#page-dashboard #dash-fixed-bar h2 { color: color-mix(in srgb, var(--text) 88%, var(--accent2) 12%); }
+
+/* Buttons, inputs, tabs, sidebar — the same soft language everywhere else */
+.btn { border-radius: 11px !important; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--accent3))) !important;
+  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--accent) 55%, transparent) !important;
+  border: none !important;
+}
+.btn-primary:hover { box-shadow: 0 11px 26px -10px color-mix(in srgb, var(--accent) 62%, transparent) !important; }
+.btn-ghost { border-radius: 11px !important; }
+input:not([type="color"]), select, textarea {
+  border-radius: 11px !important;
+  transition: border-color .2s, box-shadow .2s;
+}
+input:focus:not([type="color"]), select:focus, textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent) !important;
+}
+.tabs { border-radius: 13px !important; }
+.tab.active { box-shadow: 0 2px 10px -4px color-mix(in srgb, var(--gw-a) 35%, transparent) !important; }
+.badge { border-radius: 999px !important; }
+#sidebar {
+  background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%) !important;
+  backdrop-filter: blur(14px) saturate(115%);
+  -webkit-backdrop-filter: blur(14px) saturate(115%);
+}
 </style>
 <script id="widget-emoji-final-script">
 /* Simple, reliable emoji identities for widgets. This replaces only the visual icon renderer. */
