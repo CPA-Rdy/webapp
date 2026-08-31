@@ -1,6 +1,6 @@
 {
-  "name": "CPA Ready",
-  "short_name": "CPA Ready",
+  "name": "CPALE Ready",
+  "short_name": "CPALE Ready",
   "description": "CPA Board Exam Study Tracker",
   "start_url": ".",
   "display": "standalone",
