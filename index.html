@@ -7450,6 +7450,53 @@ let editingCalEvent = null; // {dateStr, idx} when editing an existing session, 
 // much larger secondary store. It NEVER blocks startup and it is only allowed
 // to replace the local cache when its revision is actually newer.
 const STATE_STORAGE_KEY = 'cpale_v2_state';
+
+// SECURITY: API keys are stored OUTSIDE of `state` on purpose. `state` is what
+// gets JSON.stringify'd into localStorage/IndexedDB snapshots, safety-net
+// snapshots, Drive backups, and manual export files — so anything living on
+// `state` ends up duplicated in plaintext in all of those places, including
+// files the user might share for support. Keeping keys in their own
+// localStorage entries means normal save/snapshot/export code paths never
+// see them, with no change to how the rest of the app's data is persisted.
+const GEMINI_KEY_STORAGE_KEY = 'cpale_gemini_api_key';
+const GROQ_KEY_STORAGE_KEY = 'cpale_groq_api_key';
+function getGeminiApiKey() {
+  try { return localStorage.getItem(GEMINI_KEY_STORAGE_KEY) || ''; } catch (e) { return ''; }
+}
+function setGeminiApiKey(val) {
+  try {
+    if (val) localStorage.setItem(GEMINI_KEY_STORAGE_KEY, val);
+    else localStorage.removeItem(GEMINI_KEY_STORAGE_KEY);
+  } catch (e) { console.warn('Could not store Gemini key:', e); }
+}
+function getGroqApiKey() {
+  try { return localStorage.getItem(GROQ_KEY_STORAGE_KEY) || ''; } catch (e) { return ''; }
+}
+function setGroqApiKey(val) {
+  try {
+    if (val) localStorage.setItem(GROQ_KEY_STORAGE_KEY, val);
+    else localStorage.removeItem(GROQ_KEY_STORAGE_KEY);
+  } catch (e) { console.warn('Could not store Groq key:', e); }
+}
+// One-time migration: earlier builds stored keys as state.geminiApiKey /
+// state.groqApiKey, so they'd have been swept into every snapshot/export.
+// Move any legacy value into the new storage, then strip it from `state` so
+// it stops being duplicated. Existing saved snapshots/exports made by an
+// older build may still contain a key — that's outside what a code change
+// can retroactively fix — but every save from this point forward is clean,
+// and no tracker/progress data is touched.
+function migrateLegacyApiKeysOutOfState() {
+  try {
+    if (state && typeof state.geminiApiKey === 'string' && state.geminiApiKey) {
+      if (!getGeminiApiKey()) setGeminiApiKey(state.geminiApiKey);
+    }
+    if (state && Object.prototype.hasOwnProperty.call(state, 'geminiApiKey')) delete state.geminiApiKey;
+    if (state && typeof state.groqApiKey === 'string' && state.groqApiKey) {
+      if (!getGroqApiKey()) setGroqApiKey(state.groqApiKey);
+    }
+    if (state && Object.prototype.hasOwnProperty.call(state, 'groqApiKey')) delete state.groqApiKey;
+  } catch (e) { console.warn('API key migration skipped:', e); }
+}
 const APP_DB_NAME = 'cpale_ready_app_v1';
 const APP_DB_VERSION = 1;
 const APP_DB_STATE_STORE = 'state';
@@ -7661,8 +7708,7 @@ function load() {
   if (!state.subjectNames || typeof state.subjectNames !== 'object') state.subjectNames = {};
   if (!state.subjectColors || typeof state.subjectColors !== 'object') state.subjectColors = {};
   compactActivityLog();
-  if (typeof state.geminiApiKey !== 'string') state.geminiApiKey = '';
-  if (typeof state.groqApiKey !== 'string') state.groqApiKey = '';
+  migrateLegacyApiKeysOutOfState();
   if (typeof state.coachPersona !== 'string') state.coachPersona = 'balanced';
   if (typeof state.coachPersonaCustom !== 'string') state.coachPersonaCustom = '';
   if (Object.prototype.hasOwnProperty.call(state, 'kodaMemory')) {
@@ -15533,8 +15579,9 @@ function renderGeminiKeyStatus() {
   const inputEl = document.getElementById('set-gemini-key');
   if (!statusEl || !inputEl) return;
   inputEl.value = '';
-  if (state.geminiApiKey) {
-    const tail = state.geminiApiKey.slice(-4);
+  const geminiKey = getGeminiApiKey();
+  if (geminiKey) {
+    const tail = geminiKey.slice(-4);
     statusEl.innerHTML = `✓ Key saved (ends in <span style="font-family:var(--font-mono)">${tail}</span>). Leave the field blank and hit Save to keep it, or paste a new one to replace it.`;
     statusEl.style.color = 'var(--pass)';
   } else {
@@ -15544,14 +15591,12 @@ function renderGeminiKeyStatus() {
 }
 function saveGeminiKey() {
   const val = document.getElementById('set-gemini-key').value.trim();
-  if (val) state.geminiApiKey = val;
-  save();
+  if (val) setGeminiApiKey(val);
   renderGeminiKeyStatus();
   toast(val ? 'Gemini API key saved!' : 'No change made.');
 }
 function clearGeminiKey() {
-  state.geminiApiKey = '';
-  save();
+  setGeminiApiKey('');
   renderGeminiKeyStatus();
   toast('Gemini API key cleared.');
 }
@@ -15560,8 +15605,9 @@ function renderGroqKeyStatus() {
   const inputEl = document.getElementById('set-groq-key');
   if (!statusEl || !inputEl) return;
   inputEl.value = '';
-  if (state.groqApiKey) {
-    const tail = state.groqApiKey.slice(-4);
+  const groqKey = getGroqApiKey();
+  if (groqKey) {
+    const tail = groqKey.slice(-4);
     statusEl.innerHTML = `✓ Key saved (ends in <span style="font-family:var(--font-mono)">${tail}</span>). Leave the field blank and hit Save to keep it, or paste a new one to replace it.`;
     statusEl.style.color = 'var(--pass)';
   } else {
@@ -15571,14 +15617,12 @@ function renderGroqKeyStatus() {
 }
 function saveGroqKey() {
   const val = document.getElementById('set-groq-key').value.trim();
-  if (val) state.groqApiKey = val;
-  save();
+  if (val) setGroqApiKey(val);
   renderGroqKeyStatus();
   toast(val ? 'Groq API key saved!' : 'No change made.');
 }
 function clearGroqKey() {
-  state.groqApiKey = '';
-  save();
+  setGroqApiKey('');
   renderGroqKeyStatus();
   toast('Groq API key cleared.');
 }
@@ -18194,8 +18238,8 @@ async function respondToCoach(text) {
   const signal = kodaConversationSignal(text);
   window.__kodaDocumentContext = '';
 
-  const hasGroq = !!String(state.groqApiKey || '').trim();
-  const hasGemini = !!String(state.geminiApiKey || '').trim();
+  const hasGroq = !!String(getGroqApiKey() || '').trim();
+  const hasGemini = !!String(getGeminiApiKey() || '').trim();
   const hasApi = hasGroq || hasGemini;
   let apiError = null;
 
@@ -18372,6 +18416,8 @@ function coachContextForAI(d) {
     `Per-subject completion: ${MAIN_SUBJECTS.map(s => `${s} ${d.subjPcts[s]}%`).join(', ')}`,
     `Per-subject mastery: ${MAIN_SUBJECTS.map(s => `${s} ${d.subjMastery[s].rated ? d.subjMastery[s].pct.toFixed(0)+'%' : 'unrated'}`).join(', ')}`,
     `Current streak: ${d.streak.current} days (longest: ${d.streak.longest})`,
+    `Total learning days built: ${d.learningDays}`,
+    `Current Journey/Fire tier: Tier ${d.journeyTier.tier} — ${d.journeyTier.label} (${d.journeyTier.daysRange}); this tier is based on accumulated learning days, not consecutive streak days`,
     `Configured rest day(s): ${d.restDays.length ? d.restDays.join(', ') : 'none set'}`,
     `Days until exam: ${d.daysLeft !== null && d.daysLeft !== undefined ? d.daysLeft : 'not set'}`,
     `Topics needed per day at current pace: ${d.topicsPerDay !== null ? d.topicsPerDay : 'not calculable'}`,
@@ -18586,7 +18632,7 @@ async function generateCoachReplyGroq(userText) {
       try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.groqApiKey}` },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getGroqApiKey()}` },
           body: JSON.stringify({
             model,
             messages: [
@@ -18650,7 +18696,7 @@ async function generateCoachReplyAI(userText) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-goog-api-key': state.geminiApiKey
+            'x-goog-api-key': getGeminiApiKey()
           },
           body: JSON.stringify({
             model,
@@ -18827,8 +18873,20 @@ function coachGetData() {
     if (total > 0) videoBySubject[mk] = { total, completed, pct: Math.round(completed/total*100) };
   });
 
+  // Journey learning history is a separate, durable signal from the current streak.
+  // This mirrors the Achievements/Fire Lab source of truth exactly.
+  const learningDays = Array.isArray(streak.days) ? streak.days.length : 0;
+  const journeyFireTier = getJourneyFireTier(learningDays);
+  const journeyFire = FIRE_LAB_TIERS[journeyFireTier] || FIRE_LAB_TIERS[0];
+  const journeyTier = {
+    tier: journeyFireTier,
+    label: journeyFire.label,
+    tagline: journeyFire.tagline,
+    daysRange: journeyFire.days
+  };
+
   return {
-    stats, streak, daysLeft, subjPcts, subjStats, sorted, weakest, strongest, allSame,
+    stats, streak, learningDays, journeyFireTier, journeyTier, daysLeft, subjPcts, subjStats, sorted, weakest, strongest, allSame,
     latestPreboardAvg, preboardTrend, preboards, lowConfTopics, notStarted,
     topicsPerDay, subjectScores, practiceValid, practiceBySubject, practiceSubjectAvg, practiceWeakest, name, scores, timeOfDay,
     overallMastery, subjMastery, upcomingSessions, restDays, studySchedule, scheduledTodaySubjects, recentActivity, videoStats, videoBySubject
@@ -19017,6 +19075,23 @@ function getCoachReplyLegacy(input) {
       ? `<strong>${notStartedCount}</strong> ${notStartedCount === 1 ? 'topic is' : 'topics are'} not started in that subject.`
       : `You've started that subject, so the priority is strengthening it with practice and review.`;
     return `${style.casual ? 'Right now, ' : 'Based on your tracker, '}<strong>${weak}</strong> is your lowest-completion subject at <strong>${weakPct}%</strong>. ${reason} ${style.casual ? 'That is where I would focus first.' : 'That is the first area I would prioritize.'}`;
+  }
+
+  // ── LEARNING HISTORY / JOURNEY TIER ───────────────────────────────────────
+  // These are deterministic app-state facts. Resolve them locally so questions
+  // such as "how many days have I been learning?" or "what tier am I?"
+  // cannot collapse into a streak-only/pace response.
+  if (
+    /\b(how many|how long|number of|total)\b.*\b(days|day)\b.*\b(learning|studying|studied|learned|been)\b/i.test(rawQ) ||
+    /\b(how many|number of|total)\b.*\b(study|learning)\s+days?\b/i.test(rawQ) ||
+    /\b(what|which)\b.*\b(tier|level)\b/i.test(rawQ) ||
+    /\b(my|current)\b.*\b(journey|fire)\s+tier\b/i.test(rawQ) ||
+    /\b(tier|level)\b.*\b(am i|i'?m)\b/i.test(rawQ)
+  ) {
+    coachLastIntent = 'journey';
+    return style.casual
+      ? `you've built <strong>${d.learningDays}</strong> learning day${d.learningDays === 1 ? '' : 's'} so far, and you're at <strong>Tier ${d.journeyTier.tier} — ${escapeHtml(d.journeyTier.label)}</strong>. that's based on your accumulated study days, not just your current streak.`
+      : `You've built <strong>${d.learningDays}</strong> learning day${d.learningDays === 1 ? '' : 's'} so far, and you're currently at <strong>Tier ${d.journeyTier.tier} — ${escapeHtml(d.journeyTier.label)}</strong>. That tier is based on accumulated study days, not just your current streak.`;
   }
 
   // ── GENERAL PACE ───────────────────────────────────────────────────────────
