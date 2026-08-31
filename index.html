@@ -15938,12 +15938,14 @@ function renderInsightsPage() {
     const configuredGoalDate=state.insightsTargetDate&&/^\d{4}-\d{2}-\d{2}$/.test(state.insightsTargetDate)?new Date(state.insightsTargetDate+'T00:00:00'):null;
     const examDateForNormalPace=state.examDate ? new Date(state.examDate+'T00:00:00') : null;
     const examDaysRemaining=examDateForNormalPace&&!isNaN(examDateForNormalPace.getTime()) ? Math.max(0,Math.ceil((examDateForNormalPace-todayDate)/86400000)) : null;
-    // Normal exam pace is NOT “finish on exam day”. Reserve a review buffer before the exam.
-    // With a full runway we use ~30 days; when the exam is closer, the buffer scales down so
-    // the finish target never lands before today. A personal goal can replace this benchmark.
-    let examReviewBufferDays=examDaysRemaining!==null ? Math.min(30,Math.max(3,Math.floor(examDaysRemaining*0.20))) : null;
-    if(examDaysRemaining!==null && examReviewBufferDays>=examDaysRemaining) examReviewBufferDays=Math.max(1,examDaysRemaining-1);
-    const normalExamFinishDate=examDateForNormalPace&&examReviewBufferDays!==null ? new Date(examDateForNormalPace.getTime()-examReviewBufferDays*86400000) : null;
+    // Normal exam pace is aligned to the preboard cycle: finish core coverage
+    // before the first preboard period, leaving the remaining months for preboards,
+    // correction, and final review. For a May exam, this targets January 31.
+    const firstPreboardStart=examDateForNormalPace&&!isNaN(examDateForNormalPace.getTime())
+      ? new Date(examDateForNormalPace.getFullYear(),examDateForNormalPace.getMonth()-3,1) : null;
+    const normalExamFinishDate=firstPreboardStart ? new Date(firstPreboardStart.getTime()-86400000) : null;
+    const examReviewBufferDays=normalExamFinishDate&&examDateForNormalPace
+      ? Math.max(1,Math.ceil((examDateForNormalPace-normalExamFinishDate)/86400000)) : null;
     const validGoalDate=configuredGoalDate&&(!isNaN(configuredGoalDate.getTime()))&&(configuredGoalDate>=todayDate)&&(!state.examDate||configuredGoalDate<=new Date(state.examDate+'T00:00:00'))?configuredGoalDate:null;
     const paceDeadlineDate=validGoalDate || normalExamFinishDate;
     const paceDaysLeft=paceDeadlineDate?Math.max(0,Math.ceil((paceDeadlineDate-todayDate)/86400000)):null;
