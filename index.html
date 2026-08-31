@@ -9468,7 +9468,7 @@ function roadmapRenderInfoPanel(idx) {
   const achCards = shownAch.map(a=>`<div class="rm-badge-card" onclick="roadmapNodeClick('${a.id}')"><div class="rm-badge-icon">${a.icon}</div><div><div class="rm-badge-name">${a.name}</div><div class="rm-badge-date">Earned ${roadmapFmtDate(a.at)}</div></div></div>`).join('')
     + (moreCount>0 ? `<div class="rm-badge-card" onclick="roadmapToggleBadges(${idx})" style="align-items:center;justify-content:center"><div class="rm-badge-name">+${moreCount} more</div></div>` : '')
     + (expanded && node.achievements.length>5 ? `<div class="rm-badge-card" onclick="roadmapToggleBadges(${idx})" style="align-items:center;justify-content:center"><div class="rm-badge-name">Show less</div></div>` : '');
-  panel.innerHTML = `<div class="section-title" style="margin-bottom:10px">${node.label} ${node.year} — here's what you crushed! 💪</div>`
+  panel.innerHTML = `<div class="section-title" style="margin-bottom:10px">${node.label} ${node.year} — activity summary</div>`
     + (boxesHtml ? `<div class="rm-stat-grid">${boxesHtml}</div>` : '')
     + (achCards ? `<div style="font-size:10px;color:var(--muted);margin:2px 0 8px;text-transform:uppercase;letter-spacing:1px;font-weight:800">✨ Badges earned</div><div class="rm-badge-grid">${achCards}</div>` : '');
 }
@@ -15953,6 +15953,8 @@ function renderInsightsPage() {
     const paceBand=paceRatio===null?'unknown':paceRatio>=1.45?'moon':paceRatio>=1.15?'fast':paceRatio>=0.9?'ontrack':paceRatio>=0.65?'slow':'veryslow';
     const paceLabel={moon:'To the moon',fast:'Fast',ontrack:'On pace',slow:'Slow',veryslow:'Very slow',unknown:'Needs history'}[paceBand];
     const paceTone={moon:'var(--accent2)',fast:'var(--pass)',ontrack:'var(--pass)',slow:'var(--warn)',veryslow:'var(--danger)',unknown:'var(--muted)'}[paceBand];
+    const paceBadgeLabel=paceBand==='unknown'?'PACE NEEDS HISTORY':`PACE: ${paceLabel.toUpperCase()}`;
+    const performanceBadgeLabel=recentPracticeAvg===null?'PRACTICE: NO DATA':recentPracticeAvg>=target?'PRACTICE: TRACKING WELL':recentPracticeAvg>=75?'PRACTICE: SOLID':recentPracticeAvg>=65?'PRACTICE: BUILDING':'PRACTICE: NEEDS WORK';
     const perfForDecision=recentPracticeAvg===null?'unknown':recentPracticeAvg>=target?'strong':recentPracticeAvg>=65?'okay':'weak';
     let paceDecision='';
     let paceDecisionTone=paceTone;
@@ -16113,7 +16115,7 @@ function renderInsightsPage() {
         </section>
 
         <section class="insight-v9-pace card insight-v11-pace insight-v15-pace">
-          <div class="insight-v9-section-head"><div><div class="insight-v9-card-label">PACE + PERFORMANCE</div><h2>How your pace is tracking</h2></div><div class="insight-v21-pace-head-actions"><span class="insight-v9-head-badge" style="--tone:${paceDecisionTone}">${escapeHtml(perfForDecision==='weak'?'NEEDS WORK':perfForDecision==='strong'?'TRACKING WELL':'WATCH THIS MIX')}</span><button type="button" class="insight-goal-button" onclick="openInsightsGoalModal()">${paceGoalLabel?`Goal ${escapeHtml(paceGoalLabel)}`:'Set finish goal'} <span>↗</span></button></div></div>
+          <div class="insight-v9-section-head"><div><div class="insight-v9-card-label">PACE + PERFORMANCE</div><h2>How your pace is tracking</h2></div><div class="insight-v21-pace-head-actions"><span class="insight-v9-head-badge" style="--tone:${paceTone}">${escapeHtml(paceBadgeLabel)}</span><span class="insight-v9-head-badge" style="--tone:${performanceTone}">${escapeHtml(performanceBadgeLabel)}</span><button type="button" class="insight-goal-button" onclick="openInsightsGoalModal()">${paceGoalLabel?`Goal ${escapeHtml(paceGoalLabel)}`:'Set finish goal'} <span>↗</span></button></div></div>
           <div class="insight-v11-pace-copy"><strong>${escapeHtml(paceDecision)}</strong><span>${actualPace===null?'More dated completions are needed to classify your pace.':`Your pace is ${humanWeekly(actualPace)} · normal exam rhythm aims to finish core coverage ${examPaceLabel}${!validGoalDate&&examReviewBufferDays?` and leave about ${examReviewBufferDays} days for review.`:'.'}`}</span></div>
           <div class="insight-v11-runway-wrap insight-v23-runway">
             <div class="insight-v11-runway-meta"><span>0% start</span><span>100% finish</span></div>
@@ -28308,3 +28310,4 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
 })();
 </script>
 <!-- End CPALE Roadmap exam destination -->
+
