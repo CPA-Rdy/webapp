@@ -8921,11 +8921,20 @@ function getCompletionRank(pct) {
   return 'Beginner / Just Started';
 }
 
+function getCanonicalTopicKeys() {
+  const keys=[];
+  MAIN_SUBJECTS.forEach(mk => {
+    (SUBJECTS_META[mk]?.subs || []).forEach(sk => {
+      if (DEFAULT_TOPICS[sk]?.kind === 'video') return;
+      if (!keys.includes(sk)) keys.push(sk);
+    });
+  });
+  return keys;
+}
 function getAllTopicStats() {
   let total=0, completed=0, inprog=0, notstarted=0;
-  Object.entries(state.topics).forEach(([key, arr]) => {
-    if (DEFAULT_TOPICS[key] && DEFAULT_TOPICS[key].kind === 'video') return; // video lectures excluded from overall totals
-    arr.forEach(t => {
+  getCanonicalTopicKeys().forEach(key => {
+    (state.topics[key] || []).forEach(t => {
       total++;
       if (t.status===2) completed++;
       else if (t.status===1) inprog++;
@@ -9004,8 +9013,7 @@ function getMainSubjectMastery(mainKey) {
 
 function getOverallMastery() {
   let sumConf=0, rated=0, total=0;
-  Object.keys(state.topics).forEach(sKey => {
-    if (DEFAULT_TOPICS[sKey] && DEFAULT_TOPICS[sKey].kind === 'video') return;
+  getCanonicalTopicKeys().forEach(sKey => {
     const arr = state.topics[sKey]||[];
     total += arr.length;
     arr.forEach(t => { if ((t.confidence||0) > 0) { sumConf += t.confidence; rated++; } });
@@ -10136,8 +10144,8 @@ function getWeakTopics(limit) {
 
   const rows = [];
   let totalTopics = 0;
-  ALL_SUBJECT_KEYS.forEach(sKey => {
-    // Video-lecture collections are tracked separately via Watch Progress.
+  getCanonicalTopicKeys().forEach(sKey => {
+    // Video-lecture collections and orphaned/legacy keys are excluded.
     if (DEFAULT_TOPICS[sKey]?.kind === 'video') return;
     const topics = state.topics[sKey] || [];
     const mainSubj = DEFAULT_TOPICS[sKey]?.subject;
@@ -15880,7 +15888,7 @@ function renderInsightsPage() {
     const latestPractice=countedPractice.length?countedPractice[countedPractice.length-1].pct:null;
     const performanceBand=practiceTrendDelta===null?'unknown':practiceTrendDelta>=3?'improving':practiceTrendDelta<=-3?'declining':'steady';
     const performanceLabel={improving:'Improving',steady:'Steady',declining:'Declining',unknown:'Not enough history'}[performanceBand];
-    const performanceTone={improving:'var(--pass)',steady:'var(--accent2)',declining:'var(--danger)',unknown:'var(--muted)'}[performanceBand];
+    const performanceTone=recentPracticeAvg===null?'var(--muted)':recentPracticeAvg>=target?'var(--pass)':recentPracticeAvg>=75?'var(--accent2)':recentPracticeAvg>=65?'var(--warn)':'var(--danger)';
 
     // ── Board / score evidence ───────────────────────────────────────────────
     const boardEntries=(state.scores||[]).map((s,i)=>({s,i,c:calcEntry(s)})).filter(x=>x.c.avg!==null);
@@ -15948,6 +15956,8 @@ function renderInsightsPage() {
     const perfForDecision=recentPracticeAvg===null?'unknown':recentPracticeAvg>=target?'strong':recentPracticeAvg>=65?'okay':'weak';
     let paceDecision='';
     let paceDecisionTone=paceTone;
+    if(perfForDecision==='strong') paceDecisionTone=paceBand==='veryslow'||paceBand==='slow'?'var(--warn)':'var(--pass)';
+    else if(perfForDecision==='okay' && paceBand==='veryslow') paceDecisionTone='var(--warn)';
     if(paceBand==='unknown') paceDecision='Keep logging completed topics until your true pace is measurable.';
     else if(paceBand==='veryslow' && perfForDecision==='weak') { paceDecision='Your coverage is moving slowly, and the recent scores still need work. Keep the next blocks focused on review and a short scored check before adding more volume.'; paceDecisionTone='var(--danger)'; }
     else if((paceBand==='veryslow'||paceBand==='slow') && perfForDecision==='strong') { paceDecision='Your performance is healthy; the bottleneck is coverage. Increase completed topics gradually while keeping your current practice standard.'; paceDecisionTone='var(--warn)'; }
@@ -28263,3 +28273,38 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
 })();
 </script>
 <!-- End CPALE Test Now pagination reliability patch -->
+
+<!-- CPALE Roadmap exam destination -->
+<style id="cpale-roadmap-exam-destination-style">
+.roadmap-exam-destination{position:absolute;z-index:5;width:170px;transform:translate(-50%,-50%);padding:10px 12px;border:1px solid color-mix(in srgb,#f59e0b 60%,var(--border));border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,#f59e0b 18%,var(--card)),var(--card));box-shadow:0 10px 25px rgba(0,0,0,.22);text-align:center;pointer-events:none}
+.roadmap-exam-destination:after{content:'';position:absolute;left:50%;bottom:-11px;width:2px;height:11px;background:#f59e0b;transform:translateX(-50%)}
+.roadmap-exam-destination.is-end{transform:translate(-50%,-50%)}
+.roadmap-exam-destination .red-kicker{font:900 8px var(--font-mono);letter-spacing:.14em;color:#f59e0b}
+.roadmap-exam-destination strong{display:block;margin-top:4px;font-size:13px;color:var(--text)}
+.roadmap-exam-destination span{display:block;margin-top:3px;font-size:9px;color:var(--muted)}
+.roadmap-exam-destination .red-flag{font-size:20px;line-height:1}
+</style>
+<script id="cpale-roadmap-exam-destination-script">
+(function(){
+  'use strict';
+  const base=window.renderRoadmap;
+  function addDestination(){
+    const host=document.getElementById('history-roadmap'),canvas=host?.querySelector('.roadmap-canvas');
+    const points=(typeof roadmapPts!=='undefined'&&Array.isArray(roadmapPts))?roadmapPts:window.roadmapPts;
+    if(!host||!canvas||!Array.isArray(points)||!state?.examDate)return;
+    const exam=new Date(state.examDate+'T00:00:00');if(isNaN(exam.getTime()))return;
+    const key=typeof roadmapMonthKey==='function'?roadmapMonthKey(exam):exam.getFullYear()+'-'+String(exam.getMonth()+1).padStart(2,'0');
+    const month=points.find(p=>p.key===key), last=points[points.length-1];if(!last)return;
+    const existing=canvas.querySelector('.roadmap-exam-destination');if(existing)existing.remove();
+    const inTimeline=!!month, x=inTimeline?month.x:last.x+190, y=inTimeline?Math.max(74,month.y-92):last.y;
+    if(!inTimeline){const currentWidth=parseFloat(canvas.style.width)||0;canvas.style.width=Math.max(currentWidth,x+115)+'px';canvas.style.minWidth=canvas.style.width}
+    const d=document.createElement('div');d.className='roadmap-exam-destination'+(inTimeline?'':' is-end');d.style.left=x+'px';d.style.top=y+'px';
+    const date=exam.toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'});
+    d.innerHTML='<div class="red-flag">🏁</div><div class="red-kicker">EXAM DESTINATION</div><strong>'+date+'</strong><span>'+(inTimeline?'Your finish line':'Keep building toward this finish line')+'</span>';
+    canvas.appendChild(d);
+  }
+  window.renderRoadmap=function(){const out=typeof base==='function'?base.apply(this,arguments):undefined;requestAnimationFrame(addDestination);return out};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addDestination);else addDestination();
+})();
+</script>
+<!-- End CPALE Roadmap exam destination -->
