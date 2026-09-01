@@ -16017,8 +16017,12 @@ function renderInsightsPage() {
       const st = getMainSubjectStats(mk) || {};
       return { mk, total:Number(st.total)||0, completed:Number(st.completed)||0, pct:Number(st.pct)||0 };
     });
-    const totalTopics = topicsBySubject.reduce((a,b)=>a+b.total,0);
-    const completedTopics = topicsBySubject.reduce((a,b)=>a+b.completed,0);
+    // Use the canonical live aggregate shared by Dashboard/widgets. The
+    // per-subject breakdown is still used for focus, but the overall Insights
+    // total must count each current sub-subject key once after merges/removals.
+    const liveTopicStats = typeof getAllTopicStats === 'function' ? getAllTopicStats() : { total:0, completed:0 };
+    const totalTopics = Number(liveTopicStats.total) || 0;
+    const completedTopics = Number(liveTopicStats.completed) || 0;
     const remainingTopics = Math.max(0,totalTopics-completedTopics);
     const progressPct = totalTopics ? Math.round(completedTopics/totalTopics*100) : 0;
 
@@ -26600,7 +26604,7 @@ function getTopicLastTouchInfo(sKey, idx){
 .insight-final-kd-row{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--surface) 72%,transparent);transition:transform .16s ease,border-color .16s ease,background .16s ease}.insight-final-kd-row:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent2) 28%,var(--border));background:color-mix(in srgb,var(--accent2) 4%,var(--surface))}.insight-final-kd-dot{width:8px;height:8px;border-radius:50%}.insight-final-kd-main{min-width:0}.insight-final-kd-main strong{display:block;font-size:10.5px;line-height:1.3}.insight-final-kd-main span{display:block;margin-top:3px;font-size:7.8px;color:var(--muted)}.insight-final-kd-main em{display:block;margin-top:4px;font-style:normal;font-size:7.8px;font-weight:800}.insight-final-kd-test{flex:none;padding:7px 11px;border:1px solid color-mix(in srgb,var(--accent2) 35%,var(--border));border-radius:8px;background:color-mix(in srgb,var(--accent2) 7%,transparent);color:var(--accent2);font:800 8px var(--font-body);cursor:pointer}.insight-final-kd-test:hover{background:color-mix(in srgb,var(--accent2) 13%,transparent)}.insight-final-kd-empty{padding:12px 2px 3px}.insight-final-kd-empty strong{display:block;font-size:10px}.insight-final-kd-empty span{display:block;margin-top:4px;font-size:8.3px;line-height:1.45;color:var(--muted)}
 @media(max-width:700px){.insight-final-general-test{align-items:flex-start;flex-direction:column}.insight-final-general-test button{width:100%}.insight-final-kd-row{grid-template-columns:9px minmax(0,1fr)}.insight-final-kd-test{grid-column:2;justify-self:start}}
 </style>
-<script id="reactive-insights-patch">
+<script id="reactive-topic-count-refresh">
 (() => {
   const original = window.renderInsightsPage;
   if (typeof original !== 'function' || window.__reactiveInsightsPatched) return;
@@ -26649,15 +26653,23 @@ function getTopicLastTouchInfo(sKey, idx){
     requestAnimationFrame(patchTodayPanel);
   }
   window.renderInsightsPage = refreshReactive;
+  function refreshActiveTopicCountViews() {
+    const active = id => document.getElementById(id)?.classList.contains('active');
+    if (active('page-dashboard') && typeof renderDashboard === 'function') renderDashboard();
+    if (active('page-reminders')) refreshReactive();
+    if (active('page-achievements') && typeof renderAchievementsPage === 'function') renderAchievementsPage();
+    if (active('page-scoresheet') && typeof renderScoresheet === 'function') renderScoresheet();
+    if (active('page-tracker') && typeof renderTracker === 'function') renderTracker();
+    if (active('page-calendar') && typeof renderCalendar === 'function') renderCalendar();
+    if (active('page-history') && typeof renderHistoryPage === 'function') renderHistoryPage();
+    if (active('page-settings') && typeof renderSettings === 'function') renderSettings();
+  }
   if (typeof window.save === 'function' && !window.__reactiveSavePatched) {
     const originalSave = window.save;
     window.__reactiveSavePatched = true;
     window.save = function(...args) {
       const result = originalSave.apply(this, args);
-      requestAnimationFrame(() => {
-        if (document.getElementById('reminders-page-content')) refreshReactive();
-        if (document.getElementById('page-settings')?.classList.contains('active') && typeof renderSettings === 'function') renderSettings();
-      });
+      requestAnimationFrame(refreshActiveTopicCountViews);
       return result;
     };
   }
