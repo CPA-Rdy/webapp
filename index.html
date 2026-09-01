@@ -16018,10 +16018,15 @@ function renderInsightsPage() {
       return { mk, total:Number(st.total)||0, completed:Number(st.completed)||0, pct:Number(st.pct)||0 };
     });
     // Use the same canonical live aggregate as Dashboard/widgets.
-    const liveTopicStats = typeof getAllTopicStats === 'function' ? getAllTopicStats() : { total:0, completed:0 };
+    const liveTopicStats = typeof getAllTopicStats === 'function'
+      ? getAllTopicStats()
+      : { total:0, completed:0, inprog:0, notstarted:0 };
     const totalTopics = Number(liveTopicStats.total) || 0;
     const completedTopics = Number(liveTopicStats.completed) || 0;
-    const remainingTopics = Math.max(0,totalTopics-completedTopics);
+    const inProgressTopics = Number(liveTopicStats.inprog) || 0;
+    const notStartedTopics = Number(liveTopicStats.notstarted) || 0;
+    // Remaining means every topic that is not Done: In Progress + Not Started.
+    const remainingTopics = inProgressTopics + notStartedTopics;
     const progressPct = totalTopics ? Math.round(completedTopics/totalTopics*100) : 0;
 
     // ── Practice evidence ────────────────────────────────────────────────────
