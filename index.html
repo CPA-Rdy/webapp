@@ -17835,10 +17835,9 @@ function gapIsAllRestDays(fromDate, toDate) {
 }
 
 function calcStreak() {
-  const days = Array.from(new Set(state.studyDays || [])).sort();
-  if (!days.length) return { current: 0, longest: 0, days };
-
   const today = localDateStr();
+  const days = Array.from(new Set((state.studyDays || []).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(String(d)) && String(d) <= today).map(String))).sort();
+  if (!days.length) return { current: 0, longest: 0, days };
   let current = 0, longest = 0, streak = 0;
   let prev = null;
 
