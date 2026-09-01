@@ -16017,9 +16017,7 @@ function renderInsightsPage() {
       const st = getMainSubjectStats(mk) || {};
       return { mk, total:Number(st.total)||0, completed:Number(st.completed)||0, pct:Number(st.pct)||0 };
     });
-    // Use the canonical live aggregate shared by Dashboard/widgets. The
-    // per-subject breakdown is still used for focus, but the overall Insights
-    // total must count each current sub-subject key once after merges/removals.
+    // Use the same canonical live aggregate as Dashboard/widgets.
     const liveTopicStats = typeof getAllTopicStats === 'function' ? getAllTopicStats() : { total:0, completed:0 };
     const totalTopics = Number(liveTopicStats.total) || 0;
     const completedTopics = Number(liveTopicStats.completed) || 0;
@@ -26653,6 +26651,15 @@ function getTopicLastTouchInfo(sKey, idx){
     requestAnimationFrame(patchTodayPanel);
   }
   window.renderInsightsPage = refreshReactive;
+  if (typeof window.showPage === 'function' && !window.__reactiveShowPagePatched) {
+    const originalShowPage = window.showPage;
+    window.__reactiveShowPagePatched = true;
+    window.showPage = function(id, ...args) {
+      const result = originalShowPage.apply(this, [id, ...args]);
+      if (id === 'reminders') requestAnimationFrame(refreshReactive);
+      return result;
+    };
+  }
   function refreshActiveTopicCountViews() {
     const active = id => document.getElementById(id)?.classList.contains('active');
     if (active('page-dashboard') && typeof renderDashboard === 'function') renderDashboard();
