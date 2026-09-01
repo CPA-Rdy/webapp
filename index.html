@@ -6431,12 +6431,12 @@ renderDashboard(); }, 400);
           <button type="button" id="ps-multitag-toggle-btn" onclick="togglePsMultiTag()" style="font:inherit;font-size:11px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Covered more than one topic? Tag them individually</button>
           <div id="ps-multitag-body" style="display:none;margin-top:12px">
             <div style="font-size:10.5px;color:var(--muted);margin-bottom:6px">Tag every topic this set covered:</div>
-            <div id="ps-topics-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            <div id="ps-topics-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;padding-right:2px"></div>
             <label id="ps-breakdown-toggle-row" style="display:none;align-items:center;gap:8px;margin-top:12px;font-size:11.5px;color:var(--muted);cursor:pointer">
               <input type="checkbox" id="ps-breakdown-toggle" onchange="togglePracticeBreakdown()">
               Break down the score per tagged topic (you know which items covered which topic — the app doesn't)
             </label>
-            <div id="ps-breakdown-rows" style="display:none;margin-top:10px;"></div>
+            <div id="ps-breakdown-rows" style="display:none;margin-top:10px;max-height:220px;overflow-y:auto;padding-right:2px"></div>
             <div id="ps-breakdown-hint" style="display:none;font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5">Only sure about some of them? Leave a topic's Total blank if you don't know how many items covered it (e.g. it was embedded across the set) — it stays tagged as covered, just without its own count. At least one topic needs a Total.</div>
           </div>
         </div>
@@ -6481,6 +6481,8 @@ renderDashboard(); }, 400);
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost btn-sm" id="tracker-bulk-move-btn" onclick="openBulkMoveModal()" style="display:none">↕ Move Selected</button>
+      <button class="btn btn-ghost btn-sm" id="tracker-bulk-merge-btn" onclick="openMergeTopicsModal()" style="display:none">⧉ Merge Selected</button>
+      <button class="btn btn-ghost btn-sm" id="tracker-bulk-transfer-btn" onclick="openTransferTopicsModal()" style="display:none">🔀 Transfer Selected</button>
       <button class="btn btn-danger btn-sm" id="tracker-bulk-delete-btn" onclick="bulkDeleteSelectedTopics()" style="display:none">🗑 Delete Selected</button>
       <button class="btn btn-primary btn-sm" onclick="openAddTopicModal()">+ Add Topic</button>
     </div>
@@ -7328,6 +7330,47 @@ renderDashboard(); }, 400);
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-primary" style="flex:1" onclick="applyBulkMoveTopics()">Move Topics</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-bulk-move-topics')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-merge-topics">
+  <div class="modal">
+    <h3>⧉ Merge Topics</h3>
+    <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px">Combine the selected topics into one. Their practice scores, calendar sessions, and confidence/status history all move to the surviving topic — nothing is lost, the topic count just goes down.</div>
+    <div id="merge-summary" class="organizer-summary"></div>
+    <div class="form-row">
+      <label>Keep as</label>
+      <select id="merge-survivor" onchange="renderMergePreview()"></select>
+    </div>
+    <div class="form-row">
+      <label>Merged topic name <span style="font-weight:400;color:var(--muted)">(editable)</span></label>
+      <input type="text" id="merge-name">
+    </div>
+    <div id="merge-preview" style="font-size:10.5px;color:var(--muted);line-height:1.6;margin-bottom:4px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="applyMergeTopics()">✓ Merge Topics</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-merge-topics')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-transfer-topics">
+  <div class="modal">
+    <h3>🔀 Transfer Topics</h3>
+    <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px">Move the selected topics to a different sub-subject — even under a different subject. Their status, confidence, and history follow them.</div>
+    <div id="transfer-summary" class="organizer-summary"></div>
+    <div class="form-row">
+      <label>Move to</label>
+      <select id="transfer-target"></select>
+    </div>
+    <div class="form-row">
+      <label>Place them</label>
+      <select id="transfer-position"><option value="end">At end of destination list</option><option value="start">At start of destination list</option></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="applyTransferTopics()">✓ Transfer Topics</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-transfer-topics')">Cancel</button>
     </div>
   </div>
 </div>
@@ -14459,6 +14502,149 @@ function applyBulkMoveTopics() {
 }
 
 // ============================================================
+// TOPIC MERGE (combine 2+ topics in the same sub-subject into one)
+// ============================================================
+function openMergeTopicsModal() {
+  const arr = state.topics[currentTrackerSub] || [];
+  const idxs = Array.from(selectedTopicIndices).filter(i => i >= 0 && i < arr.length).sort((a,b)=>a-b);
+  if (idxs.length < 2) { toast('Select at least 2 topics to merge.'); return; }
+  const summary = document.getElementById('merge-summary');
+  if (summary) summary.innerHTML = `<strong>${idxs.length} topics selected</strong><span>${idxs.map(i=>escapeHtml(arr[i].name)).join(', ')}</span>`;
+  const survivor = document.getElementById('merge-survivor');
+  if (survivor) survivor.innerHTML = idxs.map(i => `<option value="${i}">${escapeHtml(arr[i].name)}</option>`).join('');
+  renderMergePreview();
+  openModal('modal-merge-topics');
+}
+function renderMergePreview() {
+  const arr = state.topics[currentTrackerSub] || [];
+  const survivorIdx = parseInt(document.getElementById('merge-survivor')?.value,10);
+  const survivor = arr[survivorIdx];
+  const nameInput = document.getElementById('merge-name');
+  if (nameInput && survivor) nameInput.value = survivor.name;
+  const idxs = Array.from(selectedTopicIndices).filter(i => i >= 0 && i < arr.length).sort((a,b)=>a-b);
+  const statuses = idxs.map(i=>arr[i]?.status||0);
+  const conf = idxs.map(i=>arr[i]?.confidence||0);
+  const preview = document.getElementById('merge-preview');
+  if (preview) preview.textContent = `Resulting topic keeps the most-advanced status (${Math.max(...statuses)===2?'Done':Math.max(...statuses)===1?'In Progress':'Not Started'}) and highest confidence (${Math.max(...conf)}/5) among the merged topics.`;
+}
+function applyMergeTopics() {
+  const sKey = currentTrackerSub;
+  const arr = state.topics[sKey] || [];
+  const idxs = Array.from(selectedTopicIndices).filter(i => i >= 0 && i < arr.length).sort((a,b)=>a-b);
+  if (idxs.length < 2) return;
+  const survivorIdx = parseInt(document.getElementById('merge-survivor')?.value,10);
+  if (!idxs.includes(survivorIdx)) { toast('Pick one of the selected topics to keep.'); return; }
+  const newName = (document.getElementById('merge-name')?.value || '').trim();
+  if (!newName) { toast('Enter a name for the merged topic.'); return; }
+  const merged = idxs.map(i => arr[i]);
+  const survivor = arr[survivorIdx];
+  const oldNames = merged.filter(t => t !== survivor).map(t => t.name);
+  // Combine status/confidence/dates onto the survivor before removing the rest.
+  survivor.status = Math.max(...merged.map(t=>t.status||0));
+  survivor.confidence = Math.max(...merged.map(t=>t.confidence||0));
+  const starts = merged.map(t=>t.dateStarted).filter(Boolean).sort();
+  const ends = merged.map(t=>t.dateEnded).filter(Boolean).sort();
+  if (starts.length) survivor.dateStarted = starts[0];
+  if (ends.length) survivor.dateEnded = ends[ends.length-1];
+  survivor.name = newName;
+  // Remove the merged-away topics (descending idx to keep positions valid).
+  idxs.slice().sort((a,b)=>b-a).forEach(i => { if (i !== survivorIdx) arr.splice(i,1); });
+  const newIdx = arr.findIndex(t => t.id === survivor.id);
+  remapTopicHistory(sKey, oldNames.concat([survivor.name === newName ? null : survivor.name]).filter(n=>n && n!==newName), sKey, newName, newIdx, null, true);
+  // Also repoint anything already pointing at the survivor's own old idx/name.
+  remapTopicHistory(sKey, [newName], sKey, newName, newIdx, null, true);
+  selectedTopicIndices = new Set();
+  save(); closeModal('modal-merge-topics'); renderTracker(); renderDashboard(); renderCoach();
+  toast(`${merged.length} topics merged into "${newName}".`);
+}
+
+// ============================================================
+// TOPIC TRANSFER (move topics to a different sub-subject/subject)
+// ============================================================
+function openTransferTopicsModal() {
+  const arr = state.topics[currentTrackerSub] || [];
+  const idxs = Array.from(selectedTopicIndices).filter(i => i >= 0 && i < arr.length).sort((a,b)=>a-b);
+  if (!idxs.length) return;
+  const summary = document.getElementById('transfer-summary');
+  if (summary) summary.innerHTML = `<strong>${idxs.length} topic${idxs.length===1?'':'s'} selected</strong><span>${idxs.slice(0,3).map(i=>escapeHtml(arr[i].name)).join(', ')}${idxs.length>3?' …':''}</span>`;
+  const target = document.getElementById('transfer-target');
+  if (target) {
+    target.innerHTML = Object.keys(SUBJECTS_META).map(mk => {
+      const opts = SUBJECTS_META[mk].subs.filter(sk => sk !== currentTrackerSub)
+        .map(sk => `<option value="${sk}">${escapeHtml(DEFAULT_TOPICS[sk]?.name||sk)}</option>`).join('');
+      return opts ? `<optgroup label="${escapeHtml(SUBJECTS_META[mk].name)}">${opts}</optgroup>` : '';
+    }).join('');
+  }
+  openModal('modal-transfer-topics');
+}
+function applyTransferTopics() {
+  const oldKey = currentTrackerSub;
+  const arr = state.topics[oldKey] || [];
+  const idxs = Array.from(selectedTopicIndices).filter(i => i >= 0 && i < arr.length).sort((a,b)=>a-b);
+  if (!idxs.length) return;
+  const newKey = document.getElementById('transfer-target')?.value;
+  if (!newKey || newKey === oldKey) { toast('Choose a different sub-subject.'); return; }
+  const position = document.getElementById('transfer-position')?.value || 'end';
+  const newMainKey = Object.keys(SUBJECTS_META).find(mk => SUBJECTS_META[mk].subs.includes(newKey)) || '';
+  if (!state.topics[newKey]) state.topics[newKey] = [];
+  const dest = state.topics[newKey];
+  const moving = idxs.map(i => arr[i]);
+  // Remove from source, preserving relative order.
+  arr.splice(0, arr.length, ...arr.filter((_,i)=>!idxs.includes(i)));
+  // Insert into destination.
+  if (position === 'start') dest.unshift(...moving); else dest.push(...moving);
+  moving.forEach(t => {
+    const newIdx = dest.findIndex(x => x.id === t.id);
+    remapTopicHistory(oldKey, [t.name], newKey, t.name, newIdx, newMainKey, false);
+  });
+  selectedTopicIndices = new Set();
+  save(); closeModal('modal-transfer-topics'); renderTracker(); renderDashboard(); renderCoach();
+  toast(`${moving.length} topic${moving.length===1?'':'s'} transferred to ${DEFAULT_TOPICS[newKey]?.name||newKey}.`);
+}
+
+// Repoints practice-score and calendar-event references from one or more old
+// (subjectKey, topicName) pairs onto a single new (subjectKey, topicName, idx).
+// allowSubjectKeyChange=false keeps multi-topic practice entries (which cover
+// more than one topic) attached to their original sub-subject, since they
+// can't be cleanly split between two sub-subjects.
+function remapTopicHistory(oldSKey, oldNames, newSKey, newName, newIdx, newMainKey, sameSubsubject) {
+  const nameSet = new Set(oldNames.map(n => String(n||'').trim()).filter(Boolean));
+  if (!nameSet.size) return;
+  (state.practiceScores || []).forEach(p => {
+    if (p.subjectKey !== oldSKey) return;
+    const tags = Array.isArray(p.topicTags) && p.topicTags.length ? p.topicTags.length : (p.topicIdx!=null?1:0);
+    const isSingleTopic = tags <= 1;
+    let touched = false;
+    if (p.topicName && nameSet.has(String(p.topicName).trim())) { p.topicName = newName; touched = true; if (isSingleTopic) p.topicIdx = newIdx; }
+    if (Array.isArray(p.topicTagNames)) {
+      p.topicTagNames = p.topicTagNames.map(n => nameSet.has(String(n||'').trim()) ? newName : n);
+    }
+    if (Array.isArray(p.breakdown)) {
+      const seen = {};
+      const merged = [];
+      p.breakdown.forEach(b => {
+        if (b.topicName && nameSet.has(String(b.topicName).trim())) { b.topicName = newName; if (isSingleTopic) b.topicIdx = newIdx; touched = true; }
+        const key = b.topicName || b.topicIdx;
+        if (seen[key] !== undefined) {
+          const ex = merged[seen[key]];
+          if (b.total) ex.total = (Number(ex.total)||0) + (Number(b.total)||0);
+          if (b.correct) ex.correct = (Number(ex.correct)||0) + (Number(b.correct)||0);
+        } else { seen[key] = merged.length; merged.push(b); }
+      });
+      p.breakdown = merged;
+    }
+    if (touched && sameSubsubject === false && isSingleTopic) { p.subjectKey = newSKey; if (newMainKey) p.mainSubject = newMainKey; }
+  });
+  Object.keys(state.calEvents || {}).forEach(dateStr => {
+    (state.calEvents[dateStr] || []).forEach(ev => {
+      if (ev.subjectKey !== oldSKey || !ev.topicName || !nameSet.has(String(ev.topicName).trim())) return;
+      ev.topicName = newName; ev.topicIdx = newIdx;
+      if (sameSubsubject === false) { ev.subjectKey = newSKey; if (newMainKey) ev.mainKey = newMainKey; }
+    });
+  });
+}
+
+// ============================================================
 // TRACKER BULK SELECT / DELETE
 // ============================================================
 let selectedTopicIndices = new Set();
@@ -14480,7 +14666,11 @@ function updateTrackerBulkBar() {
   const selectAllCb = document.getElementById('tracker-select-all');
   const topics = state.topics[currentTrackerSub] || [];
   const n = selectedTopicIndices.size;
+  const mergeBtn = document.getElementById('tracker-bulk-merge-btn');
+  const transferBtn = document.getElementById('tracker-bulk-transfer-btn');
   if (moveBtn) { moveBtn.style.display = n ? 'inline-flex' : 'none'; moveBtn.textContent = `↕ Move Selected (${n})`; }
+  if (mergeBtn) { mergeBtn.style.display = n >= 2 ? 'inline-flex' : 'none'; mergeBtn.textContent = `⧉ Merge Selected (${n})`; }
+  if (transferBtn) { transferBtn.style.display = n ? 'inline-flex' : 'none'; transferBtn.textContent = `🔀 Transfer Selected (${n})`; }
   if (btn) { btn.style.display = n ? 'inline-flex' : 'none'; btn.textContent = `🗑 Delete Selected (${n})`; }
   if (selectAllCb) {
     selectAllCb.checked = topics.length > 0 && n === topics.length;
@@ -15874,6 +16064,17 @@ function renderInsightsPage() {
     });
     subjectRows.sort((a,b)=>a.avg-b.avg);
 
+    // ── Today's focus subject (from the study routine in Settings) ──────────
+    // Determined early so practice performance can be scoped to what's
+    // actually being studied today, instead of a global "last 3 scores"
+    // blend that may belong to a different subject entirely.
+    const focusCandidatesEarly=topicsBySubject.filter(x=>x.total>0);
+    const lowestCoverageEarly=focusCandidatesEarly.length?focusCandidatesEarly.slice().sort((a,b)=>a.pct-b.pct||(b.total-b.completed)-(a.total-a.completed))[0]:null;
+    const scheduledCandidatesEarly=todaySubjects.map(mk=>topicsBySubject.find(x=>x.mk===mk)).filter(Boolean);
+    const actionSubjectEarly=scheduledCandidatesEarly.length?scheduledCandidatesEarly.slice().sort((a,b)=>a.pct-b.pct||(b.total-b.completed)-(a.total-a.completed))[0]:lowestCoverageEarly;
+    const focusPracticeRow=actionSubjectEarly?subjectRows.find(r=>r.mk===actionSubjectEarly.mk):null;
+    const focusSubjectNameEarly=actionSubjectEarly?(SUBJECTS_META[actionSubjectEarly.mk]?.name||actionSubjectEarly.mk):null;
+
     const countedPractice=practice.filter(x=>{
       const p=x.p,breakdown=Array.isArray(p.breakdown)?p.breakdown:[];
       if(breakdown.length)return breakdown.some(b=>Number.isFinite(Number(b.correct))&&Number.isFinite(Number(b.total))&&Number(b.total)>0);
@@ -15886,9 +16087,15 @@ function renderInsightsPage() {
     const priorPracticeAvg=priorSet.length?priorSet.reduce((a,b)=>a+b,0)/priorSet.length:null;
     const practiceTrendDelta=recentPracticeAvg!==null&&priorPracticeAvg!==null?recentPracticeAvg-priorPracticeAvg:null;
     const latestPractice=countedPractice.length?countedPractice[countedPractice.length-1].pct:null;
-    const performanceBand=practiceTrendDelta===null?'unknown':practiceTrendDelta>=3?'improving':practiceTrendDelta<=-3?'declining':'steady';
+    // Performance used to drive pace decisions/hero copy: the overall practice
+    // average for today's focus subject (per the study routine in Settings),
+    // not just the last 3 scores across every subject. Falls back to the
+    // global recent blend only when that subject has no practice data yet.
+    const performanceMetric=focusPracticeRow?focusPracticeRow.avg:recentPracticeAvg;
+    const performanceMetricDelta=focusPracticeRow?focusPracticeRow.delta:practiceTrendDelta;
+    const performanceBand=performanceMetricDelta===null?'unknown':performanceMetricDelta>=3?'improving':performanceMetricDelta<=-3?'declining':'steady';
     const performanceLabel={improving:'Improving',steady:'Steady',declining:'Declining',unknown:'Not enough history'}[performanceBand];
-    const performanceTone=recentPracticeAvg===null?'var(--muted)':recentPracticeAvg>=target?'var(--pass)':recentPracticeAvg>=75?'var(--accent2)':recentPracticeAvg>=65?'var(--warn)':'var(--danger)';
+    const performanceTone=performanceMetric===null?'var(--muted)':performanceMetric>=target?'var(--pass)':performanceMetric>=75?'var(--accent2)':performanceMetric>=65?'var(--warn)':'var(--danger)';
 
     // ── Board / score evidence ───────────────────────────────────────────────
     const boardEntries=(state.scores||[]).map((s,i)=>({s,i,c:calcEntry(s)})).filter(x=>x.c.avg!==null);
@@ -15956,8 +16163,8 @@ function renderInsightsPage() {
     const paceLabel={moon:'To the moon',fast:'Fast',ontrack:'On pace',slow:'Slow',veryslow:'Very slow',unknown:'Needs history'}[paceBand];
     const paceTone={moon:'var(--accent2)',fast:'var(--pass)',ontrack:'var(--pass)',slow:'var(--warn)',veryslow:'var(--danger)',unknown:'var(--muted)'}[paceBand];
     const paceBadgeLabel=paceBand==='unknown'?'PACE NEEDS HISTORY':`PACE: ${paceLabel.toUpperCase()}`;
-    const performanceBadgeLabel=recentPracticeAvg===null?'PRACTICE: NO DATA':recentPracticeAvg>=target?'PRACTICE: TRACKING WELL':recentPracticeAvg>=75?'PRACTICE: SOLID':recentPracticeAvg>=65?'PRACTICE: BUILDING':'PRACTICE: NEEDS WORK';
-    const perfForDecision=recentPracticeAvg===null?'unknown':recentPracticeAvg>=target?'strong':recentPracticeAvg>=65?'okay':'weak';
+    const performanceBadgeLabel=performanceMetric===null?'PRACTICE: NO DATA':performanceMetric>=target?'PRACTICE: TRACKING WELL':performanceMetric>=75?'PRACTICE: SOLID':performanceMetric>=65?'PRACTICE: BUILDING':'PRACTICE: NEEDS WORK';
+    const perfForDecision=performanceMetric===null?'unknown':performanceMetric>=target?'strong':performanceMetric>=65?'okay':'weak';
     let paceDecision='';
     let paceDecisionTone=paceTone;
     if(perfForDecision==='strong') paceDecisionTone=paceBand==='veryslow'||paceBand==='slow'?'var(--warn)':'var(--pass)';
@@ -16002,10 +16209,9 @@ function renderInsightsPage() {
 
     // ── Focus + recommendation ──────────────────────────────────────────────
     const subjectCoverage=topicsBySubject.filter(x=>x.total>0).map(x=>({...x,unfinished:Math.max(0,x.total-x.completed)})).sort((a,b)=>a.pct-b.pct||b.unfinished-a.unfinished);
-    const lowestCoverage=subjectCoverage[0]||null;
-    const scheduledCandidates=todaySubjects.map(mk=>topicsBySubject.find(x=>x.mk===mk)).filter(Boolean);
-    const actionSubject=scheduledCandidates.length?scheduledCandidates.slice().sort((a,b)=>a.pct-b.pct||b.unfinished-a.unfinished)[0]:lowestCoverage;
-    const focusName=actionSubject?(SUBJECTS_META[actionSubject.mk]?.name||actionSubject.mk):null;
+    const lowestCoverage=lowestCoverageEarly;
+    const actionSubject=actionSubjectEarly;
+    const focusName=focusSubjectNameEarly;
     const focusRemaining=actionSubject?Math.max(0,actionSubject.total-actionSubject.completed):0;
     const actionTopic=actionSubject?(()=>{const subs=SUBJECTS_META[actionSubject.mk]?.subs||[];for(const sk of subs){const arr=state.topics[sk]||[];const idx=arr.findIndex(t=>Number(t.status)!==2);if(idx>=0)return {sk,idx};if(arr.length)return {sk,idx:0};}return null})():null;
     const mainActionText=(paceBand==='slow'||paceBand==='veryslow')?(focusName?`Work ${focusName}`:'Work an unfinished topic'):(performanceBand==='declining'?'Take a scored check':timeTopic?`Refresh ${timeTopic.topic}`:'Keep your momentum');
@@ -16086,7 +16292,7 @@ function renderInsightsPage() {
         <section class="insight-v15-hero card">
           <div class="insight-v15-hero-copy">
             <div class="insight-v15-kicker">${paceBand==='unknown'?'PACE STATUS':'CURRENT PACE + PERFORMANCE'}</div>
-            <h1><span style="color:${paceTone}">${escapeHtml(paceLabel)}</span> pace${recentPracticeAvg!==null?` + <span style="color:${performanceTone}">${recentPracticeAvg.toFixed(0)}% practice</span>`:''}: ${escapeHtml(paceDecision.split('.')[0]||paceDecision)}</h1>
+            <h1><span style="color:${paceTone}">${escapeHtml(paceLabel)}</span> pace${performanceMetric!==null?` + <span style="color:${performanceTone}">${performanceMetric.toFixed(0)}%${focusPracticeRow?` ${escapeHtml(focusSubjectNameEarly)}`:''} practice</span>`:''}: ${escapeHtml(paceDecision.split('.')[0]||paceDecision)}</h1>
             <p>${escapeHtml(daysLeft===null?`${completedTopics}/${totalTopics||0} topics complete.`:`${completedTopics}/${totalTopics||0} topics complete · ${daysLeft} days until the exam.`)}</p>
           </div>
           <div class="insight-v15-hero-side">
@@ -26306,6 +26512,9 @@ function getTopicLastTouchInfo(sKey, idx){
           // skip rather than falling back to an 'untested' nag.
           if(!ret && lastScore==null) return;
           const key=ret?.key || (days!==null&&days>=14?'refresh':'recent');
+          // 'recent' means it was just reinforced — nothing to decay yet, so it
+          // must not occupy a slot in the "needs checking" list.
+          if(key==='recent') return;
           const rank=key==='slipping'?0:key==='refresh'?1:key==='untested'?2:key==='holding'?3:4;
           rows.push({mk,sk,idx,topic:t.name,subName:DEFAULT_TOPICS[sk]?.name||sk,days,lastDate:touch.date||last?.date||'',lastScore,key,ret,rank});
         });
@@ -26391,6 +26600,73 @@ function getTopicLastTouchInfo(sKey, idx){
 .insight-final-kd-row{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--surface) 72%,transparent);transition:transform .16s ease,border-color .16s ease,background .16s ease}.insight-final-kd-row:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent2) 28%,var(--border));background:color-mix(in srgb,var(--accent2) 4%,var(--surface))}.insight-final-kd-dot{width:8px;height:8px;border-radius:50%}.insight-final-kd-main{min-width:0}.insight-final-kd-main strong{display:block;font-size:10.5px;line-height:1.3}.insight-final-kd-main span{display:block;margin-top:3px;font-size:7.8px;color:var(--muted)}.insight-final-kd-main em{display:block;margin-top:4px;font-style:normal;font-size:7.8px;font-weight:800}.insight-final-kd-test{flex:none;padding:7px 11px;border:1px solid color-mix(in srgb,var(--accent2) 35%,var(--border));border-radius:8px;background:color-mix(in srgb,var(--accent2) 7%,transparent);color:var(--accent2);font:800 8px var(--font-body);cursor:pointer}.insight-final-kd-test:hover{background:color-mix(in srgb,var(--accent2) 13%,transparent)}.insight-final-kd-empty{padding:12px 2px 3px}.insight-final-kd-empty strong{display:block;font-size:10px}.insight-final-kd-empty span{display:block;margin-top:4px;font-size:8.3px;line-height:1.45;color:var(--muted)}
 @media(max-width:700px){.insight-final-general-test{align-items:flex-start;flex-direction:column}.insight-final-general-test button{width:100%}.insight-final-kd-row{grid-template-columns:9px minmax(0,1fr)}.insight-final-kd-test{grid-column:2;justify-self:start}}
 </style>
+<script id="reactive-insights-patch">
+(() => {
+  const original = window.renderInsightsPage;
+  if (typeof original !== 'function' || window.__reactiveInsightsPatched) return;
+  window.__reactiveInsightsPatched = true;
+
+  const esc = s => typeof escapeHtml === 'function' ? escapeHtml(String(s)) : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pct = p => Number.isFinite(p) ? `${Math.round(p)}%` : '—';
+  const scored = key => (state.practiceScores || []).filter(p => p && p.mainSubject === key && p.score !== null && Number(p.max) > 0 && Number.isFinite(Number(p.score))).map(p => Number(p.score) / Number(p.max) * 100);
+  const stats = key => {
+    const topics = (SUBJECTS_META[key]?.subs || []).flatMap(sk => state.topics?.[sk] || []);
+    const done = topics.filter(t => Number(t.status) === 2).length;
+    const scores = scored(key);
+    return { total: topics.length, done, coverage: topics.length ? done / topics.length * 100 : 0, practice: scores.length ? scores.reduce((a,b) => a+b, 0) / scores.length : null, checks: scores.length };
+  };
+  const schedule = () => {
+    const today = localDateStr();
+    const keys = typeof getScheduledMainSubjects === 'function' ? getScheduledMainSubjects(today) : [];
+    return keys.filter(k => MAIN_SUBJECTS.includes(k));
+  };
+  const scheduleDaysLeft = key => {
+    const end = state.insightsTargetDate || state.examDate;
+    if (!end) return 0;
+    const start = new Date(localDateStr() + 'T00:00:00');
+    const finish = new Date(end + 'T00:00:00');
+    let n = 0;
+    for (let d = new Date(start); d <= finish; d.setDate(d.getDate()+1)) {
+      const day = d.getDay();
+      if ((state.restDays || []).includes(day)) continue;
+      const keys = (state.studySchedule || {})[day] || [];
+      if (keys.includes(key)) n++;
+    }
+    return n;
+  };
+  function patchTodayPanel() {
+    const root = document.getElementById('reminders-page-content');
+    if (!root) return;
+    const todayKeys = schedule();
+    const pace = root.querySelector('.insight-v15-pace');
+    if (pace && todayKeys.length) {
+      const h = pace.querySelector('h2');
+      if (h) h.textContent = 'Routine-aware pace for today';
+    }
+  }
+  function refreshReactive() {
+    original();
+    requestAnimationFrame(patchTodayPanel);
+  }
+  window.renderInsightsPage = refreshReactive;
+  if (typeof window.save === 'function' && !window.__reactiveSavePatched) {
+    const originalSave = window.save;
+    window.__reactiveSavePatched = true;
+    window.save = function(...args) {
+      const result = originalSave.apply(this, args);
+      requestAnimationFrame(() => {
+        if (document.getElementById('reminders-page-content')) refreshReactive();
+        if (document.getElementById('page-settings')?.classList.contains('active') && typeof renderSettings === 'function') renderSettings();
+      });
+      return result;
+    };
+  }
+
+  if (document.getElementById('reminders-page-content')) refreshReactive();
+  window.addEventListener('storage', refreshReactive);
+})();
+
+</script>
 </body>
 
 <style id="cpale-absolute-fire-final">
