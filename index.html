@@ -27435,7 +27435,7 @@ function getTopicLastTouchInfo(sKey, idx){
     const total = Math.max(1, Math.ceil(notes.length / NOTE_PAGE_SIZE));
     notePage = Math.min(notePage, total - 1);
     const visible = notes.slice(notePage * NOTE_PAGE_SIZE, (notePage + 1) * NOTE_PAGE_SIZE);
-    return visible.map(n => {
+    return renderPageControls('notes', notePage, total) + visible.map(n => {
       const convertEditor = noteInlineKey === n.key ? `<div class="future-self-note-convert"><div class="future-self-note-original"><span>Original Score Note</span><p>${esc(n.text)}</p></div><label>Write the review question you want to revisit</label><div id="future-self-note-question-${safeId(n.key)}" class="future-self-editor" data-future-editor="true" contenteditable="true" data-placeholder="For example: Why did I make this mistake, and what rule should I remember next time?"></div>${richTools('future-self-note-question-' + safeId(n.key),'future-self-note-image-' + safeId(n.key))}<div class="future-self-inline-actions"><button class="btn btn-primary btn-sm" onclick="futureSelfSavePromotedNote('${esc(n.key)}')">Save as question</button><button class="btn btn-ghost btn-sm" onclick="futureSelfCancelPromotedNote()">Cancel</button></div></div>` : '';
       return `<article class="future-self-note-card" style="--fs-subject-color:${esc(subjectColor(n.mainSubject))}">
         <div class="future-self-q-context"><span class="future-self-status note">SCORESHEET NOTE</span><span class="future-self-context-segment subject" style="--segment-color:${esc(subjectColor(n.mainSubject))}">${esc(subjectName(n.mainSubject))}</span>${n.subSubjectName?`<span class="future-self-context-arrow">›</span><span class="future-self-context-segment sub">${esc(n.subSubjectName)}</span>`:''}<span class="future-self-context-date">${esc(n.date || 'Undated')}</span></div>
@@ -27443,7 +27443,7 @@ function getTopicLastTouchInfo(sKey, idx){
         <div class="future-self-note-context"><span>${esc(n.label)}</span>${n.topicNames.length?`<span><b>Topic${n.topicNames.length>1?'s':''}:</b> ${esc(n.topicNames.slice(0,2).join(' · '))}${n.topicNames.length>2?` <em>+${n.topicNames.length-2} more</em>`:''}</span>`:'<span><b>Topic:</b> Comprehensive / not specified</span>'}${n.score?`<span><b>Score:</b> ${esc(n.score)}</span>`:''}</div>
         ${convertEditor || `<div class="future-self-note-actions"><span class="future-self-source-pill">Imported from Scoresheet</span><button class="btn btn-ghost btn-sm" onclick="futureSelfStartPromoteNote('${esc(n.key)}')">Create review question</button></div>`}
       </article>`;
-    }).join('') + renderPageControls('notes', notePage, total);
+    }).join('');
   }
 
   function subjectOptions(){
@@ -30623,6 +30623,57 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
 @media (max-width: 900px) {
   #page-future-self .future-self-question-grid-panel {
     height: auto !important;
+  }
+}
+</style>
+
+
+<style id="future-self-all-questions-scroll-final">
+/* Keep All Questions compact as history grows: headers remain visible while
+   each status lane scrolls through its own question cards. */
+#page-future-self .future-self-question-grid-panel {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+#page-future-self .future-self-question-grid-panel > .future-self-list {
+  min-height: 0 !important;
+  max-height: 520px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+#page-future-self .future-self-question-grid-panel > .future-self-list > .future-self-question,
+#page-future-self .future-self-question-grid-panel > .future-self-list > .future-self-grid-empty {
+  flex: none !important;
+}
+@media (max-width: 900px) {
+  #page-future-self .future-self-question-grid-panel {
+    height: auto !important;
+  }
+  #page-future-self .future-self-question-grid-panel > .future-self-list {
+    max-height: 440px !important;
+  }
+}
+</style>
+
+
+<style id="future-self-score-notes-scroll-final">
+/* Keep the Score Notes section compact as notes grow, without changing the
+   section header, filters, editors, or existing question-lane behavior. */
+#page-future-self .future-self-section:has(.future-self-note-card) > .future-self-list {
+  min-height: 0 !important;
+  max-height: 520px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+@media (max-width: 900px) {
+  #page-future-self .future-self-section:has(.future-self-note-card) > .future-self-list {
+    max-height: 440px !important;
   }
 }
 </style>
