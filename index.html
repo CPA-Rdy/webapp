@@ -14697,19 +14697,37 @@ function applyMergeTopics() {
 // ============================================================
 // TOPIC TRANSFER (move topics to a different sub-subject/subject)
 // ============================================================
+function getTransferTargetSubSubjects() {
+  // Build from the canonical main-subject order so every board subject is shown,
+  // even if an older saved state left a subject's sub-subject index incomplete.
+  // Explicitly removed built-ins remain excluded, preserving the user's edits.
+  const removed = state.removedBuiltinSubSubjects || {};
+  return MAIN_SUBJECTS.map(mk => {
+    const meta = SUBJECTS_META[mk];
+    if (!meta) return null;
+    const indexed = Array.isArray(meta.subs) ? meta.subs : [];
+    const fallback = Object.entries(DEFAULT_TOPICS)
+      .filter(([sk, item]) => item && item.subject === mk && item.kind !== 'video' && !(removed[mk] || []).includes(sk))
+      .map(([sk]) => sk);
+    const subs = [...new Set([...indexed, ...fallback])]
+      .filter(sk => sk !== currentTrackerSub && DEFAULT_TOPICS[sk]);
+    return { key: mk, name: meta.name || mk, fullName: meta.fullName || '', subs };
+  }).filter(Boolean);
+}
+
 function openTransferTopicsModal() {
   const arr = state.topics[currentTrackerSub] || [];
   const idxs = Array.from(selectedTopicIndices).filter(i => i >= 0 && i < arr.length).sort((a,b)=>a-b);
   if (!idxs.length) return;
   const summary = document.getElementById('transfer-summary');
-  if (summary) summary.innerHTML = `<strong>${idxs.length} topic${idxs.length===1?'':'s'} selected</strong><span>${idxs.slice(0,3).map(i=>escapeHtml(arr[i].name)).join(', ')}${idxs.length>3?' …':''}</span>`;
+  if (summary) summary.innerHTML = `<strong>${idxs.length} topic${idxs.length===1?'':'s'} selected</strong><span>${idxs.slice(0,3).map(i => escapeHtml(arr[i].name)).join(', ')}${idxs.length>3?' …':''}</span>`;
   const target = document.getElementById('transfer-target');
   if (target) {
-    target.innerHTML = Object.keys(SUBJECTS_META).map(mk => {
-      const opts = SUBJECTS_META[mk].subs.filter(sk => sk !== currentTrackerSub)
-        .map(sk => `<option value="${sk}">${escapeHtml(DEFAULT_TOPICS[sk]?.name||sk)}</option>`).join('');
-      return opts ? `<optgroup label="${escapeHtml(SUBJECTS_META[mk].name)}">${opts}</optgroup>` : '';
-    }).join('');
+    target.innerHTML = getTransferTargetSubSubjects().map(group => {
+      const opts = group.subs
+        .map(sk => `<option value="${escapeHtml(sk)}">${escapeHtml(DEFAULT_TOPICS[sk]?.name||sk)}</option>`).join('');
+      return opts ? `<optgroup label="${escapeHtml(group.name)}${group.fullName ? ` — ${escapeHtml(group.fullName)}` : ''}">${opts}</optgroup>` : '';
+    }).join('') || '<option value="">No other subject topics available</option>';
   }
   openModal('modal-transfer-topics');
 }
@@ -14721,7 +14739,12 @@ function applyTransferTopics() {
   const newKey = document.getElementById('transfer-target')?.value;
   if (!newKey || newKey === oldKey) { toast('Choose a different sub-subject.'); return; }
   const position = document.getElementById('transfer-position')?.value || 'end';
-  const newMainKey = Object.keys(SUBJECTS_META).find(mk => SUBJECTS_META[mk].subs.includes(newKey)) || '';
+  const newMainKey = MAIN_SUBJECTS.find(mk => SUBJECTS_META[mk]?.subs?.includes(newKey))
+    || DEFAULT_TOPICS[newKey]?.subject
+    || '';
+  if (newMainKey && SUBJECTS_META[newMainKey] && !SUBJECTS_META[newMainKey].subs.includes(newKey)) {
+    SUBJECTS_META[newMainKey].subs.push(newKey);
+  }
   if (!state.topics[newKey]) state.topics[newKey] = [];
   const dest = state.topics[newKey];
   const moving = idxs.map(i => arr[i]);
@@ -17180,6 +17203,22 @@ function setSidebarBackupStatus(msg) {
 let _savedFileHandle = null; // remember the chosen file between saves
 let _autoSaveTimer = null;
 let _autoSavePending = false;
+let _backupIndicatorTimer = null;
+
+function showBackupIndicator(title, duration=5000) {
+  const indicator = document.getElementById('autosave-indicator');
+  if (!indicator) return;
+  clearTimeout(_backupIndicatorTimer);
+  indicator.textContent = '✓';
+  indicator.style.color = 'var(--pass)';
+  indicator.title = title || 'Backup saved';
+  _backupIndicatorTimer = setTimeout(() => {
+    if (indicator && !_autoSavePending) {
+      indicator.textContent = '';
+      indicator.title = '';
+    }
+  }, duration);
+}
 
 function scheduleAutoSave() {
   // Mark that autosave is pending (visual indicator)
@@ -17197,8 +17236,7 @@ function scheduleAutoSave() {
       await writable.write(blob);
       await writable.close();
       _autoSavePending = false;
-      if (indicator) { indicator.textContent = '✓'; indicator.style.color = 'var(--pass)'; indicator.title = 'Auto-saved to: ' + _savedFileHandle.name; }
-      setTimeout(() => { if (indicator && !_autoSavePending) { indicator.textContent = ''; indicator.title = ''; } }, 3000);
+      showBackupIndicator('Auto-saved to: ' + _savedFileHandle.name);
     } catch(e) {
       // File handle invalid — clear it, user will need to re-pick
       _savedFileHandle = null;
@@ -17225,8 +17263,7 @@ async function saveToFile() {
           await writable.write(blob);
           await writable.close();
           toast('💾 Saved to: ' + _savedFileHandle.name);
-          const ind = document.getElementById('autosave-indicator');
-          if (ind) { ind.textContent = '✓'; ind.style.color = 'var(--pass)'; ind.title = 'Saved: ' + _savedFileHandle.name; setTimeout(()=>{ if(ind && !_autoSavePending){ind.textContent='';ind.title='';} }, 3000); }
+          showBackupIndicator('Saved: ' + _savedFileHandle.name);
           markBackupNow();
           return;
         } catch(e) {
@@ -17245,6 +17282,7 @@ async function saveToFile() {
       await writable.write(blob);
       await writable.close();
       toast('💾 Saved to: ' + handle.name);
+      showBackupIndicator('Saved: ' + handle.name);
       markBackupNow();
     } catch(e) {
       if (e.name !== 'AbortError') {
@@ -17265,6 +17303,7 @@ function _fallbackDownload(blob) {
   a.download = 'cpale_tracker_ln.json';
   a.click();
   toast('💾 File saved! (Tip: Use Chrome/Edge for better save-to-file support)');
+  showBackupIndicator('Downloaded backup file');
   setSidebarBackupStatus('✓ Saved ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
   markBackupNow();
 }
