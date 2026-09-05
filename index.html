@@ -16326,19 +16326,19 @@ function renderInsightsPage() {
     const requiredPace=paceDaysLeft!==null&&paceDaysLeft>0?remainingTopics/paceDaysLeft:null;
     const paceRatio=actualPace!==null&&requiredPace!==null&&requiredPace>0?actualPace/requiredPace:null;
     const paceBand=paceRatio===null?'unknown':paceRatio>=1.45?'moon':paceRatio>=1.15?'fast':paceRatio>=0.9?'ontrack':paceRatio>=0.65?'slow':'veryslow';
-    const paceLabel={moon:'To the moon',fast:'Fast',ontrack:'On pace',slow:'Slow',veryslow:'Very slow',unknown:'Needs history'}[paceBand];
-    const paceTone={moon:'var(--accent2)',fast:'var(--pass)',ontrack:'var(--pass)',slow:'var(--warn)',veryslow:'var(--danger)',unknown:'var(--muted)'}[paceBand];
-    const paceBadgeLabel=paceBand==='unknown'?'PACE NEEDS HISTORY':`PACE: ${paceLabel.toUpperCase()}`;
+    const paceLabel={moon:'To the moon',fast:'Moving fast',ontrack:'Moving well',slow:'Building steadily',veryslow:'Taking shape',unknown:'Getting started'}[paceBand];
+    const paceTone={moon:'var(--accent2)',fast:'var(--pass)',ontrack:'var(--pass)',slow:'var(--accent2)',veryslow:'var(--accent2)',unknown:'var(--muted)'}[paceBand];
+    const paceBadgeLabel=paceBand==='unknown'?'PACE: GETTING STARTED':`PACE: ${paceLabel.toUpperCase()}`;
     const performanceBadgeLabel=performanceMetric===null?'PRACTICE: NO DATA':performanceMetric>=target?'PRACTICE: TRACKING WELL':performanceMetric>=75?'PRACTICE: SOLID':performanceMetric>=65?'PRACTICE: BUILDING':'PRACTICE: NEEDS WORK';
     const perfForDecision=performanceMetric===null?'unknown':performanceMetric>=target?'strong':performanceMetric>=65?'okay':'weak';
     let paceDecision='';
     let paceDecisionTone=paceTone;
-    if(perfForDecision==='strong') paceDecisionTone=paceBand==='veryslow'||paceBand==='slow'?'var(--warn)':'var(--pass)';
-    else if(perfForDecision==='okay' && paceBand==='veryslow') paceDecisionTone='var(--warn)';
-    if(paceBand==='unknown') paceDecision='Keep logging completed topics until your true pace is measurable.';
-    else if(paceBand==='veryslow' && perfForDecision==='weak') { paceDecision='Your coverage is moving slowly, and the recent scores still need work. Keep the next blocks focused on review and a short scored check before adding more volume.'; paceDecisionTone='var(--danger)'; }
-    else if((paceBand==='veryslow'||paceBand==='slow') && perfForDecision==='strong') { paceDecision='Your performance is healthy; the bottleneck is coverage. Increase completed topics gradually while keeping your current practice standard.'; paceDecisionTone='var(--warn)'; }
-    else if((paceBand==='fast'||paceBand==='moon') && perfForDecision==='weak') { paceDecision='You are covering ground quickly, but the recent scores still need work. Shift the next block toward scored practice and mistake review before adding more topics.'; paceDecisionTone='var(--danger)'; }
+    if(perfForDecision==='strong') paceDecisionTone=paceBand==='veryslow'||paceBand==='slow'?'var(--accent2)':'var(--pass)';
+    else if(perfForDecision==='okay' && paceBand==='veryslow') paceDecisionTone='var(--accent2)';
+    if(paceBand==='unknown') paceDecision='You are getting started, and every dated completion will make your momentum easier to see.';
+    else if(paceBand==='veryslow' && perfForDecision==='weak') { paceDecision='Your progress is taking shape. Keep the next block focused on review and one short scored check — each completed topic adds useful momentum.'; paceDecisionTone='var(--accent2)'; }
+    else if((paceBand==='veryslow'||paceBand==='slow') && perfForDecision==='strong') { paceDecision='Your performance is healthy, and your coverage is building. Add completed topics gradually while keeping your current practice standard.'; paceDecisionTone='var(--accent2)'; }
+    else if((paceBand==='fast'||paceBand==='moon') && perfForDecision==='weak') { paceDecision='You are covering ground quickly. Give the next block a little more room for scored practice and mistake review so your progress sticks.'; paceDecisionTone='var(--warn)'; }
     else if((paceBand==='fast'||paceBand==='moon') && perfForDecision==='strong') { paceDecision='Excellent: pace and performance are both moving in the right direction. Keep the rhythm and protect time for practice.'; paceDecisionTone='var(--pass)'; }
     else if(paceBand==='ontrack' && perfForDecision==='weak') { paceDecision='Your pace is on track, while the recent scores still need work. Keep the rhythm steady and use the next scored check to tighten the weak spots.'; paceDecisionTone='var(--warn)'; }
     else if(paceBand==='ontrack' && perfForDecision==='strong') { paceDecision='You are balancing coverage and performance well. Maintain the current rhythm and keep validating with practice.'; paceDecisionTone='var(--pass)'; }
@@ -16446,12 +16446,12 @@ function renderInsightsPage() {
     const examPaceLabel=normalExamFinishLabel ? `by ${normalExamFinishLabel}` : 'before the exam';
     const paceBufferDays=(validGoalDate&&state.examDate)?Math.max(0,Math.ceil((new Date(state.examDate+'T00:00:00')-validGoalDate)/86400000)):null;
     const paceMessage = actualPace===null
-      ? `Your pace will become clearer as dated topic completions build up${normalExamFinishLabel?` — the normal exam rhythm aims to finish core coverage by ${normalExamFinishLabel}.`:'.'}`
+      ? `Your momentum will become clearer as dated topic completions build up${normalExamFinishLabel?` — the study rhythm is designed to finish core coverage by ${normalExamFinishLabel}.`:'.'}`
       : paceRatio!==null && paceRatio<1
-      ? `You are averaging ${humanWeekly(actualPace)} now. ${validGoalDate?`Your personal goal is ${paceGoalLabel}.`:(normalExamFinishLabel?`The normal exam rhythm finishes core coverage by ${normalExamFinishLabel}, leaving about ${examReviewBufferDays} days to review.`:'Set an exam date to benchmark the finish rhythm.')}`
+      ? `You are averaging ${humanWeekly(actualPace)} now. ${validGoalDate?`You are building toward your personal goal on ${paceGoalLabel}.`:(normalExamFinishLabel?`You are building toward core coverage by ${normalExamFinishLabel}, with about ${examReviewBufferDays} days reserved for review.`:'Set an exam date to give your momentum a helpful reference point.')}`
       : paceRatio!==null && paceRatio>=1
-      ? `You are already moving at the needed pace. Keep the rhythm steady and protect the time you are building for practice and review.`
-      : 'Keep logging dated completions so the finish pace can become more precise.';
+      ? `You are moving at a sustainable rhythm. Keep building steadily and protect the time you are creating for practice and review.`
+      : 'Keep logging dated completions so your momentum becomes easier to see.';
 
     el.innerHTML=`
       <div class="insights-onepage-v15">
@@ -16490,7 +16490,7 @@ function renderInsightsPage() {
 
         <section class="insight-v9-pace card insight-v11-pace insight-v15-pace">
           <div class="insight-v9-section-head"><div><div class="insight-v9-card-label">PACE + PERFORMANCE</div><h2>How your pace is tracking</h2></div><div class="insight-v21-pace-head-actions"><span class="insight-v9-head-badge" style="--tone:${paceTone}">${escapeHtml(paceBadgeLabel)}</span><span class="insight-v9-head-badge" style="--tone:${performanceTone}">${escapeHtml(performanceBadgeLabel)}</span><button type="button" class="insight-goal-button" onclick="openInsightsGoalModal()">${paceGoalLabel?`Goal ${escapeHtml(paceGoalLabel)}`:'Set finish goal'} <span>↗</span></button></div></div>
-          <div class="insight-v11-pace-copy"><strong>${escapeHtml(paceDecision)}</strong><span>${actualPace===null?'More dated completions are needed to classify your pace.':`Your pace is ${humanWeekly(actualPace)} · normal exam rhythm aims to finish core coverage ${examPaceLabel}${!validGoalDate&&examReviewBufferDays?` and leave about ${examReviewBufferDays} days for review.`:'.'}`}</span></div>
+          <div class="insight-v11-pace-copy"><strong>${escapeHtml(paceDecision)}</strong><span>${actualPace===null?'Add a few dated completions and your momentum picture will become clearer.':`You are adding ${humanWeekly(actualPace)} · the study rhythm aims to finish core coverage ${examPaceLabel}${!validGoalDate&&examReviewBufferDays?` with about ${examReviewBufferDays} days left for review.`:'.'}`}</span></div>
           <div class="insight-v11-runway-wrap insight-v23-runway">
             <div class="insight-v11-runway-meta"><span>0% start</span><span>100% finish</span></div>
             <div class="insight-v11-runway">
