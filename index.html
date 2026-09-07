@@ -12607,21 +12607,21 @@ function scoreSignalEmoji(value){
 function getPracticeInsight({avg, delta=null, sd=null, count=0, best=null, worst=null, name='this area', target=75}){
   const a=Number(avg), d=Number(delta), s=Number(sd), t=Number(target)||75;
   const focusName = escapeHtml(String(name || 'this area'));
-  if(!Number.isFinite(a)) return {label:'Not enough scores yet', icon:'📊', color:'var(--muted)', meaning:'There are not enough scored attempts to tell what is happening yet.', action:'Log a few more scored sets so the app can identify a real pattern.'};
+  if(!Number.isFinite(a)) return {label:'Not enough scores yet', icon:'📊', color:'var(--muted)', meaning:'There are not enough scored attempts to tell what is happening yet.', action:'A few more scored sets could help reveal a useful pattern.'};
   const inconsistent = count>=3 && Number.isFinite(s) && s>=15;
   const improving = Number.isFinite(d) && d>=2;
   const declining = Number.isFinite(d) && d<=-2;
   const aboveTarget = a>=t;
-  if(inconsistent && declining) return {label:'Needs steadier practice', icon:'🎯', color:'var(--warn)', meaning:'Your recent results are lower and vary quite a bit between attempts. The topic is worth working on until your results settle.', action:`Focus on ${focusName}, then do 2–3 short sets and look for a steadier result.`};
-  if(inconsistent && aboveTarget) return {label:'Strong result, still building consistency', icon:'🎲', color:'var(--warn)', meaning:'Your average is good, but your results swing a lot.', action:`Keep testing ${focusName} until you can repeatedly score ${t}% or higher.`};
-  if(inconsistent) return {label:'Still settling in', icon:'🎯', color:'var(--warn)', meaning:'Your results move around from attempt to attempt, so the average is not the whole story yet.', action:`Do 2–3 short focused sets on ${focusName} and look for a steadier result.`};
-  if(declining && aboveTarget) return {label:'Worth a quick refresh', icon:'↘', color:'var(--warn)', meaning:`Your average is still above ${t}%, but your recent results have dipped.`, action:`Review a few recent mistakes in ${focusName}, then check yourself again.`};
-  if(declining) return {label:'Needs more practice', icon:'↘', color:'var(--warn)', meaning:`Your recent scores have dipped and are currently below ${t}%.`, action:`Work on the weak parts of ${focusName}, then check yourself again.`};
-  if(improving && aboveTarget) return {label:'Strong and improving', icon:'📈', color:'var(--pass)', meaning:`You are above ${t}% and your recent scores are improving.`, action:'Keep going and use occasional harder questions to make this reliable.'};
-  if(improving) return {label:'Moving up', icon:'📈', color:'var(--accent2)', meaning:`Your scores are improving, although you are not consistently at ${t}% yet.`, action:`Keep practicing ${focusName} and let the next few checks confirm the trend.`};
-  if(aboveTarget) return {label:'Strong and steady', icon:'✅', color:'var(--pass)', meaning:`Your average is at or above ${t}% and there is no major warning sign.`, action:'Maintain it with spaced review and put more study time into weaker areas.'};
-  if(a>=65) return {label:'Within reach', icon:'🧩', color:'var(--warn)', meaning:`You are below ${t}%, but close enough for focused practice to make a difference.`, action:`Target the mistakes in ${focusName}, then check again.`};
-  return {label:'Needs more attention', icon:'🌱', color:'var(--warn)', meaning:`Your average is still well below ${t}%, so this area needs more practice before the picture is strong.`, action:`Review the core ideas in ${focusName}, practice with focused questions, then test again.`};
+  if(inconsistent && declining) return {label:'Needs steadier practice', icon:'🎯', color:'var(--warn)', meaning:`Your scores in ${focusName} have been going up and down, and your latest attempts are weaker than your earlier ones. That usually means some parts are still unclear—not that you should simply do more random questions.`, action:`It may help to review the questions you missed, especially the repeated mistake, then try 3 short sets on that same area. Reaching at least ${t}% twice in a row could be a good sign that it is settling in.`};
+  if(inconsistent && aboveTarget) return {label:'Strong result, still building consistency', icon:'🎲', color:'var(--warn)', meaning:`You are scoring well in ${focusName}, but the result is not the same each time yet. You may know the topic, but you still need to make that performance dependable under different questions.`, action:`You could try 2–3 more mixed sets in ${focusName} and use two or three results at ${t}% or higher as a sign that the performance is becoming dependable.`};
+  if(inconsistent) return {label:'Still settling in', icon:'🎯', color:'var(--warn)', meaning:`Your results in ${focusName} are changing a lot from one attempt to the next, so the latest score may not show your real level yet.`, action:`A useful approach could be to review your missed questions, choose one weak area, and try 3 short focused sets on it. Getting closer to the same result each time would show that it is becoming more stable.`};
+  if(declining && aboveTarget) return {label:'Worth a quick refresh', icon:'↘', color:'var(--warn)', meaning:`Your average is still above ${t}%, but your recent results have dipped.`, action:`It may be worth reviewing a few recent mistakes in ${focusName} and checking yourself again when you feel ready.`};
+  if(declining) return {label:'Needs more practice', icon:'↘', color:'var(--warn)', meaning:`Your recent scores have dipped and are currently below ${t}%.`, action:`You might benefit from revisiting the weaker parts of ${focusName} and then checking yourself again.`};
+  if(improving && aboveTarget) return {label:'Strong and improving', icon:'📈', color:'var(--pass)', meaning:`You are above ${t}% and your recent scores are improving.`, action:'You could keep this going with occasional harder questions so the progress becomes more reliable.'};
+  if(improving) return {label:'Moving up', icon:'📈', color:'var(--accent2)', meaning:`Your scores are improving, although you are not consistently at ${t}% yet.`, action:`It may help to keep practicing ${focusName} and let the next few checks confirm the trend.`};
+  if(aboveTarget) return {label:'Strong and steady', icon:'✅', color:'var(--pass)', meaning:`Your average is at or above ${t}% and there is no major warning sign.`, action:'Spaced review could help you maintain this while you give more attention to weaker areas.'};
+  if(a>=65) return {label:'Within reach', icon:'🧩', color:'var(--warn)', meaning:`You are below ${t}%, but close enough for focused practice to make a difference.`, action:`You could focus on the mistakes in ${focusName} and check again after a short review.`};
+  return {label:'Needs more attention', icon:'🌱', color:'var(--warn)', meaning:`Your average is still well below ${t}%, so this area needs more practice before the picture is strong.`, action:`It may help to revisit the core ideas in ${focusName}, try some focused questions, and test yourself again when ready.`};
 }
 
 function getTopicRetentionHistory(sKey, idx){
@@ -12869,8 +12869,28 @@ function renderPracticeAnalytics(){
 
   const topicGroups={};
   all.forEach(({p,pct,i})=>{
-    const key=p.topicName||'Comprehensive / Multiple Topics';
-    (topicGroups[key] ||= []).push({pct,i,date:p.date||''});
+    const breakdown = Array.isArray(p.breakdown) ? p.breakdown : [];
+    const topicsArr = state.topics?.[p.subjectKey] || [];
+    const usableBreakdown = breakdown.map(b => {
+      const total = Number(b?.total);
+      const correct = Number(b?.correct);
+      const idx = Number.isInteger(Number(b?.topicIdx)) ? Number(b.topicIdx) : null;
+      const name = String(b?.topicName || (idx !== null ? topicsArr[idx]?.name : '') || '').trim();
+      const topicPct = Number.isFinite(correct) && Number.isFinite(total) && total > 0 ? Math.min(100, Math.max(0, correct / total * 100)) : null;
+      return {name, topicPct};
+    }).filter(b => b.name && b.topicPct !== null);
+    // When a multi-topic drill has a saved breakdown, trend each topic using
+    // its own result. This is more useful than assigning the aggregate score
+    // to every topic. Without a breakdown, keep the aggregate in one honest
+    // combined bucket instead of inventing topic-level evidence.
+    if (usableBreakdown.length) {
+      usableBreakdown.forEach(({name, topicPct}) => {
+        (topicGroups[name] ||= []).push({pct:topicPct,i,date:p.date||''});
+      });
+    } else {
+      const key=p.topicName||'Comprehensive / Multiple Topics';
+      (topicGroups[key] ||= []).push({pct,i,date:p.date||''});
+    }
   });
   // Priority tier reuses the same score bands as the pass/conditional/needs-work
   // legend below, so "priority" and "result" always mean the same thing.
@@ -12912,15 +12932,25 @@ function renderPracticeAnalytics(){
       <div style="padding:9px;border:1px solid var(--border);border-radius:8px"><div style="font-size:9px;color:var(--muted)">LOWEST</div><strong style="font-size:12px;color:${colorFor(worst)}">${worst.toFixed(1)}%</strong></div>
     </div>
     ${(()=>{
-      const subjectTrend=trendInfo(all.map((x)=>({pct:x.pct,i:x.i,date:x.p.date||''})));
-      const subjectSd=all.length>=3?stddev(all.map(x=>x.pct)):null;
+      const trendEvidence=all.map(x=>{
+        const breakdown=Array.isArray(x.p.breakdown)?x.p.breakdown:[];
+        const topicPcts=breakdown.map(b=>{
+          const correct=Number(b?.correct), total=Number(b?.total);
+          return Number.isFinite(correct)&&Number.isFinite(total)&&total>0 ? Math.min(100,Math.max(0,correct/total*100)) : null;
+        }).filter(v=>v!==null);
+        // A breakdown gives a better picture of this attempt than its raw
+        // aggregate, but it still contributes only one point to the trend.
+        return {pct:topicPcts.length?avg(topicPcts):x.pct,i:x.i,date:x.p.date||''};
+      });
+      const subjectTrend=trendInfo(trendEvidence);
+      const subjectSd=trendEvidence.length>=3?stddev(trendEvidence.map(x=>x.pct)):null;
       const insight=getPracticeInsight({avg:overall,delta:subjectTrend.delta,sd:subjectSd,count:all.length,name:selectedLabel,target:targetPct});
       return `<div style="margin-bottom:16px;padding:12px 13px;border:1px solid var(--border);border-left:3px solid ${insight.color};border-radius:10px;background:var(--surface)">
         <div style="display:flex;align-items:flex-start;gap:9px">
           <div style="font-size:18px;line-height:1">${insight.icon}</div>
           <div><div style="font-size:12px;font-weight:800;color:${insight.color};margin-bottom:4px">${insight.label}</div>
           <div style="font-size:11.5px;line-height:1.55"><strong>Here is what that means:</strong> ${insight.meaning}</div>
-          <div style="font-size:11.5px;line-height:1.55;margin-top:4px"><strong>Your next step:</strong> ${insight.action}</div></div>
+          <div style="font-size:11.5px;line-height:1.55;margin-top:4px"><strong>A helpful next step:</strong> ${insight.action}</div></div>
         </div>
       </div>`;
     })()}
@@ -19291,13 +19321,24 @@ function kodaNLPContextBlock(text){
 // Local conversational layer: intent signals, follow-ups, tone
 // mirroring, and context-aware replies happen before any AI API call.
 // ============================================================
-const KODA_CONVO_MAX_TURNS = 12;
+const KODA_CONVO_MAX_TURNS = 24;
+const KODA_MEMORY_KEY = 'cpale_koda_conversation_memory_v2';
 let kodaConversation = {
   lastUserText: '',
   lastCoachText: '',
   signal: 'normal',
-  turns: []
+  turns: [],
+  learnerMemory: []
 };
+try {
+  const savedKodaMemory = JSON.parse(localStorage.getItem(KODA_MEMORY_KEY) || '{}');
+  if (savedKodaMemory && typeof savedKodaMemory === 'object') {
+    kodaConversation.turns = Array.isArray(savedKodaMemory.turns) ? savedKodaMemory.turns.slice(-KODA_CONVO_MAX_TURNS) : [];
+    kodaConversation.learnerMemory = Array.isArray(savedKodaMemory.learnerMemory) ? savedKodaMemory.learnerMemory.slice(-20) : [];
+    const last = kodaConversation.turns[kodaConversation.turns.length - 1];
+    if (last) { kodaConversation.lastUserText = last.user || ''; kodaConversation.lastCoachText = last.coach || ''; kodaConversation.signal = last.signal || 'normal'; }
+  }
+} catch (_) {}
 
 function kodaConversationSignal(text) {
   const q = String(text || '').trim();
@@ -19322,12 +19363,23 @@ function kodaStyleFromUser(text) {
   const raw = String(text || '');
   const personaKey = state.coachPersona || 'balanced';
   const custom = String(state.coachPersonaCustom || '').trim();
-  const lower = /(?:lowercase|all lowercase|use lowercase)/i.test(custom) || personaKey === 'direct';
-  const casual = personaKey !== 'direct' || /(?:casual|relaxed|friendly|conversational)/i.test(custom);
+  const letters = raw.match(/[A-Za-z]/g) || [];
+  const lowercaseLetters = raw.match(/[a-z]/g) || [];
+  const userWritesCasually = /(?:bro|like|lol|yeah|nah|tho|tbh|pls|please|actually|basically)/i.test(raw) || /[!?]{2,}/.test(raw);
+  const lower = /(?:lowercase|all lowercase|use lowercase)/i.test(custom) || personaKey === 'direct' || (letters.length >= 8 && lowercaseLetters.length / letters.length >= 0.82);
+  const casual = personaKey !== 'direct' || userWritesCasually || /(?:casual|relaxed|friendly|conversational)/i.test(custom);
   const emoji = !/(?:no emojis|avoid emojis|keep emojis minimal|minimal emojis)/i.test(custom);
   const nicknameMatch = custom.match(/(?:call me|address me as|refer to me as)\s+([A-Za-z0-9][A-Za-z0-9 _'’-]{0,30})/i);
   const nickname = nicknameMatch ? nicknameMatch[1].trim().replace(/[.!,;:]+$/,'') : '';
   return { lower, casual, emoji, personaKey, custom, nickname };
+}
+
+function kodaConversationStyleMode(text) {
+  const raw = String(text || '').trim();
+  if (/\b(formal|professionally|formal tone|official|academic writing|rewrite this formally)\b/i.test(raw)) return 'FORMAL';
+  if (/\b(technical|implementation|code|api|architecture|debug|syntax|algorithm|developer|specification|exactly how)\b/i.test(raw)) return 'TECHNICAL';
+  if (/\b(what should i do|what do i study|help me plan|stuck|confused|struggling|how do i improve|next step|routine|schedule)\b/i.test(raw)) return 'COACH';
+  return 'NATURAL';
 }
 
 function kodaPersonalTouchHtml(text, userText='') {
@@ -19339,53 +19391,15 @@ function kodaPersonalTouchHtml(text, userText='') {
 }
 
 function kodaDiversifyLocalReply(reply, userText='') {
+  // Keep the actual reply intact. Artificial lead-ins such as “the useful
+  // signal is…” made even good offline answers sound like generated reports.
   let s = kodaPersonalTouchHtml(reply, userText);
   const style = kodaStyleFromUser(userText);
-  const signal = kodaConversationSignal(userText);
-  const turn = kodaConversation.turns.length;
-  if (!s || signal === 'ack' || signal === 'thanks' || signal === 'reconsider') return s;
-
-  // Vary delivery without changing the underlying facts. This keeps the
-  // offline brain from sounding like a single canned chatbot response.
-  const banks = {
-    progress: [
-      'The useful part of that picture is ',
-      'Looking at your tracker, the main takeaway is ',
-      'What stands out in your current progress is '],
-    subject: [
-      'For this subject, the clearest move is ',
-      'Looking at this subject specifically, ',
-      'Your current subject data points to this: '],
-    scores: [
-      'From the scores you have logged, ',
-      'The score history points to ',
-      'The useful signal in those scores is '],
-    motivation: [
-      'Here is the part worth acting on: ',
-      'The practical takeaway is ',
-      'Right now, I would keep it simple: '],
-    normal: [
-      'Based on your current study data, ',
-      'What stands out here is ',
-      'The practical answer from your tracker is ']
-  };
-  const key = signal === 'normal' ? (coachLastIntent === 'progress' ? 'progress' : coachLastIntent === 'scores' ? 'scores' : coachLastIntent === 'subject' ? 'subject' : coachLastIntent === 'motivation' ? 'motivation' : 'normal') : signal;
-  const bank = banks[key] || banks.normal;
-  const lead = bank[turn % bank.length];
-
-  // Avoid awkward duplication when the canned response already begins with
-  // the same idea or a direct greeting.
-  const plain = stripCoachHtml(s).toLowerCase();
-  if (plain.length > 35 && !/^(yo|hello|hey|good morning|good afternoon|good evening|because|yeah|yep|sure|for )/i.test(plain)) {
-    s = lead + s.charAt(0).toLowerCase() + s.slice(1);
-  }
-
-  if (style.nickname && /^(motivation|progress|subject|scores|normal)$/.test(key) && turn % 3 === 0) {
-    s = `<strong>${escapeHtml(style.nickname)}</strong>, ${s.charAt(0).toLowerCase()}${s.slice(1)}`;
+  if (style.lower && s && s.length < 180 && /^[A-Z]/.test(s)) {
+    s = s.charAt(0).toLowerCase() + s.slice(1);
   }
   return s;
 }
-
 function kodaCasualBridge(signal, style) {
   if (signal === 'reconsider') return style.casual ? 'yeah yeah, hold on 😭 ' : 'yeah, let’s slow that part down. ';
   if (signal === 'challenge') return style.casual ? 'yeahhh, that’s the part that matters. ' : 'yeah — that distinction matters. ';
@@ -19402,6 +19416,14 @@ function kodaRememberConversationTurn(userText, coachText, signal) {
   kodaConversation.signal = signal || 'normal';
   kodaConversation.turns.push({ user: String(userText || ''), coach: stripCoachHtml(coachText), signal: signal || 'normal', at: Date.now() });
   if (kodaConversation.turns.length > KODA_CONVO_MAX_TURNS) kodaConversation.turns.shift();
+  const raw = String(userText || '').trim();
+  const memoryMatch = raw.match(/^(?:please\s+)?remember(?:\s+that)?\s*[:,-]?\s*(.+)$/i);
+  const preferenceMatch = raw.match(/^(?:i\s+(?:prefer|learn better with|struggle with|am currently studying|am studying)|my\s+(?:goal|focus|preference)\s+is)\s+(.+)$/i);
+  const fact = (memoryMatch?.[1] || preferenceMatch?.[1] || '').trim();
+  if (fact && fact.length >= 3) {
+    kodaConversation.learnerMemory = [...kodaConversation.learnerMemory.filter(x => x.toLowerCase() !== fact.toLowerCase()), fact].slice(-20);
+  }
+  try { localStorage.setItem(KODA_MEMORY_KEY, JSON.stringify({turns:kodaConversation.turns, learnerMemory:kodaConversation.learnerMemory})); } catch (_) {}
 }
 
 function kodaPreviousTopicLabel() {
@@ -19700,6 +19722,35 @@ function coachContextForAI(d) {
     return `${mk}: completion ${d.subjPcts[mk]}%; mastery ${mastery.rated ? mastery.pct.toFixed(0)+'%' : 'unrated'}; pending ${pending.length}; practice ${pAvg != null ? pAvg.toFixed(0)+'%' : 'none'}; low-confidence completed ${low}`;
   }).join('\n');
 
+  const calendarEvents = Object.entries(state.calEvents || {}).flatMap(([date, events]) =>
+    (Array.isArray(events) ? events : []).map(e => `${date} — ${e.title || e.topic || e.name || e.activityType || 'Study session'}${e.time ? ` at ${e.time}` : ''}`)
+  ).sort().slice(0, 40);
+  const recentHistory = (state.activityLog || []).slice(0, 30).map(e =>
+    `${e.day || (e.ts ? localDateStr(new Date(e.ts)) : 'undated')} — ${e.title || e.type || 'Study activity'}${e.subject ? ` (${e.subject})` : ''}`
+  );
+  const recentScores = (state.scores || []).slice(-20).map(s =>
+    `${s.date || 'undated'} — ${s.label || s.type || 'Score'}: ${s.score ?? '—'}/${s.max ?? '—'}${s.mainSubject ? ` (${s.mainSubject})` : ''}`
+  );
+  const recentPractice = (state.practiceScores || []).slice(-20).map(s =>
+    `${s.date || 'undated'} — ${s.label || 'Practice'}: ${s.score ?? '—'}/${s.max ?? '—'}${s.mainSubject ? ` (${s.mainSubject})` : ''}`
+  );
+  const developerMode = (() => { try { return localStorage.getItem('cpale_future_self_developer_mode_v1') === '1'; } catch (_) { return false; } })();
+  const futureSelfContext = developerMode && Array.isArray(state.futureSelfQuestions)
+    ? `DEV-ONLY FUTURE SELF: ${state.futureSelfQuestions.length} saved question(s), ${state.futureSelfQuestions.filter(q => q.status === 'resolved').length} resolved. Recent questions: ${state.futureSelfQuestions.slice(-12).map(q => `${q.status === 'resolved' ? 'resolved' : 'open'} — ${String(q.text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180)}`).join(' | ') || 'none'}`
+    : 'Future Self developer area is not available in the current mode.';
+  const wholeAppContext = [
+    `WEBAPP ACCESS: Koda has read-only access to all normal areas: Dashboard, Topic Tracker, Scoresheet, Study Calendar, Study History, Insights/Reminders, Achievements/Fire Lab, and Settings/Profile.`,
+    `Profile/settings: name ${state.name || 'not set'}; exam target ${state.examTarget || 'not set'}; exam date ${state.examDate || 'not set'}; coach persona ${state.coachPersona || 'balanced'}.`,
+    `Study routine from Settings: ${Object.entries(state.studySchedule || {}).map(([day, items]) => `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][Number(day)] || day}: ${(Array.isArray(items) ? items : []).map(k => SUBJECTS_META[k]?.name || k).join(', ') || 'no subjects'}`).join('; ') || 'no routine configured'}; rest days: ${(state.restDays || []).map(i => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i]).filter(Boolean).join(', ') || 'none configured'}.`,
+    `Subjects scheduled for today: ${(d.scheduledTodaySubjects || []).map(k => SUBJECTS_META[k]?.name || k).join(', ') || 'none'}.`,
+    `Study days recorded: ${Array.isArray(state.studyDays) ? state.studyDays.length : 0}; activity history entries: ${(state.activityLog || []).length}; calendar sessions: ${calendarEvents.length}; exam scores: ${(state.scores || []).length}; practice scores: ${(state.practiceScores || []).length}.`,
+    `Upcoming/scheduled calendar entries: ${calendarEvents.join('; ') || 'none available'}`,
+    `Recent Study History: ${recentHistory.join('; ') || 'none available'}`,
+    `Recent Scoresheet entries: ${recentScores.join('; ') || 'none available'}`,
+    `Recent Practice entries: ${recentPractice.join('; ') || 'none available'}`,
+    `Insights target date: ${state.insightsTargetDate || state.examDate || 'not set'}.`,
+    futureSelfContext
+  ].join('\n');
   return [
     `Name: ${d.name}`,
     `Overall completion: ${Math.round(d.stats.pct)}% (${d.stats.completed}/${d.stats.total} topics done, ${d.stats.inprog} in progress)`,
@@ -19720,6 +19771,7 @@ function coachContextForAI(d) {
     d.upcomingSessions.length ? `Upcoming Calendar sessions: ${d.upcomingSessions.map(s => `${s.day}${s.time?' '+s.time:''} — ${s.topicName||'Comprehensive/Multiple Topics'}${s.activity?' ('+s.activity+')':''}`).join('; ')}` : 'No upcoming sessions scheduled on the Calendar',
     d.recentActivity.length ? `Recent activity (Study History tab): ${d.recentActivity.join('; ')}` : '',
     d.videoStats.total > 0 ? `Video lectures watched: ${d.videoStats.completed}/${d.videoStats.total} (${Math.round(d.videoStats.pct)}%)${Object.keys(d.videoBySubject).length ? ' — by subject: '+Object.entries(d.videoBySubject).map(([mk,v])=>`${mk} ${v.completed}/${v.total}`).join(', ') : ''}` : 'No video lecture sets added yet',
+    wholeAppContext,
     `SUBJECT SNAPSHOT — inspect this before recommending focus:\n${subjectSnapshot}`,
     `FULL TOPIC INVENTORY — authoritative current Tracker state; inspect this before recommending a specific topic:\n${topicInventory || 'No tracker topics are available.'}`
   ].filter(Boolean).join('\n');
@@ -19748,11 +19800,18 @@ function formatKodaReply(raw, userText = '') {
 
   // Quick word-count limit to keep conversations snappy
   const wantsDetail = /\b(detail|detailed|deep|deeper|step[- ]by[- ]step|steps|plan|study plan|schedule|walkthrough|teach me|explain thoroughly|full explanation|breakdown|compare|examples?)\b/i.test(userText);
+  const requestedSteps = /\b(step|steps|how to|process|procedure|first.*then|then.*next)\b/i.test(userText);
+  const inherentlyComplex = /\b(why|how does|how do|explain|difference between|compare|scenario|case|journal entr|calculation|compute|recognize|classif|process|relationship|unless|except|although|therefore)\b/i.test(userText)
+    || (String(userText).match(/[?]/g) || []).length > 1
+    || String(userText).trim().split(/\s+/).length > 28;
   const personaKey = state.coachPersona || 'balanced';
-  const wordLimit = wantsDetail ? 150 : (personaKey === 'direct' ? 45 : personaKey === 'warm' ? 75 : 65);
+  const wordLimit = requestedSteps ? 260 : wantsDetail ? 260 : inherentlyComplex ? 180 : (personaKey === 'direct' ? 70 : personaKey === 'warm' ? 95 : 85);
   
   const plain = s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  const sentenceParts = plain.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [plain];
+  // Protect numbered-list markers so "1." is not mistaken for the end of a
+  // sentence and cause the next step to be dropped by the compacting pass.
+  const listSafePlain = plain.replace(/(\b\d+)\./g, '$1§');
+  const sentenceParts = (listSafePlain.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [listSafePlain]).map(x => x.replace(/§/g, '.'));
   let kept = []; let count = 0;
   
   for (const sentence of sentenceParts) {
@@ -19767,9 +19826,18 @@ function formatKodaReply(raw, userText = '') {
     if (kept.length && count + n > wordLimit) break;
     kept.push(cleanSentence); 
     count += n;
-    if (!wantsDetail && kept.length >= (personaKey === 'direct' ? 2 : 3)) break;
+    if (!requestedSteps && !wantsDetail && !inherentlyComplex && kept.length >= (personaKey === 'direct' ? 3 : 4)) break;
   }
   if (kept.length) s = kept.join(' ').trim();
+
+  // Never present an API cutoff as the ending. If the final retained text has
+  // no sentence ending, keep only the last complete thought; if it is a short
+  // standalone answer, close it naturally with a period.
+  if (s && !/[.!?][\"'”’)\]]?$/.test(s)) {
+    const lastStop = Math.max(s.lastIndexOf('.'), s.lastIndexOf('!'), s.lastIndexOf('?'));
+    if (lastStop >= 0) s = s.slice(0, lastStop + 1).trim();
+    else s = s.replace(/[,:;\-]\s*$/, '').trim() + '.';
+  }
 
   // Simple paragraph breaks
   const paragraphs = s
@@ -19834,38 +19902,48 @@ const COACH_PERSONAS = {
 function buildCoachPrompt(userText) {
   const d = coachGetData();
   const context = coachContextForAI(d);
-  const historyText = coachChatHistory.slice(-8)
+  // The current user turn is already supplied below; exclude it here so the
+  // model does not see the same question twice.
+  const priorHistory = coachChatHistory.length
+    ? coachChatHistory.slice(0, -1)
+    : kodaConversation.turns.flatMap(t => [{role:'user', text:t.user}, {role:'coach', text:t.coach}]);
+  const historyText = priorHistory.slice(-16)
     .map(m => `${m.role === 'coach' ? 'Coach' : 'Candidate'}: ${stripCoachHtml(m.text)}`)
     .join('\n');
+  const memoryText = kodaConversation.learnerMemory.length
+    ? `PERSISTENT LEARNER NOTES:\n${kodaConversation.learnerMemory.map(x => `- ${x}`).join('\n')}`
+    : 'PERSISTENT LEARNER NOTES: none saved yet';
 
   const persona = COACH_PERSONAS[state.coachPersona] || COACH_PERSONAS.balanced;
   const customLine = (state.coachPersonaCustom || '').trim();
+  const conversationMode = kodaConversationStyleMode(userText);
+  const modeLine = `AUTOMATIC CONVERSATION MODE: ${conversationMode}. Use this only to adjust delivery: NATURAL = relaxed everyday chat; COACH = supportive and practical; TECHNICAL = precise and implementation-focused; FORMAL = polished only when explicitly requested. Never announce the mode. Do not force an acknowledgment or casual phrase if it does not fit.`;
 
-  const system = `${KODA_KOALA_PERSONALITY} ${persona.prompt} You are Koda, the study companion inside "CPALE Ready", a tracker app for the Philippine CPA Licensure Exam (CPALE).${customLine ? ` Additional personality/style instructions from the candidate: "${customLine}"` : ''}
+  const system = `${KODA_KOALA_PERSONALITY} ${persona.prompt} You are Koda, the study companion inside "CPALE Ready", a tracker app for the Philippine CPA Licensure Exam (CPALE).${customLine ? ` Additional personality/style instructions from the candidate: "${customLine}"` : ''} ${modeLine}
 
-VOICE MATCH — THIS IS IMPORTANT: The candidate talks casually and conversationally. Mirror that rhythm without copying them word-for-word. Use contractions, short transitions, occasional lowercase, and natural phrasing when it fits. Do not become academic or overly polished just because the topic is technical. Accuracy stays high; the delivery should feel like a quick study conversation.
+VOICE MATCH — THIS IS IMPORTANT: The candidate talks casually, directly, and conversationally, often in short lowercase messages. Mirror that rhythm without copying them word-for-word: use contractions, short transitions, natural wording, and occasional lowercase when it fits. Do not sound overly polished, formal, or textbook-like just because the topic is technical. Keep the response focused and human, like a quick study conversation. Accuracy stays high, but do not turn a simple point into a lecture.
 
-KODA RESPONSE DECISION RULE: First decide what the candidate actually needs, then give only that. If the question is simple, answer it directly and stop. If it is a technical concept, give the plain-English idea first, then the one connection or exam point that matters most. If the candidate seems confused, clarify the confusion instead of dumping background. If they ask for detail, steps, comparisons, examples, or a walkthrough, expand only as much as needed. Do not repeat the question. Do not restate the same point in different words. Do not add filler like “great question,” “sure,” or “here’s a detailed explanation” unless it genuinely fits the conversation. Never give the same generic answer to two different requests just because they share a broad intent. PERSONALITY CONSISTENCY: honor the saved Koda personality and Personal Touch settings exactly; do not infer a nickname or relationship from the candidate's slang. VARIETY: when the candidate asks materially similar questions on different turns, keep the facts anchored to the live data but vary the explanation, example, emphasis, or next action. Do not reuse the previous answer's wording unless explicitly asked to repeat it. Identify the exact request and its requested output before answering. Use the most relevant live data for that request. If two questions have the same broad intent, choose different evidence or a different actionable recommendation when their wording or purpose differs. If the candidate clicks a suggestion, answer that exact suggestion specifically; do not substitute a default progress response. Do not copy your immediately previous answer unless the candidate explicitly asks you to repeat or continue it.
+KODA RESPONSE DECISION RULE: First understand what the candidate actually needs, then answer like a person replying in the same chat—not like a report or a generated lesson. If the question is simple, answer it directly and stop. If it is a technical concept, give the plain-English idea first, then the one connection or exam point that matters most. If the candidate seems confused, clarify the confusion instead of dumping background. If they ask for detail, steps, comparisons, examples, or a walkthrough, expand only as much as needed. Do not repeat the question. Do not restate the same point in different words. Do not add filler like “great question,” “sure,” or “here’s a detailed explanation” unless it genuinely fits the conversation. Never give the same generic answer to two different requests just because they share a broad intent. PERSONALITY CONSISTENCY: honor the saved Koda personality and Personal Touch settings exactly; do not infer a nickname or relationship from the candidate's slang. VARIETY: when the candidate asks materially similar questions on different turns, keep the facts anchored to the live data but vary the explanation, example, emphasis, or next action. Do not reuse the previous answer's wording unless explicitly asked to repeat it. Identify the exact request and its requested output before answering. Use the most relevant live data for that request. If two questions have the same broad intent, choose different evidence or a different actionable recommendation when their wording or purpose differs. If the candidate clicks a suggestion, answer that exact suggestion specifically; do not substitute a default progress response. Do not copy your immediately previous answer unless the candidate explicitly asks you to repeat or continue it.
 
-STUDY-BUDDY BEHAVIOR: When useful, connect the concept to the relevant subject or standard and tell the candidate what is actually worth remembering for the CPALE. Prefer natural phrasing like “basically…”, “the important part is…”, “this connects to ___ because…”, or “for the CPALE, I’d remember ___.” Do not dump source passages unless the candidate explicitly asks for exact wording or quotation.
+STUDY-BUDDY BEHAVIOR: Talk like a real person in a quick study chat. Start with the answer instead of an introduction. Use plain wording, contractions, and natural short reactions only when they fit. Do not force phrases like “the key takeaway,” “what stands out,” “the practical answer,” “here is a breakdown,” or “for the CPALE, remember.” Connect the concept to the relevant subject or standard only when it helps. Do not dump source passages unless the candidate explicitly asks for exact wording or quotation.
 
-Answer using ONLY the real data given below — never invent numbers. Keep the exchange efficient and conversational, not report-like. Normal answer: 1–3 short sentences, usually under 60 words. Technical concept: usually 2–4 short sentences, usually under 80 words. Comparison: only the few differences that change the answer. Detail is opt-in: only go longer when the candidate explicitly asks for detail, steps, a plan, walkthrough, full breakdown, or examples. No headings, decorative separators, or bullet-heavy formatting unless requested. Most importantly: FINISH THE THOUGHT. Never stop mid-sentence just to satisfy a length limit. Never reply with meta-commentary about your instructions, persona, or voice — only the actual answer to the candidate.
+Answer using ONLY the real data given below — never invent numbers. Keep the exchange efficient and conversational, not report-like. For a chain question or follow-up, answer every requested part in order and carry forward the exact subject, example, assumptions, and unresolved point from prior turns. Treat “why?”, “then what?”, “what about the other one?”, and challenges as continuations unless the wording clearly starts a new topic. When teaching, use this compact sequence when useful: direct answer → reasoning → example or CPALE connection → quick check. Default answer: 1–3 focused sentences, usually under 85 words. Expand only when the concept is inherently complex, the candidate asks for detail, there are multiple parts, or a complete chain of reasoning is needed; then use as much as necessary up to roughly 180 words, and up to 260 words only for an explicitly requested deep explanation, walkthrough, or study plan. Keep simple factual, progress, and follow-up replies short. Comparison: include only the few differences that change the answer. Detail is opt-in: only go longer when the candidate explicitly asks for detail, steps, a plan, walkthrough, full breakdown, or examples. No headings, decorative separators, or bullet-heavy formatting unless requested. Most importantly: FINISH THE THOUGHT. Never stop mid-sentence just to satisfy a length limit. Never reply with meta-commentary about your instructions, persona, or voice — only the actual answer to the candidate.
 
-RESPONSE LENGTH CONTRACT: Be concise, but complete. Generate a little more room internally so the final answer can end cleanly; the app will compact it afterward when necessary.
+RESPONSE LENGTH CONTRACT: Be concise, but complete. Say the point plainly, then stop. Use one or two short paragraphs for normal questions; expand only when the idea truly needs it or the candidate asks. If the candidate asks for steps, give no more than 3–5 short numbered steps, and make sure every numbered step is fully finished before starting the next one. If space is running out, give fewer complete steps rather than beginning another unfinished step. Never end on a fragment, dangling clause, comma, colon, or unfinished list. Do not add filler just to make the response longer.
 
 CANDIDATE DATA:
 ${context}
 
 WEBAPP AUTONOMY: You have read-only access to the complete candidate/app data supplied above. Treat it like a live webapp state snapshot, not a vague summary. For study recommendations, topic selection, progress, scheduling, prioritization, or “what should I start?” questions, inspect the actual tracker inventory and cross-check completion, confidence/mastery, practice performance, recent activity, video progress, and scheduled sessions. For questions about the candidate/app, answer from supplied state whenever possible. For general conceptual questions, answer from model knowledge instead of pretending the app needs a matching command. Never tell the candidate to rephrase merely because the question is open-ended.
 
-KODA USER-IMPORTED DOCUMENTS:
-${kodaDocumentsStatusLine()}
+KODA ADDITIONAL MATERIALS: none configured in this webapp.
+${memoryText}
 
 NLP RULES: The local NLP analysis is a routing aid, not ground truth. Use it to resolve natural-language intent, subject references, timeframes, and follow-ups, but prioritize the candidate's actual words and the supplied app state. Never mention the NLP layer to the candidate.
 
 Standards content (FAR pronouncements, PSAs, etc.) only comes from the candidate's own uploaded/imported files above, or from the AI model's own general knowledge when no relevant import exists. Never invent paragraph numbers, quotes, or requirements. Only make paragraph-level claims when the actual indexed text is present in this prompt.`;
 
-  const user = `${historyText ? `RECENT CONVERSATION:\n${historyText}\n\n` : ''}KODA LOCAL NLP ANALYSIS: ${kodaNLPContextBlock(userText)}\nCandidate's new message: "${userText}"\n\nReply as the Coach:`;
+  const user = `${historyText ? `RECENT CONVERSATION:\n${historyText}\n\n` : ''}Treat the immediately previous turn as active context. Do not restart or recap unless the candidate asks. KODA LOCAL NLP ANALYSIS: ${kodaNLPContextBlock(userText)}\nCandidate's new message: "${userText}"\n\nReply as the Coach. Continue the conversation naturally and finish every requested part:`;
 
   return { system, user };
 }
@@ -19930,7 +20008,7 @@ async function generateCoachReplyGroq(userText) {
               { role: 'system', content: system },
               { role: 'user', content: user }
             ],
-            max_tokens: 420,
+            max_tokens: 700,
             temperature: 0.72
           }),
           signal: controller.signal
@@ -19995,7 +20073,7 @@ async function generateCoachReplyAI(userText) {
             system_instruction: system,
             store: false,
             generation_config: {
-              max_output_tokens: 420,
+              max_output_tokens: 700,
               thinking_level: 'low'
             }
           }),
@@ -20233,9 +20311,10 @@ function getCoachIntroMessage() {
   const hr = { morning:'Good morning', afternoon:'Good afternoon', evening:'Good evening' }[d.timeOfDay];
   const apiNote = '';
   const nick = style.nickname ? ` ${escapeHtml(style.nickname)},` : '';
-  if (noData) return `${hr}, <strong>${d.name}</strong>! 👋 I'm Koda, your Study Coach — I know your topics, scores, streak, and exam date. You haven't started yet. Ask me where to begin, or just type what's on your mind.${apiNote}`;
+  const tierText = `${d.journeyTier.label} · Tier ${d.journeyTier.tier}`;
+  if (noData) return `${hr}, <strong>${d.name}</strong>! 👋 I'm Koda, your Study Coach. You have <strong>${d.learningDays} study day${d.learningDays === 1 ? '' : 's'}</strong> logged and you're at <strong>${escapeHtml(tierText)}</strong>. You haven't started a topic yet, so ask me where to begin or type what's on your mind.${apiNote}`;
   const pct = Math.round(d.stats.pct);
-  return `${hr}${nick} <strong>${d.name}</strong>! 👋 You're at <strong>${pct}%</strong> overall with a <strong>${d.streak.current}-day streak</strong>${d.daysLeft !== null ? ` and <strong>${d.daysLeft} days</strong> to go` : ''}. What do you want to know?${apiNote}`;
+  return `${hr}${nick} <strong>${d.name}</strong>! 👋 You're at <strong>${pct}%</strong> overall, with <strong>${d.learningDays} study day${d.learningDays === 1 ? '' : 's'}</strong> logged and <strong>${escapeHtml(tierText)}</strong>.${d.daysLeft !== null ? ` You have <strong>${d.daysLeft} days</strong> to go` : ''}. What do you want to know?${apiNote}`;
 }
 
 // ── SMART SUGGESTIONS (context-aware) ────────────────────────
@@ -20517,8 +20596,8 @@ function getCoachReplyLegacy(input) {
 
   // ── HELP / CAPABILITIES ─────────────────────────────────────────────────────
   if (/\b(help|what can you do|capabilit|can you)\b/i.test(q)) return style.casual
-    ? `I can check your tracker, scores, confidence, calendar, videos, and imported study files, then explain what the numbers mean.`
-    : `I can check your tracker, scores, confidence, calendar, video progress, and imported study files, then explain the relevant numbers and what they mean.`;
+    ? `I can read across your Dashboard, Topic Tracker, Scoresheet, Calendar, Study History, Insights, Achievements, Settings/Profile, and video progress. If Future Self is enabled in developer mode, I can use that too.`
+    : `I can read across your Dashboard, Topic Tracker, Scoresheet, Study Calendar, Study History, Insights/Reminders, Achievements, Settings/Profile, and video progress. Future Self is available to me only while the webapp is in developer mode.`;
 
   // ── DATA-AWARE LOCAL FALLBACK ───────────────────────────────────────────────
   if (d.stats.total > 0) {
@@ -25419,31 +25498,28 @@ function getVideoReply(nlp) {
 function getScheduleReply(nlp) {
   const today = localDateStr();
   const events = [];
-  
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const routineEntries = Object.entries(state.studySchedule || {}).filter(([, items]) => Array.isArray(items) && items.length);
+  const routineText = routineEntries.map(([day, items]) => `${dayNames[Number(day)] || day}: ${items.map(k => SUBJECTS_META[k]?.name || k).join(', ')}`).join(' · ');
+  const restText = (state.restDays || []).map(i => dayNames[i]).filter(Boolean).join(', ');
   // Collect upcoming events for next 7 days
   for (let i = 0; i <= 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
     const dStr = localDateStr(d);
     const dayEvents = state.calEvents[dStr] || [];
-    dayEvents.forEach(e => {
-      events.push({ date: dStr, event: e });
-    });
+    dayEvents.forEach(e => { events.push({ date: dStr, event: e }); });
   }
-  
   if (!events.length) {
-    return `<div>📅 You don't have any upcoming study sessions scheduled!</div>
-    <div style="margin-top:8px;color:var(--muted)">💡 Go to the <strong>Study Calendar</strong> to plan your study sessions.</div>`;
+    if (routineText || restText) return `<div>📅 Your saved study routine is:</div><div style="margin-top:6px;padding:7px 10px;background:var(--surface);border-radius:6px;border-left:3px solid var(--accent)">${routineText || 'No subjects assigned to routine days.'}${restText ? `<div style="margin-top:5px;color:var(--muted)">Rest days: ${restText}</div>` : ''}</div><div style="margin-top:8px;color:var(--muted)">There are no separate Calendar sessions in the next 7 days.</div>`;
+    return `<div>📅 You don't have a study routine or upcoming Calendar sessions saved yet.</div><div style="margin-top:8px;color:var(--muted)">You can set your routine in <strong>Settings</strong> or plan individual sessions in the <strong>Study Calendar</strong>.</div>`;
   }
-  
-  let reply = `<div>📅 Your upcoming study sessions:</div>`;
-  
+  let reply = `<div>📅 Your upcoming study sessions:</div>${routineText || restText ? `<div style="margin-top:6px;color:var(--muted)"><strong>Saved routine:</strong> ${routineText || 'none'}${restText ? ` · <strong>Rest days:</strong> ${restText}` : ''}</div>` : ''}`;
   const grouped = {};
   events.forEach(({ date, event }) => {
     if (!grouped[date]) grouped[date] = [];
     grouped[date].push(event);
   });
-  
   Object.keys(grouped).sort().forEach(date => {
     const d = new Date(date + 'T00:00:00');
     const label = date === today ? 'Today' : d.toLocaleDateString('default', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -25453,17 +25529,12 @@ function getScheduleReply(nlp) {
       const color = calEventColor(e);
       const time = e.time || 'Any time';
       const name = calEventDisplayName(e);
-      reply += `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:12px">
-        <span style="color:${color}">${time}</span>
-        <span>${name}</span>
-      </div>`;
+      reply += `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:12px"><span style="color:${color}">${time}</span><span>${name}</span></div>`;
     });
     reply += `</div>`;
   });
-  
   return reply;
 }
-
 function getExamDateReply(nlp) {
   const daysLeft = countdownDays();
   
@@ -25821,7 +25892,7 @@ function getGenericHelpfulReplySafe(text) {
   if (/^(hi|hey|hello|yo|sup|hiya|howdy)\b/i.test(normalized)) return getCoachDefaultReply();
 
   if (/\b(help|what can you do|capabilit|how can you help)\b/i.test(normalized)) {
-    return `I can work offline from the data you've already logged, ${name}. Ask me about <strong>what to study next</strong>, a <strong>subject</strong>, <strong>weak topics</strong>, <strong>scores</strong>, <strong>confidence</strong>, <strong>videos</strong>, or your <strong>pace</strong>. No API key is required for those.`;
+    return `I can work offline from the data you've already logged, ${name}. I can read your <strong>Dashboard</strong>, <strong>Topic Tracker</strong>, <strong>Scoresheet</strong>, <strong>Calendar</strong>, <strong>Study History</strong>, <strong>Insights</strong>, <strong>Achievements</strong>, <strong>Settings/Profile</strong>, and videos. Future Self is included only when developer mode is enabled.`;
   }
 
   // Natural-language requests that may not match the enhanced intent table.
@@ -26878,6 +26949,7 @@ function getTopicLastTouchInfo(sKey, idx){
   let activeTab = 'questions';
   let activeMainSubject = 'all';
   let questionFilter = 'open';
+  let questionSort = 'newest';
   let questionSearch = '';
   let activeTopicFilter = '';
   let activeSubSubjectFilter = '';
@@ -27231,11 +27303,33 @@ function getTopicLastTouchInfo(sKey, idx){
     return mainSubjects().map(key => ({
       key,
       name:subjectName(key),
-      questions:questions().filter(q => getQuestionMain(q) === key).length,
-      open:questions().filter(q => getQuestionMain(q) === key && q.status !== 'resolved').length,
-      resolved:questions().filter(q => getQuestionMain(q) === key && q.status === 'resolved').length,
+      questions:questions().filter(q => questionMatchesBrowseFilters(q, key)).length,
+      open:questions().filter(q => questionMatchesBrowseFilters(q, key) && q.status !== 'resolved').length,
+      resolved:questions().filter(q => questionMatchesBrowseFilters(q, key) && q.status === 'resolved').length,
       notes:notes.filter(n => n.mainSubject === key).length
     }));
+  }
+  function questionMatchesBrowseFilters(q, subjectKey){
+    const main = getQuestionMain(q);
+    if (subjectKey === 'general') {
+      if (main) return false;
+    } else {
+      if (main !== subjectKey) return false;
+      if (activeMainSubject === subjectKey && activeSubSubjectFilter && getQuestionSub(q) !== activeSubSubjectFilter) return false;
+      const topicQuery = activeMainSubject === subjectKey ? activeTopicFilter.trim().toLowerCase() : '';
+      if (topicQuery && !getQuestionTopic(q).toLowerCase().includes(topicQuery)) return false;
+    }
+    return true;
+  }
+  function generalQuestionCounts(){
+    const list = questions().filter(q => !getQuestionMain(q));
+    return {
+      key:'general', name:'General Learning',
+      questions:list.length,
+      open:list.filter(q => q.status !== 'resolved').length,
+      resolved:list.filter(q => q.status === 'resolved').length,
+      notes:currentScoreNotes().filter(n => !n.mainSubject).length
+    };
   }
 
   function catalogSubSubjects(){
@@ -27262,6 +27356,7 @@ function getTopicLastTouchInfo(sKey, idx){
   }
   function renderSubjectRail(){
     const counts = subjectCounts();
+    const general = generalQuestionCounts();
     const allQuestions = questions().length;
     const allOpen = questions().filter(q => q.status !== 'resolved').length;
     const allResolved = questions().filter(q => q.status === 'resolved').length;
@@ -27272,6 +27367,7 @@ function getTopicLastTouchInfo(sKey, idx){
     return `<aside class="future-self-subject-rail">
       <div class="future-self-rail-label">${railLabel}</div>
       <button class="future-self-subject-btn ${activeMainSubject==='all'?'active':''}" style="--fs-subject-color:var(--accent2)" onclick="futureSelfChooseSubject('all')"><span class="future-self-subject-dot all"></span><span>All subjects</span><b>${allCount}</b></button>
+      <button class="future-self-subject-btn ${activeMainSubject==='general'?'active':''}" style="--fs-subject-color:var(--muted)" onclick="futureSelfChooseSubject('general')"><span class="future-self-subject-dot" style="background:var(--muted)"></span><span>General Learning</span><b>${countFor(general)}</b></button>
       ${counts.map(s => `<button class="future-self-subject-btn ${activeMainSubject===s.key?'active':''}" style="--fs-subject-color:${esc(subjectColor(s.key))}" onclick="futureSelfChooseSubject('${esc(s.key)}')"><span class="future-self-subject-dot" style="background:${esc(subjectColor(s.key))}"></span><span>${esc(s.name)}</span><b>${countFor(s)}</b></button>`).join('')}
       ${renderSubjectFilters()}
     </aside>`;
@@ -27323,7 +27419,8 @@ function getTopicLastTouchInfo(sKey, idx){
       // the search field is empty.
       if (!hasSearch && questionFilter === 'open' && q.status === 'resolved') return false;
       if (!hasSearch && questionFilter === 'resolved' && q.status !== 'resolved') return false;
-      if (activeMainSubject !== 'all' && getQuestionMain(q) !== activeMainSubject) return false;
+      if (activeMainSubject === 'general' && getQuestionMain(q)) return false;
+      if (activeMainSubject !== 'all' && activeMainSubject !== 'general' && getQuestionMain(q) !== activeMainSubject) return false;
       if (activeSubSubjectFilter && getQuestionSub(q) !== activeSubSubjectFilter) return false;
       if (topicQuery && !getQuestionTopic(q).toLowerCase().includes(topicQuery)) return false;
       if (hasSearch) {
@@ -27334,7 +27431,13 @@ function getTopicLastTouchInfo(sKey, idx){
         if (!hay.includes(query) && matched < Math.max(1, Math.ceil(terms.size * 0.6))) return false;
       }
       return true;
-    }).reverse();
+    }).sort((a,b) => {
+      const da = String(a.q.createdAt || a.q.updatedAt || '');
+      const db = String(b.q.createdAt || b.q.updatedAt || '');
+      const dateCompare = da.localeCompare(db);
+      if (dateCompare) return questionSort === 'oldest' ? dateCompare : -dateCompare;
+      return questionSort === 'oldest' ? a.idx - b.idx : b.idx - a.idx;
+    });
   }
 
   function richTools(editorId, imageId){
@@ -27486,7 +27589,7 @@ function getTopicLastTouchInfo(sKey, idx){
   }
 
   function subjectOptions(){
-    return `<option value="">General study</option>${mainSubjects().map(k => `<option value="${esc(k)}" ${captureMainSubject===k?'selected':''}>${esc(subjectName(k))}</option>`).join('')}`;
+    return `<option value="">General Learning</option>${mainSubjects().map(k => `<option value="${esc(k)}" ${captureMainSubject===k?'selected':''}>${esc(subjectName(k))}</option>`).join('')}`;
   }
   function subSubjectOptions(){
     if (!captureMainSubject || typeof SUBJECTS_META === 'undefined') return '<option value="">Optional sub-subject</option>';
@@ -27500,7 +27603,7 @@ function getTopicLastTouchInfo(sKey, idx){
   }
   function editSubjectOptions(q){
     const selected = getQuestionMain(q);
-    return `<option value="">General study</option>${mainSubjects().map(k => `<option value="${esc(k)}" ${selected===k?'selected':''}>${esc(subjectName(k))}</option>`).join('')}`;
+    return `<option value="">General Learning</option>${mainSubjects().map(k => `<option value="${esc(k)}" ${selected===k?'selected':''}>${esc(subjectName(k))}</option>`).join('')}`;
   }
   function editSubSubjectOptions(main, selected){
     if (!main || typeof SUBJECTS_META === 'undefined') return '<option value="">Optional sub-subject</option>';
@@ -27549,14 +27652,21 @@ function getTopicLastTouchInfo(sKey, idx){
     ensureNav(); ensurePage();
     const shell = document.getElementById('future-self-shell');
     if (!shell) return;
-    const openCount = questions().filter(q => q.status !== 'resolved').length;
-    const resolvedCount = questions().filter(q => q.status === 'resolved').length;
-    const activeName = activeMainSubject === 'all' ? 'All subjects' : subjectName(activeMainSubject);
+    const browseQuestions = questions().filter(q => {
+      if (activeMainSubject === 'general') return !getQuestionMain(q);
+      if (activeMainSubject !== 'all' && getQuestionMain(q) !== activeMainSubject) return false;
+      if (activeSubSubjectFilter && getQuestionSub(q) !== activeSubSubjectFilter) return false;
+      const topicQuery = activeTopicFilter.trim().toLowerCase();
+      return !topicQuery || getQuestionTopic(q).toLowerCase().includes(topicQuery);
+    });
+    const openCount = browseQuestions.filter(q => q.status !== 'resolved').length;
+    const resolvedCount = browseQuestions.filter(q => q.status === 'resolved').length;
+    const activeName = activeMainSubject === 'all' ? 'All subjects' : activeMainSubject === 'general' ? 'General Learning' : subjectName(activeMainSubject);
     shell.innerHTML = `<div class="future-self-header"><div><div class="future-self-kicker">PRIVATE DEVELOPER MODE</div><h2>Future Self</h2><p>Capture vague questions and Score Notes in one searchable place, organized by the subject and topic they came from.</p></div><button class="btn btn-primary" onclick="futureSelfFocusCapture()">＋ Dump a question</button></div>
       <div class="future-self-layout ${activeTab==='retrieval'?'future-self-layout-retrieval':''}">${activeTab==='retrieval'?'':renderSubjectRail()}<main class="future-self-main"><div class="future-self-breadcrumb"><span>Future Self</span><b>›</b><strong>${esc(activeName)}</strong></div>
       <div class="future-self-tabs"><button class="future-self-tab ${activeTab==='questions'?'active':''}" onclick="futureSelfSetTab('questions')">Questions <b>${questionFilter === 'resolved' ? resolvedCount : questionFilter === 'all' ? questions().length : openCount}</b></button><button class="future-self-tab ${activeTab==='notes'?'active':''}" onclick="futureSelfSetTab('notes')">Score Notes <b>${currentScoreNotes().length}</b></button><button class="future-self-tab ${activeTab==='retrieval'?'active':''}" onclick="futureSelfSetTab('retrieval')">Retrieve</button></div>
       ${activeTab === 'retrieval' ? renderRetrievalPage() : activeTab === 'questions' ? (captureOpen ? `<section class="future-self-capture card" id="future-self-capture" style="--fs-subject-color:${esc(subjectColor(captureMainSubject))}"><div class="future-self-section-label">CAPTURE A LEARNING GAP</div><div id="future-self-question-input" class="future-self-editor" data-future-editor="true" contenteditable="true" role="textbox" aria-label="Question" oninput="futureSelfQuestionDraftChanged(this.innerHTML)" data-placeholder="Write the vague question exactly as it feels right now…"></div>${richTools('future-self-question-input','future-self-question-image')}<div id="future-self-duplicate-suggestions"></div><div class="future-self-capture-row"><select id="future-self-main-subject" onchange="futureSelfSubjectChanged(this.value)">${subjectOptions()}</select><select id="future-self-subject-key" onchange="futureSelfSubSubjectChanged(this.value)">${subSubjectOptions()}</select><select id="future-self-topic-select" onchange="futureSelfTopicChanged(this.value)">${topicOptions()}</select><button class="btn btn-primary btn-sm" onclick="futureSelfSaveQuestion()">Save question</button><button class="btn btn-ghost btn-sm" onclick="futureSelfCloseCapture()">Close</button></div><div class="future-self-capture-hint">Subject and exact topic are optional. Choose a sub-subject to browse its topic list, or leave the topic blank and simply save the question.</div></section>` : '') : ''}
-      ${activeTab === 'retrieval' ? '' : activeTab === 'questions' ? `<section class="future-self-section"><div class="future-self-section-head"><div><h3>${esc(activeName)} questions</h3><p>Questions stay attached to their subject and topic until you resolve them.</p></div><div class="future-self-mini-stats"><span>${openCount} open overall</span><span>${resolvedCount} resolved</span></div></div><div class="future-self-tools"><div class="future-self-search-wrap"><input id="future-self-search" value="${esc(questionSearch)}" oninput="futureSelfSearch(this.value)" placeholder="Search every question, open or resolved" aria-label="Search every question, open or resolved"><span id="future-self-search-count" class="future-self-search-hint">${questionSearch.trim()?`${filteredQuestions().length} match${filteredQuestions().length===1?'':'es'} across all statuses`:'Search ignores the Open / Resolved tabs so matches are never hidden.'}</span></div><div class="future-self-status-nav" role="tablist"><button class="${questionFilter==='open'?'active':''}" onclick="futureSelfFilter('open')"><span>Open</span><b>${openCount}</b></button><button class="${questionFilter==='all'?'active':''}" onclick="futureSelfFilter('all')"><span>All questions</span><b>${questions().length}</b></button><button class="${questionFilter==='resolved'?'active':''}" onclick="futureSelfFilter('resolved')"><span>Resolved</span><b>${resolvedCount}</b></button></div></div><div class="future-self-list">${renderQuestionRows()}</div></section>` : `<section class="future-self-section"><div class="future-self-section-head"><div><h3>${esc(activeName)} Score Notes</h3><p>Every note keeps its Scoresheet source, subject, sub-subject, and topic context.</p></div><div class="future-self-mini-stats"><span>${filteredNotes().length} in view</span></div></div><div class="future-self-list">${renderScoreNotes()}</div></section>`}
+      ${activeTab === 'retrieval' ? '' : activeTab === 'questions' ? `<section class="future-self-section"><div class="future-self-section-head"><div><h3>${esc(activeName)} questions</h3><p>Questions stay attached to their subject and topic until you resolve them.</p></div><div class="future-self-mini-stats"><span>${openCount} open overall</span><span>${resolvedCount} resolved</span></div></div><div class="future-self-tools"><div class="future-self-search-wrap"><input id="future-self-search" value="${esc(questionSearch)}" oninput="futureSelfSearch(this.value)" placeholder="Search every question, open or resolved" aria-label="Search every question, open or resolved"><span id="future-self-search-count" class="future-self-search-hint">${questionSearch.trim()?`${filteredQuestions().length} match${filteredQuestions().length===1?'':'es'} across all statuses`:'Search ignores the Open / Resolved tabs so matches are never hidden.'}</span></div><div class="future-self-status-nav" role="tablist"><button class="${questionFilter==='open'?'active':''}" onclick="futureSelfFilter('open')"><span>Open</span><b>${openCount}</b></button><button class="${questionFilter==='all'?'active':''}" onclick="futureSelfFilter('all')"><span>All questions</span><b>${browseQuestions.length}</b></button><button class="${questionFilter==='resolved'?'active':''}" onclick="futureSelfFilter('resolved')"><span>Resolved</span><b>${resolvedCount}</b></button></div><label class="future-self-sort-control">Sort questions <select onchange="futureSelfQuestionSort(this.value)" aria-label="Sort Future Self questions"><option value="newest" ${questionSort==='newest'?'selected':''}>Newest first</option><option value="oldest" ${questionSort==='oldest'?'selected':''}>Oldest first</option></select></label></div><div class="future-self-list">${renderQuestionRows()}</div></section>` : `<section class="future-self-section"><div class="future-self-section-head"><div><h3>${esc(activeName)} Score Notes</h3><p>Every note keeps its Scoresheet source, subject, sub-subject, and topic context.</p></div><div class="future-self-mini-stats"><span>${filteredNotes().length} in view</span></div></div><div class="future-self-list">${renderScoreNotes()}</div></section>`}
       <div class="future-self-footer-note">Private archive only. This does not change your public dashboard, tracker, Scoresheet calculations, or Insights.</div></main></div>`;
   }
 
@@ -27575,6 +27685,7 @@ function getTopicLastTouchInfo(sKey, idx){
   window.futureSelfChooseSubject = key => { activeMainSubject = key || 'all'; activeSubSubjectFilter = ''; activeTopicFilter = ''; questionPage = 0; notePage = 0; render(); };
   window.futureSelfSetTab = tab => { activeTab = tab === 'retrieval' ? 'retrieval' : tab === 'notes' ? 'notes' : 'questions'; activeTopicFilter = ''; questionPage = 0; notePage = 0; render(); };
   window.futureSelfFilter = filter => { questionFilter = ['all','resolved'].includes(filter) ? filter : 'open'; questionPage = 0; render(); };
+  window.futureSelfQuestionSort = value => { questionSort = value === 'oldest' ? 'oldest' : 'newest'; questionPage = 0; render(); };
   window.futureSelfRetrievalSubject = value => { retrievalMainSubject = value || ''; retrievalSubSubject = ''; retrievalTopic = ''; render(); };
   window.futureSelfRetrievalSub = value => { retrievalSubSubject = value || ''; retrievalTopic = ''; render(); };
   window.futureSelfRetrievalTopic = value => { retrievalTopic = value || ''; render(); };
