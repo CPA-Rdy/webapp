@@ -8374,7 +8374,9 @@ function hydrateFromIndexedDB() {
         local?.removedBuiltinTopics,
         saved.removedBuiltinTopics
       );
-      state = { ...state, ...saved, removedBuiltinSubSubjects, removedBuiltinTopics };
+      // Boolean flags only ever go false->true, so a plain union is safe.
+      const topicLibrarySynced = { ...(state.topicLibrarySynced||{}), ...(local?.topicLibrarySynced||{}), ...(saved.topicLibrarySynced||{}) };
+      state = { ...state, ...saved, removedBuiltinSubSubjects, removedBuiltinTopics, topicLibrarySynced };
       applyPersistedSubjectStructure();
       _persistenceRevision = savedRev;
 
@@ -9246,6 +9248,7 @@ function syncBuiltInTopicLibrary() {
   // built-in curriculum topics introduced after an older save was created.
   // Without this migration, an existing state.topics array prevented load()
   // from ever seeing newly added default topics, leaving Achievements totals stale.
+  if (!state.topicLibrarySynced) state.topicLibrarySynced = {};
   MAIN_SUBJECTS.forEach(mainKey => {
     (SUBJECTS_META[mainKey]?.subs || []).forEach(subKey => {
       if ((state.removedBuiltinSubSubjects?.[mainKey] || []).includes(subKey)) return;
@@ -9253,6 +9256,21 @@ function syncBuiltInTopicLibrary() {
       if (!definition || !Array.isArray(definition.topics)) return;
       const topics = Array.isArray(state.topics[subKey]) ? state.topics[subKey] : [];
       const existingNames = new Set(topics.map(t => String(t?.name || '').trim().toLowerCase()));
+
+      // First sync ever for this sub-subject under this tracking system: any
+      // built-in name already missing here was deleted before removals were
+      // recorded (an older save, or an imported/legacy export). Treat that
+      // gap as an intentional prior deletion instead of re-adding it — this
+      // runs exactly once per sub-subject, so genuinely new built-in topics
+      // added by a future app update still flow in normally afterward.
+      if (!state.topicLibrarySynced[subKey]) {
+        definition.topics.forEach(name => {
+          const normalized = String(name).trim().toLowerCase();
+          if (!existingNames.has(normalized)) markBuiltinTopicRemoved(subKey, name);
+        });
+        state.topicLibrarySynced[subKey] = true;
+      }
+
       const removedNames = new Set(state.removedBuiltinTopics?.[subKey] || []);
       definition.topics.forEach((name, index) => {
         const normalized = String(name).trim().toLowerCase();
@@ -14886,6 +14904,7 @@ function applyMergeTopics() {
   const merged = idxs.map(i => arr[i]);
   const survivor = arr[survivorIdx];
   const oldNames = merged.filter(t => t !== survivor).map(t => t.name);
+  const survivorOldName = survivor.name;
   // Combine status/confidence/dates onto the survivor before removing the rest.
   survivor.status = Math.max(...merged.map(t=>t.status||0));
   survivor.confidence = Math.max(...merged.map(t=>t.confidence||0));
@@ -14894,6 +14913,11 @@ function applyMergeTopics() {
   if (starts.length) survivor.dateStarted = starts[0];
   if (ends.length) survivor.dateEnded = ends[ends.length-1];
   survivor.name = newName;
+  // Every default-named topic that's now gone (merged away, or the survivor's
+  // own pre-merge built-in name if it changed) must be recorded so a reload
+  // never re-seeds it as a stray duplicate alongside the merged result.
+  oldNames.forEach(n => markBuiltinTopicRemoved(sKey, n));
+  if (survivorOldName !== newName) markBuiltinTopicRemoved(sKey, survivorOldName);
   // Remove the merged-away topics (descending idx to keep positions valid).
   idxs.slice().sort((a,b)=>b-a).forEach(i => { if (i !== survivorIdx) arr.splice(i,1); });
   const newIdx = arr.findIndex(t => t.id === survivor.id);
@@ -17566,6 +17590,14 @@ async function importData(event) {
     const preImportSnapshot = takeSafetySnapshot('Import');
     const imported = { ...state, ...loaded };
     delete imported.__persistenceRevision;
+    // The baseline pass in syncBuiltInTopicLibrary() only fires once per
+    // sub-subject, ever. If the current (pre-import) session already ran it
+    // for a subject — which happens on ordinary app startup, before you've
+    // imported anything — that flag would carry over here and silently skip
+    // baselining against the topics you're importing, letting old deletions
+    // reappear. A legacy backup has no such flags of its own, so always trust
+    // only what the imported file itself says.
+    imported.topicLibrarySynced = (loaded.topicLibrarySynced && typeof loaded.topicLibrarySynced === 'object') ? loaded.topicLibrarySynced : {};
     const now = Date.now();
     const freshRevision = Math.max(now, Number(state.__persistenceRevision || 0) + 1, _persistenceRevision + 1);
     imported.__persistenceRevision = freshRevision;
