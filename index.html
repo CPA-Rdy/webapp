@@ -5461,7 +5461,9 @@ body.light-mode .firelab-avatar-stage.is-tier-8 .firelab-avatar-ring::before{opa
 .insights-onepage-v15 .insight-v15-pace-signal b{color:var(--signal-tone)!important}
 @media(max-width:760px){.insights-onepage-v15 .insight-v15-pace-signals{grid-template-columns:1fr}}
 </style>
-\n<style id="insights-v31-retention-integration">\n.insights-onepage-v15 .insight-v31-general-test{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0 14px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent2) 18%,var(--border));border-radius:12px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent2) 6%,var(--surface)),color-mix(in srgb,var(--surface) 94%,transparent));}\n.insights-onepage-v15 .insight-v31-general-test strong{display:block;font-size:10.5px}\n.insights-onepage-v15 .insight-v31-general-test span{display:block;margin-top:3px;color:var(--muted);font-size:8.3px;line-height:1.45}\n.insights-onepage-v15 .insight-v31-general-test button{border:1px solid color-mix(in srgb,var(--accent2) 35%,var(--border));background:color-mix(in srgb,var(--accent2) 10%,transparent);color:var(--accent2);border-radius:9px;padding:8px 11px;font:800 8px var(--font-body);cursor:pointer;white-space:nowrap}\n.insights-onepage-v15 .insight-v31-general-test button:hover{background:color-mix(in srgb,var(--accent2) 16%,transparent)}\n@media(max-width:700px){.insights-onepage-v15 .insight-v31-general-test{align-items:flex-start;flex-direction:column}.insights-onepage-v15 .insight-v31-general-test button{width:100%}}\n</style>\n
+
+<style id="insights-v31-retention-integration">\n.insights-onepage-v15 .insight-v31-general-test{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0 14px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent2) 18%,var(--border));border-radius:12px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent2) 6%,var(--surface)),color-mix(in srgb,var(--surface) 94%,transparent));}\n.insights-onepage-v15 .insight-v31-general-test strong{display:block;font-size:10.5px}\n.insights-onepage-v15 .insight-v31-general-test span{display:block;margin-top:3px;color:var(--muted);font-size:8.3px;line-height:1.45}\n.insights-onepage-v15 .insight-v31-general-test button{border:1px solid color-mix(in srgb,var(--accent2) 35%,var(--border));background:color-mix(in srgb,var(--accent2) 10%,transparent);color:var(--accent2);border-radius:9px;padding:8px 11px;font:800 8px var(--font-body);cursor:pointer;white-space:nowrap}\n.insights-onepage-v15 .insight-v31-general-test button:hover{background:color-mix(in srgb,var(--accent2) 16%,transparent)}\n@media(max-width:700px){.insights-onepage-v15 .insight-v31-general-test{align-items:flex-start;flex-direction:column}.insights-onepage-v15 .insight-v31-general-test button{width:100%}}\n</style>
+
 <style id="future-self-uiux-polish">
 /* Future Self UI/UX polish — presentation only. Core behavior intentionally untouched. */
 .future-self-main{max-width:1180px;margin:0 auto}
@@ -8057,6 +8059,7 @@ const BUILT_IN_VIDEO_SUBJECTS = {
 
 function ensureBuiltInVideoLibraries() {
   Object.entries(BUILT_IN_VIDEO_SUBJECTS).forEach(([mainKey, meta]) => {
+    if ((state.removedBuiltinSubSubjects?.[mainKey] || []).includes(meta.key)) return;
     if (!SUBJECTS_META[mainKey].subs.includes(meta.key)) {
       SUBJECTS_META[mainKey].subs.push(meta.key);
     }
@@ -8298,6 +8301,20 @@ function save() {
   scheduleAutoDriveBackup();
 }
 
+function applyPersistedSubjectStructure() {
+  const removed = state && state.removedBuiltinSubSubjects;
+  if (removed && typeof removed === 'object') {
+    Object.entries(removed).forEach(([mainKey, keys]) => {
+      if (!SUBJECTS_META[mainKey]) return;
+      (Array.isArray(keys) ? keys : []).forEach(key => {
+        SUBJECTS_META[mainKey].subs = (SUBJECTS_META[mainKey].subs || []).filter(k => k !== key);
+        const idx = ALL_SUBJECT_KEYS.indexOf(key);
+        if (idx > -1) ALL_SUBJECT_KEYS.splice(idx, 1);
+      });
+    });
+  }
+}
+
 function hydrateFromIndexedDB() {
   if (_hydrationStarted) return;
   _hydrationStarted = true;
@@ -8318,6 +8335,7 @@ function hydrateFromIndexedDB() {
 
     if (saved && typeof saved === 'object' && !Array.isArray(saved) && savedRev > localRev) {
       state = { ...state, ...saved };
+      applyPersistedSubjectStructure();
       _persistenceRevision = savedRev;
 
       ALL_SUBJECT_KEYS.forEach(key => {
@@ -8368,6 +8386,7 @@ function load() {
       _persistenceRevision = Number(state.__persistenceRevision || 0);
     } catch(e) {}
   }
+  applyPersistedSubjectStructure();
   // Background hydration preserves the original instant startup path.
   hydrateFromIndexedDB();
   ALL_SUBJECT_KEYS.forEach(key => {
@@ -9189,6 +9208,7 @@ function syncBuiltInTopicLibrary() {
   // from ever seeing newly added default topics, leaving Achievements totals stale.
   MAIN_SUBJECTS.forEach(mainKey => {
     (SUBJECTS_META[mainKey]?.subs || []).forEach(subKey => {
+      if ((state.removedBuiltinSubSubjects?.[mainKey] || []).includes(subKey)) return;
       const definition = DEFAULT_TOPICS[subKey];
       if (!definition || !Array.isArray(definition.topics)) return;
       const topics = Array.isArray(state.topics[subKey]) ? state.topics[subKey] : [];
@@ -28028,7 +28048,7 @@ function getTopicLastTouchInfo(sKey, idx){
   // state is private to this closure. Expose only what it needs.
   window.__fsInternal = {
     questions, normalizeQuestion, getQuestionMain, getQuestionSub, getQuestionTopic,
-    plainText, filteredQuestions, render, saveState, today, futureSelfLearningContext,
+    plainText, filteredQuestions, render, saveState, today, futureSelfLearningContext, formatFutureSelfDate, safeId,
     setActiveTab: v => { activeTab = v; },
     setQuestionFilter: v => { questionFilter = v; },
     setActiveMainSubject: v => { activeMainSubject = v; },
@@ -28622,6 +28642,205 @@ function getTopicLastTouchInfo(sKey, idx){
   #page-future-self .future-self-overview-mode .fs-cp-lectures .fs-cp-video-rings { display:flex !important; align-items:center; gap:10px; }
   #page-future-self .future-self-overview-mode .fs-cp-lectures .fs-cp-selected-video-progress { display:block !important; flex:1 1 auto; min-width:0; }
   #page-future-self .future-self-overview-mode .fs-cp-lectures .fs-cp-total-video-ring { display:none; }
+</style>
+
+<style id="future-self-subject-pacing-v1">
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace{padding:14px 15px!important;margin-top:13px;border:1px solid rgba(154,208,238,.18);border-radius:14px;background:rgba(5,15,28,.4);backdrop-filter:blur(10px)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+#page-future-self .future-self-overview-mode .fs-cp-pace-label{display:flex;align-items:center;gap:5px;margin:0!important;font:900 8px var(--font-mono)!important;letter-spacing:.14em;color:#79a6be}
+#page-future-self .future-self-overview-mode .fs-cp-pace-legend{display:flex;align-items:center;gap:5px;font-size:7px;color:var(--ov-dim,#94a8bd);white-space:nowrap}
+#page-future-self .future-self-overview-mode .fs-cp-pace-legend i{width:18px;height:5px;border-radius:99px;background:#67e8ff;display:inline-block}
+#page-future-self .future-self-overview-mode .fs-cp-pace-legend b{width:1px;height:9px;background:#f7fbff;opacity:.7;display:inline-block}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-list{display:flex;flex-direction:column;gap:5px}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-row{padding:8px 8px 7px;border-radius:9px;border:1px solid transparent;min-width:0}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-row.is-focus{background:rgba(103,232,255,.08);border-color:rgba(103,232,255,.25);box-shadow:inset 2px 0 #67e8ff}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:8px}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-head>span{display:flex;align-items:center;gap:6px;min-width:0}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-head>span>i{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-head b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-head em{font:900 5.8px var(--font-mono);letter-spacing:.08em;color:#67e8ff;padding:3px 5px;border-radius:999px;background:rgba(103,232,255,.12);font-style:normal}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-head strong{font:800 7px var(--font-body);white-space:nowrap}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-track{height:7px;margin-top:6px;border-radius:99px;background:rgba(255,255,255,.1);position:relative}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-track i{display:block;height:100%;border-radius:inherit;opacity:.9}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-track b{position:absolute;top:-2px;width:1px;height:11px;background:#f7fbff;opacity:.75}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-meta{display:flex;justify-content:space-between;gap:8px;margin-top:4px;color:var(--ov-dim,#94a8bd);font-size:6.8px}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-caption{display:flex;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(150,190,220,.12);color:var(--ov-dim,#94a8bd);font-size:6.8px}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-caption b{color:#fff;font:800 7px var(--font-mono)}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-track .pace-fill{display:block;height:100%;border-radius:inherit;opacity:.9}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-track .pace-target{top:-3px;height:13px;width:2px;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.12);opacity:.95}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-subject-pace-caption b{color:#173b56}
+@media(max-width:520px){#page-future-self .future-self-overview-mode .fs-cp-pace-head{align-items:flex-start;flex-direction:column;gap:6px}#page-future-self .future-self-overview-mode .fs-cp-subject-pace-meta{flex-wrap:wrap}}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-subject-pace{background:rgba(255,255,255,.62);border-color:rgba(27,99,132,.16)}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-subject-pace-row.is-focus{background:rgba(0,170,202,.08);border-color:rgba(0,147,181,.25);box-shadow:inset 2px 0 #00aaca}
+</style>
+
+<style id="future-self-subject-pacing-command-center-v2">
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace{padding:0!important;margin-top:13px!important;overflow:hidden;border:1px solid rgba(123,222,255,.3)!important;border-radius:16px!important;background:linear-gradient(145deg,rgba(10,31,45,.96),rgba(9,20,32,.96))!important;box-shadow:inset 0 1px rgba(255,255,255,.06),0 15px 35px rgba(0,0,0,.18)}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-row{padding:18px 20px 16px!important;border:0!important;background:transparent!important;box-shadow:none!important}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-header{display:flex;justify-content:space-between;align-items:flex-start;gap:22px}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-kicker{display:block;color:#67e8ff;font:900 7px var(--font-mono);letter-spacing:.16em}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-header h3{margin:5px 0 5px;color:#f7fbff;font-size:19px;line-height:1.2;letter-spacing:-.025em}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-header p{margin:0;color:#dbe9f4;font-size:10px;font-weight:700;line-height:1.45}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-header small{display:block;margin-top:6px;color:#829caf;font-size:8px;line-height:1.45}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-chips{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;max-width:390px}
+#page-future-self .future-self-overview-mode .pace-chip{padding:6px 9px;border:1px solid rgba(103,232,255,.28);border-radius:999px;color:#67e8ff;font:900 7px var(--font-mono);letter-spacing:.05em;white-space:nowrap}
+#page-future-self .future-self-overview-mode .pace-chip-practice{color:#facc15;border-color:rgba(250,204,21,.28)}
+#page-future-self .future-self-overview-mode .pace-chip-goal{color:#b7d9e9;border-color:rgba(130,200,235,.28)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track-wrap{position:relative;margin-top:16px;padding:15px 12px 9px;border:1px solid rgba(130,200,235,.14);border-radius:11px;background:rgba(2,14,24,.55)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-finish{position:absolute;right:10px;top:7px;color:#71889a;font-size:6.5px}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track{position:relative;height:24px;margin-top:7px;border-radius:99px;background:linear-gradient(90deg,rgba(103,232,255,.11),rgba(103,232,255,.04));box-shadow:inset 0 1px 5px rgba(0,0,0,.26)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track:before{content:"";position:absolute;inset:9px 0;height:5px;border-radius:99px;background:linear-gradient(90deg,rgba(103,232,255,.6),rgba(103,232,255,.15),rgba(250,204,21,.2),rgba(255,255,255,.08))}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track>i{position:absolute;top:0;transform:translateX(-50%);height:24px;width:1px;font-style:normal;z-index:2}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track>i b{display:block;width:12px;height:12px;margin:5px auto 0;border-radius:50%;background:#67e8ff;border:3px solid #102d3b;box-shadow:0 0 0 3px rgba(103,232,255,.18),0 0 15px rgba(103,232,255,.45)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track>i span{position:absolute;top:27px;left:50%;transform:translateX(-50%);white-space:nowrap;font:800 7px var(--font-body);color:#67e8ff}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track .pacer-pace b{background:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.16),0 0 15px rgba(250,204,21,.38)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track .pacer-pace span{color:#facc15}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track .pacer-goal b{background:#00aaca;box-shadow:0 0 0 3px rgba(0,170,202,.18),0 0 15px rgba(0,170,202,.42)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track .pacer-goal span{color:#00bddd}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-track .pacer-finish-marker{position:absolute;right:0;top:5px;height:15px;width:2px;background:#a7b9c5;opacity:.8}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:27px;color:#7d94a5;font-size:7px}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-legend span{display:flex;align-items:center;gap:5px}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-legend i{width:7px;height:7px;border-radius:50%;display:inline-block;background:#67e8ff}.fs-cp-pacer-legend .legend-pace{background:#facc15!important}.fs-cp-pacer-legend .legend-goal{background:#00aaca!important}
+@media(max-width:700px){#page-future-self .future-self-overview-mode .fs-cp-pacer-header{flex-direction:column;gap:12px}#page-future-self .future-self-overview-mode .fs-cp-pacer-chips{justify-content:flex-start;max-width:none}#page-future-self .future-self-overview-mode .fs-cp-pacer-header h3{font-size:17px}}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-subject-pace{background:linear-gradient(145deg,#effaff,#f7fbff)!important;border-color:rgba(27,99,132,.22)!important}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pacer-header h3{color:#173b56}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pacer-header p{color:#2f536b}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pacer-header small{color:#638198}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pacer-track-wrap{background:rgba(224,244,251,.72)}
+</style>
+
+<script id="future-self-subject-goal-script">
+(function(){
+  window.futureSelfEditSubjectGoal=function(){
+    var d=window.__fsInternal&&window.__fsInternal.state?window.__fsInternal.state:null;
+    var mk=(window.__futureSelfOverviewData&&window.__futureSelfOverviewData().mk)||'';
+    if(!mk){var el=document.querySelector('#page-future-self .fs-cp-subject');mk=el?el.textContent.trim():'';}
+    if(!mk)return;
+    var goals={};try{goals=JSON.parse(localStorage.getItem('cpale_subject_goals_v1')||'{}')}catch(e){}
+    var current=goals[mk]||'';
+    var next=window.prompt('Finish '+mk+' by (YYYY-MM-DD)',current);
+    if(next===null)return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(next)||isNaN(new Date(next+'T00:00:00').getTime())){if(window.toast)window.toast('Use a valid date like 2027-05-31.');return;}
+    goals[mk]=next;try{localStorage.setItem('cpale_subject_goals_v1',JSON.stringify(goals))}catch(e){}
+    if(typeof window.futureSelfRender==='function')window.futureSelfRender();
+  };
+})();
+</script>
+
+<style id="future-self-subject-pacing-minimal-v3">
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace{padding:0!important;margin-top:13px!important;overflow:hidden;border:1px solid rgba(123,222,255,.24)!important;border-radius:13px!important;background:rgba(5,18,30,.62)!important}
+#page-future-self .future-self-overview-mode .fs-cp-subject-pace-row{padding:14px 15px!important;border:0!important;background:transparent!important;box-shadow:none!important}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-simple-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-kicker{display:block;color:#67e8ff;font:900 6.5px var(--font-mono);letter-spacing:.15em}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-simple-head h3{margin:4px 0 0;color:#f7fbff;font-size:16px;line-height:1.2}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-goal{border:1px solid rgba(130,200,235,.3);border-radius:999px;background:transparent;color:#b7d9e9;padding:6px 9px;font:800 7px var(--font-mono);white-space:nowrap;cursor:pointer}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-goal:hover{border-color:#67e8ff;color:#67e8ff}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-copy{margin:8px 0 12px;color:#9db5c5;font-size:8.5px;line-height:1.4}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track{position:relative;height:22px;margin:0 8px;border-radius:99px;background:linear-gradient(90deg,rgba(103,232,255,.35),rgba(250,204,21,.18),rgba(255,255,255,.06))}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track:before{content:"";position:absolute;left:0;right:0;top:8px;height:5px;border-radius:99px;background:rgba(255,255,255,.1)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track>i{position:absolute;top:0;transform:translateX(-50%);height:22px;font-style:normal;z-index:2}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track>i b{display:block;width:10px;height:10px;margin:5px auto 0;border-radius:50%;background:#67e8ff;border:2px solid #123343;box-shadow:0 0 0 3px rgba(103,232,255,.16)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track .pacer-pace b{background:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.14)}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track>i span{position:absolute;top:23px;left:50%;transform:translateX(-50%);color:#9db5c5;font:800 6.5px var(--font-mono);white-space:nowrap}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track .pacer-you span{color:#67e8ff}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track .pacer-pace span{color:#facc15}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-track .pacer-finish-marker{position:absolute;right:0;top:3px;height:16px;width:2px;background:#a7b9c5;opacity:.8}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:24px;color:#7d94a5;font-size:7px}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-foot span{display:flex;align-items:center;gap:4px}.fs-cp-pacer-mini-foot span i{width:6px;height:6px;border-radius:50%;background:#67e8ff}.fs-cp-pacer-mini-foot span:nth-child(2) i{background:#facc15}
+#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-foot strong{margin-left:auto;font:900 7px var(--font-mono)}
+@media(max-width:460px){#page-future-self .future-self-overview-mode .fs-cp-pacer-simple-head{align-items:flex-start;flex-direction:column}#page-future-self .future-self-overview-mode .fs-cp-pacer-goal{align-self:flex-start}#page-future-self .future-self-overview-mode .fs-cp-pacer-mini-foot strong{margin-left:0}}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-subject-pace{background:rgba(255,255,255,.72)!important;border-color:rgba(27,99,132,.18)!important}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pacer-simple-head h3{color:#173b56}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pacer-copy{color:#638198}
+</style>
+
+<style id="future-self-subject-pacing-inline-v4">
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline{margin:14px 0 12px;padding:9px 0 8px;border-top:1px solid rgba(150,190,220,.12);border-bottom:1px solid rgba(150,190,220,.12)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head span{display:flex;align-items:baseline;gap:7px;min-width:0}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head b{font:900 6.5px var(--font-mono);letter-spacing:.13em;color:#67e8ff;white-space:nowrap}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head small{font-size:7.5px;color:#8fa8b8;white-space:nowrap}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button{border:0;padding:0;background:transparent;color:#aac7d6;font:800 7px var(--font-mono);cursor:pointer;white-space:nowrap}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button:hover{color:#67e8ff}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track{position:relative;height:5px;margin:8px 4px 0;border-radius:99px;background:rgba(255,255,255,.1)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track:before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(103,232,255,.48),rgba(103,232,255,.08))}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track i{position:absolute;z-index:1;display:block;height:100%;border-radius:inherit;background:#67e8ff;box-shadow:0 0 9px rgba(103,232,255,.3)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track b{position:absolute;z-index:2;top:-3px;width:2px;height:11px;border-radius:2px;background:#facc15;box-shadow:0 0 0 2px rgba(250,204,21,.15)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-foot{display:flex;align-items:center;gap:10px;margin-top:6px;color:#7993a5;font-size:6.8px}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-foot span{display:flex;align-items:center;gap:4px}.fs-cp-pace-inline-foot i{width:6px;height:6px;border-radius:50%;display:inline-block}.pace-dot-you{background:#67e8ff}.pace-dot-target{background:#facc15}.fs-cp-pace-inline-foot strong{margin-left:auto;font:900 6.8px var(--font-mono)}
+@media(max-width:520px){#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head span{align-items:flex-start;flex-direction:column;gap:2px}.fs-cp-pace-inline-head small{white-space:normal!important}}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline{border-color:rgba(27,99,132,.14)}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline-head small{color:#638198}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button{color:#35627a}
+</style>
+
+<style id="future-self-subject-pacing-horizontal-v5">
+/* Pace is a secondary signal: one shallow strip below the current-learning header. */
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline{display:grid;grid-template-columns:minmax(210px,.42fr) minmax(0,1fr);align-items:center;gap:18px;margin:10px 0 12px;padding:10px 14px;border:1px solid rgba(123,222,255,.18);border-radius:11px;background:rgba(5,18,30,.46);min-height:52px}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head{min-width:0}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head span{display:flex;align-items:baseline;gap:7px;min-width:0}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head b{font:900 6.5px var(--font-mono);letter-spacing:.13em;color:#67e8ff;white-space:nowrap}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head small{font-size:7.5px;color:#8fa8b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button{border:0;padding:0;background:transparent;color:#aac7d6;font:800 7px var(--font-mono);cursor:pointer;white-space:nowrap;margin-top:3px}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button:hover{color:#67e8ff}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track{position:relative;height:5px;margin:0 4px;border-radius:99px;background:rgba(255,255,255,.1)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track:before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(103,232,255,.48),rgba(103,232,255,.08))}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track i{position:absolute;z-index:1;display:block;height:100%;border-radius:inherit;background:#67e8ff;box-shadow:0 0 9px rgba(103,232,255,.3)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track b{position:absolute;z-index:2;top:-3px;width:2px;height:11px;border-radius:2px;background:#facc15;box-shadow:0 0 0 2px rgba(250,204,21,.15)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-foot{display:flex;align-items:center;gap:9px;margin-top:5px;color:#7993a5;font-size:6.8px}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-foot span{display:flex;align-items:center;gap:4px}.fs-cp-pace-inline-foot i{width:6px;height:6px;border-radius:50%;display:inline-block}.pace-dot-you{background:#67e8ff}.pace-dot-target{background:#facc15}.fs-cp-pace-inline-foot strong{margin-left:auto;font:900 6.8px var(--font-mono)}
+@media(max-width:620px){#page-future-self .future-self-overview-mode .fs-cp-pace-inline{grid-template-columns:1fr;gap:8px;padding:9px 12px}#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head span{align-items:flex-start;flex-direction:column;gap:2px}.fs-cp-pace-inline-head small{white-space:normal!important}}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline{border-color:rgba(27,99,132,.14);background:rgba(255,255,255,.62)}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline-head small{color:#638198}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button{color:#35627a}
+</style>
+
+<script id="future-self-subject-goal-calendar">
+(function(){
+  function getMk(){var data=window.__futureSelfOverviewData&&window.__futureSelfOverviewData();if(data&&data.mk)return data.mk;var el=document.querySelector('#page-future-self .fs-cp-subject');return el?el.textContent.trim().replace(/\s+HOVER TO SWITCH$/i,''):'';}
+  function close(){document.getElementById('fs-subject-goal-modal')?.remove();}
+  window.futureSelfEditSubjectGoal=function(){
+    var mk=getMk();if(!mk)return;
+    var goals={};try{goals=JSON.parse(localStorage.getItem('cpale_subject_goals_v1')||'{}')}catch(e){}
+    close();
+    var w=document.createElement('div');w.id='fs-subject-goal-modal';w.className='fs-subject-goal-modal';
+    w.innerHTML='<div class="fs-subject-goal-card"><button class="fs-subject-goal-close" type="button">×</button><span class="fs-subject-goal-kicker">SUBJECT GOAL</span><h3>Finish '+mk+'</h3><p>Choose when you want to complete this subject.</p><label>Target date<input type="date" id="fs-subject-goal-date" value="'+(goals[mk]||'')+'"></label><div class="fs-subject-goal-actions"><button type="button" class="btn btn-ghost" id="fs-subject-goal-cancel">Cancel</button><button type="button" class="btn btn-primary" id="fs-subject-goal-save">Save goal</button></div></div>';
+    document.body.appendChild(w);
+    w.addEventListener('click',function(e){if(e.target===w)close()});
+    w.querySelector('.fs-subject-goal-close').onclick=close;w.querySelector('#fs-subject-goal-cancel').onclick=close;
+    w.querySelector('#fs-subject-goal-save').onclick=function(){var v=w.querySelector('#fs-subject-goal-date').value;var today=typeof localDateStr==='function'?localDateStr():new Date().toISOString().slice(0,10);if(!v){if(window.toast)window.toast('Choose a target date first.');return;}if(v<today){if(window.toast)window.toast('Choose a future target date.');return;}if(state.examDate&&/^\d{4}-\d{2}-\d{2}$/.test(state.examDate)&&v>state.examDate){if(window.toast)window.toast('Your subject goal must be on or before the exam date.');return;}goals[mk]=v;localStorage.setItem('cpale_subject_goals_v1',JSON.stringify(goals));close();if(typeof window.save==='function')window.save();if(typeof window.futureSelfRender==='function')window.futureSelfRender();if(window.toast)window.toast('Subject goal saved.');};
+  };
+})();
+</script>
+
+<style id="future-self-subject-goal-calendar-style">
+#fs-subject-goal-modal{position:fixed;inset:0;z-index:100001;display:grid;place-items:center;padding:18px;background:rgba(3,10,20,.58);backdrop-filter:blur(5px)}
+.fs-subject-goal-card{position:relative;width:min(330px,100%);padding:18px;border:1px solid rgba(103,232,255,.3);border-radius:14px;background:linear-gradient(145deg,#10283a,#101729);box-shadow:0 24px 70px rgba(0,0,0,.45);color:#f4fbff}
+.fs-subject-goal-close{position:absolute;right:12px;top:9px;border:0;background:transparent;color:#9db7c9;font-size:21px;cursor:pointer}.fs-subject-goal-kicker{font:900 7px var(--font-mono);letter-spacing:.15em;color:#67e8ff}.fs-subject-goal-card h3{margin:7px 0 4px;font-size:17px}.fs-subject-goal-card p{margin:0 0 15px;color:#9db7c9;font-size:9px;line-height:1.4}.fs-subject-goal-card label{display:block;color:#9db7c9;font:800 8px var(--font-mono);letter-spacing:.06em;text-transform:uppercase}.fs-subject-goal-card input{display:block;width:100%;box-sizing:border-box;margin-top:7px;padding:9px;border:1px solid rgba(130,200,235,.25);border-radius:8px;background:#091824;color:#f4fbff;font:800 11px var(--font-mono);color-scheme:dark}.fs-subject-goal-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:15px}.fs-subject-goal-actions .btn{font-size:9px;padding:8px 11px}
+body.light-mode .fs-subject-goal-card{background:#f7fbff;color:#173b56;border-color:rgba(27,99,132,.25)}body.light-mode .fs-subject-goal-card p,body.light-mode .fs-subject-goal-card label{color:#638198}body.light-mode .fs-subject-goal-card input{background:#fff;color:#173b56;color-scheme:light}
+</style>
+
+<style id="future-self-subject-pacing-final-v6">
+/* Final direction: a quiet inline status rail, not another dashboard card. */
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline{display:grid!important;grid-template-columns:150px minmax(180px,1fr) auto!important;align-items:center!important;gap:18px!important;margin:10px 0 14px!important;padding:9px 12px!important;min-height:0!important;border:1px solid rgba(150,190,220,.12)!important;border-radius:9px!important;background:rgba(255,255,255,.025)!important;box-shadow:none!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head{display:flex!important;align-items:center!important;gap:8px!important;min-width:0!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head span{display:flex!important;align-items:baseline!important;gap:6px!important;min-width:0!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head b{font:900 6px var(--font-mono)!important;letter-spacing:.13em!important;color:#7ea7ba!important;white-space:nowrap!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head small{font-size:8px!important;color:#d3e2ea!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button{margin:0!important;padding:4px 6px!important;border:1px solid rgba(130,200,235,.18)!important;border-radius:6px!important;background:transparent!important;color:#9db7c9!important;font:700 6.5px var(--font-mono)!important;cursor:pointer!important;white-space:nowrap!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button:hover{border-color:#67e8ff!important;color:#67e8ff!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track{position:relative!important;height:4px!important;margin:0!important;border-radius:99px!important;background:rgba(255,255,255,.08)!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track:before{display:none!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track i{position:absolute!important;left:0!important;top:0!important;z-index:1!important;display:block!important;height:100%!important;border-radius:inherit!important;background:#58cfe7!important;box-shadow:none!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-track b{position:absolute!important;top:-3px!important;z-index:2!important;width:2px!important;height:10px!important;border-radius:2px!important;background:#f2c94c!important;box-shadow:none!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-foot{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;margin:0!important;color:#7893a3!important;font-size:7px!important;white-space:nowrap!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-foot span{display:none!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-inline-foot strong{margin:0!important;font:800 7px var(--font-mono)!important;color:#67e8ff!important}
+@media(max-width:760px){#page-future-self .future-self-overview-mode .fs-cp-pace-inline{grid-template-columns:130px minmax(100px,1fr) auto!important;gap:10px!important}}
+@media(max-width:520px){#page-future-self .future-self-overview-mode .fs-cp-pace-inline{grid-template-columns:1fr auto!important;gap:7px 10px!important}.fs-cp-pace-inline-track{grid-column:1/-1!important;grid-row:2!important}.fs-cp-pace-inline-foot{grid-column:2!important;grid-row:1!important}.fs-cp-pace-inline-head{grid-column:1!important;grid-row:1!important}}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline{border-color:rgba(27,99,132,.14)!important;background:rgba(255,255,255,.52)!important}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline-head small{color:#294d64!important}body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-inline-head button{color:#42677c!important}
+</style>
+
+<style id="future-self-subject-pacing-insights-runway-v7">
+#page-future-self .future-self-overview-mode .insight-like-pace{display:block!important;margin:10px 0 12px!important;padding:12px 14px!important;border:1px solid color-mix(in srgb,var(--accent2) 18%,var(--border))!important;border-radius:12px!important;background:linear-gradient(180deg,color-mix(in srgb,var(--card) 98%,var(--accent2) 2%),var(--card))!important;box-shadow:0 6px 18px rgba(0,0,0,.08)!important}
+#page-future-self .future-self-overview-mode .insight-like-pace-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#page-future-self .future-self-overview-mode .insight-like-kicker{font:900 6.5px var(--font-mono);letter-spacing:.13em;color:var(--muted);text-transform:uppercase}
+#page-future-self .future-self-overview-mode .insight-like-pace h3{font-size:13px;line-height:1.25;margin:4px 0 0;color:var(--text)}
+#page-future-self .future-self-overview-mode .insight-like-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}.insight-like-badge,.insight-like-actions button{font:800 6.5px var(--font-mono);padding:5px 7px;border-radius:7px;white-space:nowrap}.insight-like-badge{color:var(--accent2);border:1px solid color-mix(in srgb,var(--accent2) 30%,var(--border));background:color-mix(in srgb,var(--accent2) 8%,transparent)}.insight-like-actions button{border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer}.insight-like-actions button:hover{color:var(--accent2);border-color:var(--accent2)}.insight-like-actions button b{font-size:9px;margin-left:3px}
+#page-future-self .future-self-overview-mode .insight-like-copy{display:flex;align-items:baseline;gap:8px;margin-top:8px}.insight-like-copy strong{font:800 11px var(--font-mono);color:var(--text)}.insight-like-copy span{font-size:8px;color:var(--muted)}
+#page-future-self .future-self-overview-mode .insight-like-runway{position:relative;height:37px;margin-top:8px;padding:10px 0 0}.insight-like-runway-base{position:absolute;left:0;right:0;top:19px;height:7px;border-radius:99px;background:color-mix(in srgb,var(--border) 78%,transparent)}.insight-like-runway-fill{position:absolute;left:0;top:19px;height:7px;border-radius:99px;background:var(--accent2);opacity:.8}.insight-like-marker{position:absolute;top:6px;transform:translateX(-50%);z-index:2}.insight-like-marker i{display:block;width:11px;height:11px;border-radius:50%;background:var(--accent2);border:3px solid var(--card);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent2) 18%,transparent)}.insight-like-marker b{display:block;margin-top:5px;font-size:6.5px;white-space:nowrap;color:var(--muted);font-weight:800}.insight-like-marker.current i{background:var(--accent2)}.insight-like-marker.current b{color:var(--accent2)}.insight-like-marker.goal i{background:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 18%,transparent)}.insight-like-marker.goal b{color:var(--warn)}.insight-like-finish{position:absolute;right:0;top:12px;height:17px;width:2px;background:var(--muted);opacity:.75}.insight-like-legend{display:flex;gap:12px;margin-top:5px;font-size:7px;color:var(--muted)}.insight-like-legend span{display:flex;align-items:center;gap:4px}.insight-like-legend i{width:6px;height:6px;border-radius:50%;display:inline-block}.insight-like-legend .you-dot{background:var(--accent2)}.insight-like-legend .goal-dot{background:var(--warn)}
+@media(max-width:600px){#page-future-self .future-self-overview-mode .insight-like-pace-head{align-items:flex-start;flex-direction:column}.insight-like-actions{justify-content:flex-start!important}.insight-like-copy{flex-wrap:wrap}}
+body.light-mode #page-future-self .future-self-overview-mode .insight-like-pace{background:var(--card)!important}
 </style>
 </body>
 
@@ -29955,6 +30174,20 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
 #page-future-self .fs-cp-current{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:18px;padding:18px 22px;margin-bottom:12px;background:linear-gradient(115deg,color-mix(in srgb,var(--accent2) 13%,var(--card)),color-mix(in srgb,var(--card) 96%,white))}
 #page-future-self .fs-cp-current-main{min-width:0}
 #page-future-self .fs-cp-eyebrow,#page-future-self .fs-cp-panel-title{font:800 9px var(--font-mono);letter-spacing:.13em;color:var(--muted)}
+#page-future-self .fs-cp-eyebrow{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+#page-future-self .fs-cp-date-badge{font:900 15px var(--font-mono);letter-spacing:.02em;color:var(--accent2);background:color-mix(in srgb,var(--accent2) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent2) 30%,var(--border));border-radius:999px;padding:5px 11px}
+#page-future-self .fs-cp-eyebrow-sep{font:800 9px var(--font-mono);letter-spacing:.13em;color:var(--muted)}
+#page-future-self .fs-cp-pace{display:flex;flex-direction:column;gap:9px;margin:14px 0 16px;max-width:300px;padding:12px 14px;border:1px solid var(--border);border-radius:13px;background:color-mix(in srgb,var(--accent2) 5%,var(--surface))}
+#page-future-self .fs-cp-pace-label{display:flex;align-items:center;gap:6px;font:800 9px var(--font-mono);letter-spacing:.13em;color:var(--muted)}
+#page-future-self .fs-cp-info-icon{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--card);border:1px solid var(--border);color:var(--muted);font-style:normal;font-size:9.5px;cursor:help}
+#page-future-self .fs-cp-info-icon:hover{color:var(--accent2);border-color:var(--accent2)}
+#page-future-self .fs-cp-pace-dots{display:flex;gap:7px}
+#page-future-self .fs-cp-pace-dots i{width:11px;height:11px;border-radius:50%;background:color-mix(in srgb,var(--muted) 35%,transparent);flex:none;transition:transform .15s}
+#page-future-self .fs-cp-pace-dots i.on{background:var(--accent2);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent2) 20%,transparent);transform:scale(1.05)}
+#page-future-self .fs-cp-pace-gauge{display:flex;align-items:center;gap:11px}
+#page-future-self .fs-cp-pace-track{position:relative;flex:1;height:9px;border-radius:99px;background:linear-gradient(90deg,color-mix(in srgb,var(--muted) 55%,var(--surface)),var(--accent) 45%,var(--accent2) 75%,var(--pass))}
+#page-future-self .fs-cp-pace-marker{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;border:2.5px solid var(--card);transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+#page-future-self .fs-cp-pace-status{font-size:11.5px;font-weight:800;white-space:nowrap}
 #page-future-self .fs-cp-subject-select,#page-future-self .fs-cp-select{margin-top:5px;padding:4px 0;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--text);font-size:12px;font-weight:700;max-width:280px;cursor:pointer}
 #page-future-self .fs-cp-main-select{display:block;margin:0 0 3px!important;font-size:9px!important;color:var(--muted)!important;font-weight:600!important}
 #page-future-self .fs-cp-subject{font-size:27px;font-weight:850;letter-spacing:-.05em;color:var(--accent2);line-height:1.1;margin-top:2px}
@@ -30073,6 +30306,14 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
 .fs-cp-choice-actions .btn{font-size:10px;padding:7px 10px}
 #future-self-overview-question-window textarea,#future-self-overview-answer-window textarea{width:100%;min-height:150px;resize:vertical;box-sizing:border-box;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:12px;line-height:1.5}
 #future-self-overview-answer-window .fs-qw-card{width:min(560px,100%)}
+.fs-oaw-nav{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
+.fs-oaw-nav>span{color:var(--muted);font:800 9px var(--font-mono);letter-spacing:.06em}
+.fs-oaw-arrow{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);font:400 22px/1 var(--font-body);cursor:pointer;display:grid;place-items:center;box-shadow:0 8px 20px rgba(0,0,0,.3);z-index:5}
+.fs-oaw-arrow-prev{left:-54px}
+.fs-oaw-arrow-next{right:-54px}
+.fs-oaw-arrow:hover:not(:disabled){border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 12%,var(--card))}
+.fs-oaw-arrow:disabled{opacity:.3;cursor:not-allowed}
+@media(max-width:680px){.fs-oaw-arrow{position:static;transform:none;width:36px;height:36px}.fs-oaw-nav{gap:16px}}
 .fs-confidence-options{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:15px}
 .fs-confidence-options button{padding:10px 4px;border:1px solid var(--border);border-radius:11px;background:var(--surface);color:var(--text);cursor:pointer;font-size:10px}
 .fs-confidence-options button:hover{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 12%,var(--surface))}
@@ -30089,6 +30330,12 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
   window.__futureSelfOverviewAdapter = true;
   let overview = true;
   let overviewMainKey = ''; let overviewSubKey = ''; let overviewVideoSubKey = ''; let overviewTopicPage = 0; let overviewLecturePage = 0; let overviewTopicFilter = 'all'; let overviewLectureFilter = 'all'; const overviewPageSize = 6;
+  // Draft buffer for in-progress answers in the Quick review popup, keyed by question id.
+  // Saved on every keystroke so navigating between cards or an accidental close never
+  // throws away what was typed — reopening the same question restores it.
+  let overviewAnswerDrafts = {};
+  // Draft buffer for the Ask Future Self quick-capture popup (single field, no id needed).
+  let overviewQuickAskDraft = '';
   // Fingerprint of the routine + today's date. Checked on every single overviewData()
   // call (not just on the specific Save buttons) so ANY way the schedule changes —
   // the in-Overview modal, the normal Settings tab, an import/sync, or just the
@@ -30138,7 +30385,8 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
   function ring(p,label,color){ const r=30,c=2*Math.PI*r,o=c-(p/100)*c; return `<div class="fs-ring-wrap"><div class="fs-ring-visual"><svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="30" fill="none" stroke="var(--border)" stroke-width="6"/><circle cx="38" cy="38" r="30" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${o}"/></svg><strong class="fs-ring-value">${p}%</strong></div><span class="fs-ring-label">${escO(label)}</span></div>`; }
   function renderOverview(){
     const d=overviewData(), color=d.meta.color||'var(--accent2)', scores=d.scores;
-    const ico={score:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 16V9m4 7V5m4 11v-4m4 4V7"/><path d="M6 5l4-2 4 2 4-2"/></svg>',cal:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18M7 14h3m-3 3h6"/></svg>',question:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-4 3v-5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M9 9a3 3 0 1 1 4.8 2.4c-1 .7-1.8 1.1-1.8 2.6m0 3h.01"/></svg>'};
+    const ico={score:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 16V9m4 7V5m4 11v-4m4 4V7"/><path d="M6 5l4-2 4 2 4-2"/></svg>',cal:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18M7 14h3m-3 3h6"/></svg>',question:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-4 3v-5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M9 9a3 3 0 1 1 4.8 2.4c-1 .7-1.8 1.1-1.8 2.6m0 3h.01"/></svg>',note:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'};
+    const todayLabel=(()=>{try{return new Date(localDateStr()+'T00:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});}catch(e){return '';}})();
     const avg=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:null, best=scores.length?Math.max(...scores):null, lowest=scores.length?Math.min(...scores):null; const scoreByTopic={}; const subjectEntries=(state.practiceScores||[]).filter(p=>p&&p.mainSubject===d.mk&&Number.isFinite(Number(p.score))&&Number(p.max)>0); subjectEntries.forEach(p=>{const pct=Number(p.score)/Number(p.max)*100;const names=Array.isArray(p.topicTagNames)&&p.topicTagNames.length?p.topicTagNames:(p.topicName?[p.topicName]:[]);names.forEach(name=>{if(!scoreByTopic[name])scoreByTopic[name]=[];scoreByTopic[name].push(pct);});}); const needsAttention=Object.entries(scoreByTopic).map(([name,vals])=>({name,avg:vals.reduce((a,b)=>a+b,0)/vals.length})).filter(x=>x.avg<70).sort((a,b)=>a.avg-b.avg).slice(0,3);
     const lastEntry=subjectEntries.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(-1)[0]||null;
     const lastEntryPct=lastEntry&&Number(lastEntry.max)>0?Number(lastEntry.score)/Number(lastEntry.max)*100:null;
@@ -30151,6 +30399,52 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
     const weekAgoStr=(()=>{const w=new Date();w.setHours(0,0,0,0);w.setDate(w.getDate()-6);return localDateStr(w);})();
     const topicsThisWeek=d.all.filter(t=>t.dateEnded && t.dateEnded>=weekAgoStr).length;
     const scoresThisWeek=subjectEntries.filter(p=>String(p.date||'')>=weekAgoStr).length;
+    const paceMeta={done:{emoji:'🎉',label:'All Caught Up',pct:100,tone:'var(--pass)'},seed:{emoji:'🌱',label:'Just Getting Going',pct:14,tone:'var(--muted)'},behind:{emoji:'🚶',label:'Warming Up',pct:32,tone:'var(--accent)'},slow:{emoji:'🏃',label:'Building Momentum',pct:54,tone:'var(--accent)'},good:{emoji:'✅',label:'Right On Track',pct:76,tone:'var(--pass)'},ahead:{emoji:'🚀',label:'Ahead Of Schedule',pct:94,tone:'var(--accent2)'}};
+    const weekStart=weekAgoStr;
+    const subjectGoalStore=(()=>{try{return JSON.parse(localStorage.getItem('cpale_subject_goals_v1')||'{}')}catch(e){return {}}})();
+    const subjectGoalDate=/^\d{4}-\d{2}-\d{2}$/.test(String(subjectGoalStore[d.mk]||''))?subjectGoalStore[d.mk]:'';
+    const subjectGoalDays=subjectGoalDate?Math.max(1,Math.ceil((new Date(subjectGoalDate+'T00:00:00')-new Date(localDateStr()+'T00:00:00'))/86400000)):examDays;
+    const subjectGoalLabel=subjectGoalDate?new Date(subjectGoalDate+'T00:00:00').toLocaleDateString(undefined,{month:'short',year:'numeric'}):'Set goal';
+    const paceSubject=(()=>{
+      const subject=d.mk, metaS=SUBJECTS_META[subject]||{};
+      const keys=(metaS.subs||[]).filter(x=>!DEFAULT_TOPICS[x]||DEFAULT_TOPICS[x].kind!=='video');
+      const subjectTopics=keys.flatMap(x=>state.topics[x]||[]);
+      const remaining=subjectTopics.filter(t=>Number(t.status)!==2).length;
+      const doneThisWeek=subjectTopics.filter(t=>t.dateEnded&&t.dateEnded>=weekStart).length;
+      const total=subjectTopics.length, completion=total?Math.round((total-remaining)/total*100):0;
+      const today=new Date(localDateStr()+'T00:00:00');
+      const dated=subjectTopics.filter(t=>Number(t.status)===2&&t.dateEnded).map(t=>String(t.dateEnded)).sort();
+      const first=dated.length?new Date(dated[0]+'T00:00:00'):today;
+      const hasExamDate=/^\d{4}-\d{2}-\d{2}$/.test(String(state.examDate||''));
+      const exam=new Date((hasExamDate?state.examDate:localDateStr())+'T00:00:00');
+      const buffer=Math.min(84,Math.max(28,Math.round(Math.max(1,Math.ceil((exam-first)/86400000))*0.25)));
+      const coverageFinish=new Date(exam.getTime()-buffer*86400000);
+      const goalDate=subjectGoalDate?new Date(subjectGoalDate+'T00:00:00'):null;
+      const routineConfigured=state.studySchedule&&Object.values(state.studySchedule).some(days=>Array.isArray(days)&&days.length>0);
+      const routine=routineConfigured&&typeof getScheduledMainSubjects==='function';
+      const scheduledBetween=(from,to)=>{let n=0;const cursor=new Date(from);cursor.setHours(0,0,0,0);const end=new Date(to);end.setHours(0,0,0,0);for(;cursor<=end;cursor.setDate(cursor.getDate()+1)){const scheduled=routine?getScheduledMainSubjects(localDateStr(cursor)):[];if(!routine||scheduled.includes(subject))n++;}return Math.max(1,n);};
+      const elapsedStudy=scheduledBetween(first,today);
+      const examStudy=scheduledBetween(first,coverageFinish);
+      const examPacePct=hasExamDate?Math.max(0,Math.min(100,elapsedStudy/examStudy*100)):completion;
+      const goalPacePct=goalDate&&goalDate>=today?Math.max(0,Math.min(100,elapsedStudy/scheduledBetween(first,goalDate)*100)):null;
+      const weeklyNeed=(subjectGoalDays!==null&&subjectGoalDays>0)?remaining/(subjectGoalDays/7):null;
+      const ratio=weeklyNeed&&weeklyNeed>0?doneThisWeek/weeklyNeed:null;
+      const band=remaining===0?'done':ratio===null?'seed':ratio<0.5?'behind':ratio<0.9?'slow':ratio<1.3?'good':'ahead';
+      const pm=paceMeta[band];
+      const targetPct=total&&weeklyNeed?Math.min(100,Math.max(completion+8,completion+(weeklyNeed/total*100))):Math.min(100,completion+15);
+      const pacePct=ratio===null?0:Math.min(100,Math.round(ratio*100));
+      const examRaw=state.examDate, examLabel=examRaw&&/^\d{4}-\d{2}-\d{2}$/.test(examRaw)?new Date(examRaw+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'Set exam date';
+      const daysLeft=Math.max(1,Number(examDays)||1), hasRoutine=typeof getScheduledMainSubjects==='function';
+      let scheduledStudyDays=0, weeklyStudyDays=0;
+      for(let day=0;day<=daysLeft;day++){const dt=new Date(localDateStr()+'T00:00:00');dt.setDate(dt.getDate()+day);const scheduled=hasRoutine?getScheduledMainSubjects(localDateStr(dt)):[];if(!hasRoutine||scheduled.includes(subject)){scheduledStudyDays++;if(day<7)weeklyStudyDays++;}}
+      scheduledStudyDays=Math.max(1,scheduledStudyDays); weeklyStudyDays=hasRoutine?Math.max(0,weeklyStudyDays):7;
+      const perStudyDay=remaining?Math.ceil(remaining/scheduledStudyDays):0, perWeek=remaining?Math.ceil(remaining/scheduledStudyDays*weeklyStudyDays):0;
+      const recommendedPct=Math.round(hasExamDate?examPacePct:completion);
+      const liveGoalPct=goalPacePct===null?targetPct:Math.round(goalPacePct);
+      return {subject,metaS,remaining,doneThisWeek,ratio,band,pm,completion,total,targetPct:liveGoalPct,goalPct:subjectGoalDate?liveGoalPct:null,pacePct,examLabel,scheduledStudyDays,weeklyStudyDays,perStudyDay,perWeek,recommendedPct};
+    })();
+    const paceRows=`<section class="fs-cp-pace-inline fs-final-pacer" aria-label="Subject pacing"><div class="fs-final-pacer-head"><div><div class="fs-final-pacer-kicker">PACE + PERFORMANCE</div><h3>How ${escO(paceSubject.metaS.name||paceSubject.subject)} is tracking</h3></div><div class="fs-final-pacer-actions"><span class="fs-final-pacer-badge">${escO(paceSubject.pm.label)} <button type="button" class="fs-pace-info" aria-label="What do the pace levels mean?" title="Pace levels: Just Getting Going → Warming Up → Building Momentum → Right On Track → Ahead Of Schedule → All Caught Up">i</button></span><button type="button" onclick="futureSelfEditSubjectGoal()">${subjectGoalDate?'Goal '+escO(subjectGoalLabel):'Set subject goal'} <b>↗</b></button></div></div><div class="fs-final-pacer-copy"><strong>${paceSubject.completion}% complete</strong><span>${paceSubject.remaining} topics left · ${paceSubject.doneThisWeek} finished this week</span></div><div class="fs-final-pacer-track" aria-label="Pacing comparison"><div class="fs-final-pacer-base"></div><div class="fs-final-pacer-fill" style="width:${paceSubject.completion}%"></div><span class="fs-final-pacer-dot fs-final-pacer-dot-recommended" style="left:${paceSubject.recommendedPct}%" title="Recommended pace"></span>${paceSubject.goalPct===null?'':`<span class="fs-final-pacer-dot fs-final-pacer-dot-goal" style="left:${Math.min(100,Math.max(0,paceSubject.goalPct))}%" title="Your goal"></span>`}<span class="fs-final-pacer-dot fs-final-pacer-dot-current" style="left:${paceSubject.completion}%" title="You"></span><span class="fs-final-pacer-label fs-final-pacer-label-recommended" style="left:${paceSubject.recommendedPct}%">Recommended pace</span><span class="fs-final-pacer-label fs-final-pacer-label-current" style="left:${paceSubject.completion}%">You</span>${paceSubject.goalPct===null?'':`<span class="fs-final-pacer-label fs-final-pacer-label-goal" style="left:${Math.min(100,Math.max(0,paceSubject.goalPct))}%">Your goal</span>`}<span class="fs-final-pacer-finish"><i></i><b>100%</b></span></div></section>`;
+    const paceDots=Array.from({length:5},(_,i)=>i<Math.min(5,topicsThisWeek)?'<i class="on"></i>':'<i></i>').join('');
     const currentIdx=d.topics.findIndex(t=>Number(t.status)===1), focusIdx=currentIdx>=0?currentIdx:d.topics.findIndex(t=>Number(t.status)!==2);
     const filteredTopics=d.topics.filter(t=>overviewTopicFilter==='all'||(overviewTopicFilter==='completed'?Number(t.status)===2:overviewTopicFilter==='in-progress'?Number(t.status)===1:Number(t.status)===0)); const filteredVideos=d.videos.filter(t=>overviewLectureFilter==='all'||(overviewLectureFilter==='completed'?Number(t.status)===2:overviewLectureFilter==='in-progress'?Number(t.status)===1:Number(t.status)===0)); const focus=Math.max(0,focusIdx), topicStart=overviewTopicPage*4, preview=filteredTopics.slice(topicStart,topicStart+4), completed=overviewTopicPage?[]:filteredTopics.slice(0,focus).filter(t=>Number(t.status)===2).slice(-1);
     const shown=preview;
@@ -30159,7 +30453,7 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
     const topicRows=shown.map(t=>{const i=d.topics.indexOf(t);return `<div class="fs-cp-row"><span class="fs-cp-index">${i+1}</span><span class="fs-cp-mark ${Number(t.status)===2?'done':Number(t.status)===1?'active':''}">${Number(t.status)===2?'✓':Number(t.status)===1?'▶':'○'}</span><span class="fs-cp-name">${escO(t.name)}</span>${Number(t.status)!==2?`<button class="btn btn-ghost btn-sm" onclick="${Number(t.status)===0?'futureSelfOverviewStatus(1,'+i+')':'futureSelfOverviewComplete('+i+')'}">${Number(t.status)===1?'Continue':'Start'}</button>`:''}</div>`}).join('');
     const lectures=filteredVideos.slice(overviewLecturePage*4,overviewLecturePage*4+4).map(t=>{const i=d.videos.indexOf(t);return `<div class="fs-cp-row fs-cp-lecture"><span class="fs-cp-mark ${Number(t.status)===2?'done':Number(t.status)===1?'active':''}">${Number(t.status)===2?'✓':Number(t.status)===1?'▶':'○'}</span><span class="fs-cp-name">${escO(t.name)}</span><button class="btn btn-sm fs-video-action ${Number(t.status)===0?'btn-primary':Number(t.status)===1?'btn-ghost':''}" ${Number(t.status)===2?'disabled':''} onclick="futureSelfOverviewLectureStatus(${Number(t.status)===0?1:Number(t.status)===1?2:3},${i})">${Number(t.status)===0?'Start':Number(t.status)===1?'Complete':'Completed'}</button></div>`}).join('') || '<div class="fs-cp-empty">No lectures in this collection.</div>';
     const recent=scores.length?scores.slice(-3).map(x=>Math.round(x)+'%').join(' · '):'—';
-    return `<section class="future-self-overview future-self-cockpit"><div class="fs-cp-current"><div class="fs-cp-current-main"><div class="fs-cp-eyebrow">TODAY · CURRENTLY LEARNING</div><select class="fs-cp-subject-select fs-cp-main-select" onchange="futureSelfOverviewSubject(this.value)" title="Change subject">${MAIN_SUBJECTS.map(x=>`<option value="${escO(x)}" ${x===d.mk?'selected':''}>${escO(x)}</option>`).join('')}</select><div class="fs-hover-picker"><div class="fs-cp-subject fs-cp-switch-label" role="button" tabindex="0" title="Hover to change subject" onclick="futureSelfFocusOverviewSelect('main')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();futureSelfFocusOverviewSelect('main')}">${escO(d.mk)}<span class="fs-cp-switch-hint">Hover to switch</span></div><div class="fs-hover-menu" role="menu" aria-label="Choose subject">${MAIN_SUBJECTS.map(x=>`<button type="button" role="menuitem" class="fs-hover-option ${x===d.mk?'selected':''}" onclick="futureSelfOverviewSubject('${escO(x)}')">${escO(SUBJECTS_META[x]?.name||x)}${x===d.mk?'<span>✓</span>':''}</button>`).join('')}</div></div><div class="fs-cp-inline-rings" aria-label="Progress overview">${ring(d.pctSubject,d.mk,color)}${ring(d.pctSub,d.subName,'var(--accent2)')}${ring(Number(d.subjectVideoStats?.pct||0).toFixed(1),'Video lectures','var(--accent)')}</div><select id="fs-overview-subject-select" class="fs-cp-subject-select" onchange="futureSelfOverviewSub(this.value)" title="Change subsubject">${d.subs.map(x=>`<option value="${escO(x)}" ${x===d.sk?'selected':''}>${escO(DEFAULT_TOPICS[x]?.name||x)}</option>`).join('')}</select><div class="fs-hover-picker fs-hover-picker-sub"><div class="fs-cp-subject fs-cp-switch-label" role="button" tabindex="0" title="Hover to change subsubject" onclick="futureSelfFocusOverviewSelect('sub')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();futureSelfFocusOverviewSelect('sub')}">${escO(d.subName)}<span class="fs-cp-switch-hint">Hover to switch</span></div><div class="fs-hover-menu" role="menu" aria-label="Choose subsubject">${d.subs.map(x=>`<button type="button" role="menuitem" class="fs-hover-option ${x===d.sk?'selected':''}" onclick="futureSelfOverviewSub('${escO(x)}')">${escO(DEFAULT_TOPICS[x]?.name||x)}${x===d.sk?'<span>✓</span>':''}</button>`).join('')}</div></div><div class="fs-cp-topic-label">Current topic · <b>${escO(d.current?.name||'Choose a topic below')}</b></div><div class="fs-cp-status">${status}</div><div class="fs-cp-actions">${action}${completeAction}</div></div><div class="fs-cp-current-tools"><div class="fs-cp-banner-actions"><button class="fs-cp-banner-action" onclick="futureSelfOverviewScoreChoice()"><span class="fs-cp-action-icon">${ico.score}</span><span><b>Add score</b><small>Preboards or drills</small></span><em>›</em></button><button class="fs-cp-banner-action" onclick="futureSelfOverviewSchedule()"><span class="fs-cp-action-icon">${ico.cal}</span><span><b>Schedule</b><small>Plan a study session</small></span><em>›</em></button><button class="fs-cp-banner-action" onclick="toggleDarkMode()"><span class="fs-cp-action-icon">◐</span><span><b>Theme</b><small>${state.darkMode ? 'Dark mode' : 'Light mode'}</small></span><em>›</em></button><button class="fs-cp-banner-action" onclick="futureSelfOpenDevTools()"><span class="fs-cp-action-icon">⚙</span><span><b>Dev tools</b><small>Personalize this view</small></span><em>›</em></button><button class="fs-cp-routine" onclick="futureSelfOverviewRoutine()"><span>Next subject <b class="fs-cp-routine-arrow">›</b></span><b>${escO(d.scheduledNext)}</b><small>${escO(d.scheduledNextWhen)} · Edit</small></button></div></div></div><div class="fs-cp-middle"><div class="fs-cp-panel fs-cp-performance"><div class="fs-cp-panel-title">PERFORMANCE · MANUAL SCORES</div><div class="fs-perf-metrics"><div><strong>${avg===null?'—':avg.toFixed(1)+'%'}${trend===null?'':`<em class="fs-perf-trend ${trend>=0?'up':'down'}">${trend>=0?'▲':'▼'}${Math.abs(trend).toFixed(0)}</em>`}</strong><span>Average Score</span></div><div><strong>${best===null?'—':best.toFixed(1)+'%'}</strong><span>Highest</span></div><div><strong>${scores.length}</strong><span>Entries</span></div><div class="fs-perf-metric-link" onclick="futureSelfOverviewAnswer()"><strong>${openQCount}</strong><span>Open Qs</span></div><div class="resolved"><strong>${resolvedQCount}</strong><span>Resolved Qs</span></div><button type="button" class="fs-perf-metric-link exam" aria-label="Set or change CPALE exam date" title="Set or change CPALE exam date" onclick="futureSelfOverviewExamDate()"><strong class="fs-exam-days-number">${examDays===null?'—':examDays}</strong><span>${examDays===null?'Set CPALE exam date':`days till ${escO(examMonthYear)} CPALE`}</span></button></div><div class="fs-perf-week"><span>This week: <b>${topicsThisWeek}</b> topic${topicsThisWeek===1?'':'s'} completed</span><span>·</span><span><b>${scoresThisWeek}</b> score${scoresThisWeek===1?'':'s'} logged</span></div><div class="fs-perf-last">${lastEntry?`<span>Last logged</span><b>${escO(lastEntry.label||'Untitled')}</b><span class="fs-perf-last-date">${escO(lastEntry.date||'')}${lastEntryPct===null?'':' · '+lastEntryPct.toFixed(1)+'%'}</span>`:`<span>No scores logged for ${escO(d.mk)} yet.</span>`}</div><div class="fs-score-trend">${scores.slice(-8).map(v=>`<i style="height:${Math.max(8,Math.min(100,v))}%" title="${v.toFixed(1)}%"></i>`).join('')||'<span>No scores yet</span>'}</div><div class="fs-needs-attention"><b>Needs Attention</b>${needsAttention.length?needsAttention.map(x=>`<span>${escO(x.name)} <strong>${x.avg.toFixed(1)}%</strong></span>`).join(''):'<span>Nothing flagged from entered scores.</span>'}</div></div><div class="fs-cp-panel fs-cp-lectures"><div class="fs-cp-panel-title">VIDEO LECTURES</div><select class="fs-cp-select" onchange="futureSelfOverviewVideoSub(this.value)">${d.vsubs.map(x=>`<option value="${escO(x)}" ${x===d.videoSubKey?'selected':''}>${escO(DEFAULT_TOPICS[x]?.name||x)}</option>`).join('')}</select><div class="fs-cp-next-video"><div><span>NEXT VIDEO</span><b>${escO(d.nextVideo?.name||'All lectures completed')}</b></div>${d.nextVideo?`<button class="btn ${Number(d.nextVideo.status)===0?'btn-primary':'btn-ghost'} fs-video-action" onclick="futureSelfOverviewLectureStatus(${Number(d.nextVideo.status)===0?1:2},${d.videos.indexOf(d.nextVideo)})">${Number(d.nextVideo.status)===0?'Start':'Complete'}</button>`:`<button class="btn btn-ghost fs-video-action" disabled>Completed</button>`}</div><div class="fs-cp-video-filter"><label>Show <select onchange="futureSelfOverviewLectureFilter(this.value)"><option value="all" ${overviewLectureFilter==='all'?'selected':''}>All lectures</option><option value="completed" ${overviewLectureFilter==='completed'?'selected':''}>Completed</option><option value="in-progress" ${overviewLectureFilter==='in-progress'?'selected':''}>In progress</option><option value="not-started" ${overviewLectureFilter==='not-started'?'selected':''}>Not started</option></select></label></div><div class="fs-cp-video-rings"><div class="fs-cp-selected-video-progress"><div class="fs-cp-progress-label"><span>Selected collection</span><b>${d.videos.filter(t=>Number(t.status)===2).length} / ${d.videos.length} · ${d.videos.length?Math.round(d.videos.filter(t=>Number(t.status)===2).length/d.videos.length*100):0}%</b></div><div class="fs-cp-progress-track"><i style="width:${d.videos.length?Math.round(d.videos.filter(t=>Number(t.status)===2).length/d.videos.length*100):0}%"></i></div></div><div class="fs-cp-total-video-ring">${ring(Number(d.subjectVideoStats?.pct||0).toFixed(1),escO(d.meta.name||d.mk)+' Video Progress','var(--accent2)')}</div></div><div class="fs-cp-lecture-progress"><b>${d.videos.filter(t=>Number(t.status)===2).length} / ${d.videos.length}</b><span>${d.videos.length?Math.round(d.videos.filter(t=>Number(t.status)===2).length/d.videos.length*100):0}%</span></div><div class="fs-cp-lecture-list">${lectures}</div><div class="fs-cp-pagination"><button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewLecturePage(-1)" ${overviewLecturePage<=0?'disabled':''}>←</button><span>Page ${overviewLecturePage+1} of ${Math.max(1,Math.ceil(filteredVideos.length/4))}</span><button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewLecturePage(1)" ${overviewLecturePage>=Math.max(0,Math.ceil(filteredVideos.length/4)-1)?'disabled':''}>→</button></div></div></div><div class="fs-cp-bottom"><div class="fs-cp-panel fs-cp-topics"><div class="fs-cp-section-head"><div><div class="fs-cp-panel-title">WHAT I'M STUDYING</div><h3>${escO(d.subName)}</h3></div><span>${d.pctSub}% complete</span></div><div class="fs-cp-topic-filter"><label>Show <select onchange="futureSelfOverviewTopicFilter(this.value)"><option value="all" ${overviewTopicFilter==='all'?'selected':''}>All topics</option><option value="completed" ${overviewTopicFilter==='completed'?'selected':''}>Completed</option><option value="in-progress" ${overviewTopicFilter==='in-progress'?'selected':''}>In progress</option><option value="not-started" ${overviewTopicFilter==='not-started'?'selected':''}>Not started</option></select></label></div><div class="fs-cp-topic-progress"><i style="width:${d.pctSub}%"></i></div><div class="fs-cp-topic-list">${topicRows||'<div class="fs-cp-empty">No topics in this section.</div>'}</div><div class="fs-cp-pagination"><button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewTopicPage(-1)" ${overviewTopicPage<=0?'disabled':''}>←</button><span>Page ${overviewTopicPage+1} of ${Math.max(1,Math.ceil(filteredTopics.length/4))}</span><button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewTopicPage(1)" ${overviewTopicPage>=Math.max(0,Math.ceil(filteredTopics.length/4)-1)?'disabled':''}>→</button></div></div></div></section>`;
+    return `<section class="future-self-overview future-self-cockpit"><div class="fs-cp-current"><div class="fs-cp-current-main"><div class="fs-cp-eyebrow"><span class="fs-cp-date-badge">${escO(todayLabel)}</span><span class="fs-cp-eyebrow-sep">CURRENTLY LEARNING</span></div><div class="fs-hover-picker"><div class="fs-cp-subject fs-cp-switch-label" role="button" tabindex="0" title="Hover to change subject" onclick="futureSelfFocusOverviewSelect('main')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();futureSelfFocusOverviewSelect('main')}">${escO(d.mk)}<span class="fs-cp-switch-hint">Hover to switch</span></div><div class="fs-hover-menu" role="menu" aria-label="Choose subject">${MAIN_SUBJECTS.map(x=>`<button type="button" role="menuitem" class="fs-hover-option ${x===d.mk?'selected':''}" onclick="futureSelfOverviewSubject('${escO(x)}')">${escO(SUBJECTS_META[x]?.name||x)}${x===d.mk?'<span>✓</span>':''}</button>`).join('')}</div></div><div class="fs-cp-inline-rings" aria-label="Progress overview">${ring(d.pctSubject,d.mk,color)}${ring(d.pctSub,d.subName,'var(--accent2)')}${ring(Number(d.subjectVideoStats?.pct||0).toFixed(1),'Video lectures','var(--accent)')}</div><select id="fs-overview-subject-select" class="fs-cp-subject-select" onchange="futureSelfOverviewSub(this.value)" title="Change subsubject">${d.subs.map(x=>`<option value="${escO(x)}" ${x===d.sk?'selected':''}>${escO(DEFAULT_TOPICS[x]?.name||x)}</option>`).join('')}</select><div class="fs-hover-picker fs-hover-picker-sub"><div class="fs-cp-subject fs-cp-switch-label" role="button" tabindex="0" title="Hover to change subsubject" onclick="futureSelfFocusOverviewSelect('sub')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();futureSelfFocusOverviewSelect('sub')}">${escO(d.subName)}<span class="fs-cp-switch-hint">Hover to switch</span></div><div class="fs-hover-menu" role="menu" aria-label="Choose subsubject">${d.subs.map(x=>`<button type="button" role="menuitem" class="fs-hover-option ${x===d.sk?'selected':''}" onclick="futureSelfOverviewSub('${escO(x)}')">${escO(DEFAULT_TOPICS[x]?.name||x)}${x===d.sk?'<span>✓</span>':''}</button>`).join('')}</div></div><div class="fs-cp-topic-label">Current topic · <b>${escO(d.current?.name||'Choose a topic below')}</b></div><div class="fs-cp-status">${status}</div><div class="fs-cp-actions">${action}${completeAction}</div></div><div class="fs-cp-current-tools"><div class="fs-cp-banner-actions"><button class="fs-cp-banner-action" onclick="futureSelfOverviewScoreChoice()"><span class="fs-cp-action-icon">${ico.score}</span><span><b>Add score</b><small>Preboards or drills</small></span><em>›</em></button><button class="fs-cp-banner-action" onclick="futureSelfOverviewSchedule()"><span class="fs-cp-action-icon">${ico.cal}</span><span><b>Schedule</b><small>Plan a study session</small></span><em>›</em></button><button class="fs-cp-banner-action" onclick="toggleDarkMode()"><span class="fs-cp-action-icon">◐</span><span><b>Theme</b><small>${state.darkMode ? 'Dark mode' : 'Light mode'}</small></span><em>›</em></button><button class="fs-cp-banner-action" onclick="futureSelfOpenDevTools()"><span class="fs-cp-action-icon">⚙</span><span><b>Dev tools</b><small>Personalize this view</small></span><em>›</em></button><button class="fs-cp-banner-action fs-cp-quick-review" onclick="futureSelfOverviewAnswer()"><span class="fs-cp-action-icon">${ico.question}</span><span><b>Quick review</b><small>${openQCount?`${openQCount} open question${openQCount===1?'':'s'} on ${escO(d.mk)}`:'Nothing queued right now'}</small></span><em>›</em></button><button class="fs-cp-banner-action fs-cp-quick-capture" onclick="futureSelfOverviewQuickAsk()"><span class="fs-cp-action-icon">${ico.note}</span><span><b>Ask Future Self</b><small>Auto-tagged to ${escO(d.subName||d.mk)}</small></span><em>›</em></button><button class="fs-cp-routine" onclick="futureSelfOverviewRoutine()"><span>Next subject <b class="fs-cp-routine-arrow">›</b></span><b>${escO(d.scheduledNext)}</b><small>${escO(d.scheduledNextWhen)} · Edit</small></button></div></div></div>${paceRows}<div class="fs-cp-middle"><div class="fs-cp-panel fs-cp-performance"><div class="fs-cp-panel-title">PERFORMANCE · MANUAL SCORES</div><div class="fs-perf-metrics"><div><strong>${avg===null?'—':avg.toFixed(1)+'%'}${trend===null?'':`<em class="fs-perf-trend ${trend>=0?'up':'down'}">${trend>=0?'▲':'▼'}${Math.abs(trend).toFixed(0)}</em>`}</strong><span>Average Score</span></div><div><strong>${best===null?'—':best.toFixed(1)+'%'}</strong><span>Highest</span></div><div><strong>${scores.length}</strong><span>Entries</span></div><div class="fs-perf-metric-link" onclick="futureSelfOverviewAnswer()"><strong>${openQCount}</strong><span>Open Qs</span></div><div class="resolved"><strong>${resolvedQCount}</strong><span>Resolved Qs</span></div><button type="button" class="fs-perf-metric-link exam" aria-label="Set or change CPALE exam date" title="Set or change CPALE exam date" onclick="futureSelfOverviewExamDate()"><strong class="fs-exam-days-number">${examDays===null?'—':examDays}</strong><span>${examDays===null?'Set CPALE exam date':`days till ${escO(examMonthYear)} CPALE`}</span></button></div><div class="fs-perf-week"><span>This week: <b>${topicsThisWeek}</b> topic${topicsThisWeek===1?'':'s'} completed</span><span>·</span><span><b>${scoresThisWeek}</b> score${scoresThisWeek===1?'':'s'} logged</span></div><div class="fs-perf-last">${lastEntry?`<span>Last logged</span><b>${escO(lastEntry.label||'Untitled')}</b><span class="fs-perf-last-date">${escO(lastEntry.date||'')}${lastEntryPct===null?'':' · '+lastEntryPct.toFixed(1)+'%'}</span>`:`<span>No scores logged for ${escO(d.mk)} yet.</span>`}</div><div class="fs-score-trend">${scores.slice(-8).map(v=>`<i style="height:${Math.max(8,Math.min(100,v))}%" title="${v.toFixed(1)}%"></i>`).join('')||'<span>No scores yet</span>'}</div><div class="fs-needs-attention"><b>Needs Attention</b>${needsAttention.length?needsAttention.map(x=>`<span>${escO(x.name)} <strong>${x.avg.toFixed(1)}%</strong></span>`).join(''):'<span>Nothing flagged from entered scores.</span>'}</div></div><div class="fs-cp-panel fs-cp-lectures"><div class="fs-cp-panel-title">VIDEO LECTURES</div><select class="fs-cp-select" onchange="futureSelfOverviewVideoSub(this.value)">${d.vsubs.map(x=>`<option value="${escO(x)}" ${x===d.videoSubKey?'selected':''}>${escO(DEFAULT_TOPICS[x]?.name||x)}</option>`).join('')}</select><div class="fs-cp-next-video"><div><span>NEXT VIDEO</span><b>${escO(d.nextVideo?.name||'All lectures completed')}</b></div>${d.nextVideo?`<button class="btn ${Number(d.nextVideo.status)===0?'btn-primary':'btn-ghost'} fs-video-action" onclick="futureSelfOverviewLectureStatus(${Number(d.nextVideo.status)===0?1:2},${d.videos.indexOf(d.nextVideo)})">${Number(d.nextVideo.status)===0?'Start':'Complete'}</button>`:`<button class="btn btn-ghost fs-video-action" disabled>Completed</button>`}</div><div class="fs-cp-video-filter"><label>Show <select onchange="futureSelfOverviewLectureFilter(this.value)"><option value="all" ${overviewLectureFilter==='all'?'selected':''}>All lectures</option><option value="completed" ${overviewLectureFilter==='completed'?'selected':''}>Completed</option><option value="in-progress" ${overviewLectureFilter==='in-progress'?'selected':''}>In progress</option><option value="not-started" ${overviewLectureFilter==='not-started'?'selected':''}>Not started</option></select></label></div><div class="fs-cp-video-rings"><div class="fs-cp-selected-video-progress"><div class="fs-cp-progress-label"><span>Selected collection</span><b>${d.videos.filter(t=>Number(t.status)===2).length} / ${d.videos.length} · ${d.videos.length?Math.round(d.videos.filter(t=>Number(t.status)===2).length/d.videos.length*100):0}%</b></div><div class="fs-cp-progress-track"><i style="width:${d.videos.length?Math.round(d.videos.filter(t=>Number(t.status)===2).length/d.videos.length*100):0}%"></i></div></div><div class="fs-cp-total-video-ring">${ring(Number(d.subjectVideoStats?.pct||0).toFixed(1),escO(d.meta.name||d.mk)+' Video Progress','var(--accent2)')}</div></div><div class="fs-cp-lecture-progress"><b>${d.videos.filter(t=>Number(t.status)===2).length} / ${d.videos.length}</b><span>${d.videos.length?Math.round(d.videos.filter(t=>Number(t.status)===2).length/d.videos.length*100):0}%</span></div><div class="fs-cp-lecture-list">${lectures}</div><div class="fs-cp-pagination"><button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewLecturePage(-1)" ${overviewLecturePage<=0?'disabled':''}>←</button><span>Page ${overviewLecturePage+1} of ${Math.max(1,Math.ceil(filteredVideos.length/4))}</span><button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewLecturePage(1)" ${overviewLecturePage>=Math.max(0,Math.ceil(filteredVideos.length/4)-1)?'disabled':''}>→</button></div></div></div><div class="fs-cp-bottom"><div class="fs-cp-panel fs-cp-topics"><div class="fs-cp-section-head"><div><div class="fs-cp-panel-title">WHAT I'M STUDYING</div><h3>${escO(d.subName)}</h3></div><span>${d.pctSub}% complete</span></div><div class="fs-cp-topic-filter"><label>Show <select onchange="futureSelfOverviewTopicFilter(this.value)"><option value="all" ${overviewTopicFilter==='all'?'selected':''}>All topics</option><option value="completed" ${overviewTopicFilter==='completed'?'selected':''}>Completed</option><option value="in-progress" ${overviewTopicFilter==='in-progress'?'selected':''}>In progress</option><option value="not-started" ${overviewTopicFilter==='not-started'?'selected':''}>Not started</option></select></label></div><div class="fs-cp-topic-progress"><i style="width:${d.pctSub}%"></i></div><div class="fs-cp-topic-list">${topicRows||'<div class="fs-cp-empty">No topics in this section.</div>'}</div><div class="fs-cp-pagination"><button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewTopicPage(-1)" ${overviewTopicPage<=0?'disabled':''}>←</button><span>Page ${overviewTopicPage+1} of ${Math.max(1,Math.ceil(filteredTopics.length/4))}</span><button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewTopicPage(1)" ${overviewTopicPage>=Math.max(0,Math.ceil(filteredTopics.length/4)-1)?'disabled':''}>→</button></div></div></div></section>`;
   }
   function ensureOverviewTab(){ const tabs=document.querySelector('#page-future-self .future-self-tabs'); if(!tabs) return; if(!tabs.querySelector('.future-self-overview-tab')){ const b=document.createElement('button'); b.className='future-self-tab future-self-overview-tab'; b.innerHTML='Overview'; b.onclick=()=>{overview=true;repaint()}; tabs.prepend(b); } const questionTab=[...tabs.querySelectorAll('.future-self-tab')].find(x=>!x.classList.contains('future-self-overview-tab')&&x.textContent.trim().startsWith('Questions')); const old=tabs.querySelector('.future-self-compact-dump'); if(questionTab?.classList.contains('active')){ if(!old){ const d=document.createElement('button'); d.type='button'; d.className='btn btn-primary btn-sm future-self-compact-dump'; d.textContent='＋ Dump a question'; d.onclick=()=>{overview=false;futureSelfFocusCapture();}; tabs.appendChild(d); } } else old?.remove(); }
   function repaint(){ originalRender(); ensureOverviewTab(); if(!overview) return; const shell=document.getElementById('future-self-shell'); const main=document.querySelector('#page-future-self .future-self-main'); if(!main||!shell) return; shell.classList.add('future-self-overview-mode'); const tabs=main.querySelector('.future-self-tabs'); if(tabs){ const b=tabs.querySelector('.future-self-overview-tab'); if(b) b.classList.add('active'); tabs.querySelectorAll('.future-self-tab:not(.future-self-overview-tab)').forEach(x=>x.classList.remove('active')); tabs.querySelector('.future-self-compact-dump')?.remove(); } main.querySelector('.future-self-breadcrumb strong').textContent='Overview'; [...main.children].filter(x=>!x.classList.contains('future-self-breadcrumb')&&!x.classList.contains('future-self-tabs')).forEach(x=>x.remove()); const box=document.createElement('div'); box.innerHTML=renderOverview(); main.appendChild(box.firstElementChild); }
@@ -30186,16 +30480,16 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
     if(!api){toast('Questions tool is unavailable right now.');return;}
     const d=overviewData();
     const topicName=String(d.current?.name||'').trim();
-    // Scope to exactly what Overview is showing right now — today's topic first,
-    // then widen step by step — but stay ON Overview: no tab switch, just a window.
-    api.setQuestionFilter('open'); api.setActiveMainSubject(d.mk); api.setActiveSubSubjectFilter(d.sk); api.setQuestionSearch(''); api.setQuestionPage(0);
-    api.setActiveTopicFilter(topicName);
-    let scoped=api.filteredQuestions(), scopeLabel=topicName||d.subName||d.mk;
-    if(topicName && !scoped.length){ api.setActiveTopicFilter(''); scoped=api.filteredQuestions(); scopeLabel=d.subName||d.mk; }
-    if(!scoped.length && d.sk){ api.setActiveSubSubjectFilter(''); scoped=api.filteredQuestions(); scopeLabel=d.mk; }
+    // Scope to the whole current subject — this must match the count shown on the
+    // "Quick review" button (openQCount, which is subject-wide), or older questions
+    // on other topics/sub-subjects within the same subject become unreachable via
+    // Next/Prev even though the badge says they're there.
+    api.setQuestionFilter('open'); api.setActiveMainSubject(d.mk); api.setActiveSubSubjectFilter(''); api.setActiveTopicFilter(''); api.setQuestionSearch(''); api.setQuestionPage(0);
+    let scoped=api.filteredQuestions(), scopeLabel=d.subName||d.mk;
     if(!scoped.length && d.mk){ api.setActiveMainSubject('all'); scoped=api.filteredQuestions(); scopeLabel='any subject'; }
-    if(!scoped.length){ toast('No open questions yet — capture one below.'); futureSelfOverviewNote(); return; }
-    futureSelfOverviewOpenAnswerWindow(scoped.map(s=>s.idx), scopeLabel, 0);
+    if(!scoped.length){ toast('No open questions yet — capture one instead.'); futureSelfOverviewQuickAsk(); return; }
+    const startPos = topicName ? Math.max(0, scoped.findIndex(s => (s.q.topicName||'') === topicName)) : 0;
+    futureSelfOverviewOpenAnswerWindow(scoped.map(s=>s.idx), scopeLabel, startPos);
   };
   window.futureSelfOverviewOpenAnswerWindow=(idxList,scopeLabel,pos)=>{
     document.getElementById('future-self-overview-answer-window')?.remove();
@@ -30203,27 +30497,39 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
     const q=api.questions()[idxList[pos]];
     if(!q){ toast('That question is no longer available.'); if(pos+1<idxList.length) futureSelfOverviewOpenAnswerWindow(idxList,scopeLabel,pos+1); return; }
     const n=api.normalizeQuestion(q);
+    const draft=overviewAnswerDrafts[q.id]||'';
+    const askedLabel=api.formatFutureSelfDate?api.formatFutureSelfDate(n.createdAt):(n.createdAt||'');
     const w=document.createElement('div'); w.id='future-self-overview-answer-window';
-    w.innerHTML=`<div class="fs-qw-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="future-self-overview-label">ANSWER FROM MEMORY · ${escO(scopeLabel)}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Question ${pos+1} of ${idxList.length}</div></div><button class="btn btn-ghost btn-sm" onclick="document.getElementById('future-self-overview-answer-window').remove()">Close</button></div><h3 style="margin:10px 0 6px;font-size:15px;line-height:1.5">${escO(api.plainText(n.text||''))}</h3><textarea id="fs-oaw-text" placeholder="Write the answer you understand now…"></textarea><div style="display:flex;justify-content:flex-end;gap:7px;margin-top:10px;flex-wrap:wrap">${idxList.length>1?`<button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewSkipAnswer(${JSON.stringify(idxList)},${pos},${JSON.stringify(scopeLabel)})">Skip</button>`:''}<button class="btn btn-ghost btn-sm" onclick="futureSelfOverviewSubmitAnswer(${JSON.stringify(idxList)},${pos},${JSON.stringify(scopeLabel)},false)">Save, keep open</button><button class="btn btn-primary btn-sm" onclick="futureSelfOverviewSubmitAnswer(${JSON.stringify(idxList)},${pos},${JSON.stringify(scopeLabel)},true)">Save and resolve</button></div></div>`;
+    w.innerHTML=`<div class="fs-qw-card" style="position:relative"><button type="button" aria-label="Close" onclick="futureSelfOverviewCloseAnswer(${JSON.stringify(idxList)},${pos})" style="position:absolute;top:9px;right:11px;width:30px;height:30px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:18px;line-height:1;cursor:pointer">×</button><div style="padding-right:24px"><div class="future-self-overview-label">ANSWER FROM MEMORY · ${escO(scopeLabel)}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Question ${pos+1} of ${idxList.length} · Asked ${escO(askedLabel)}</div></div><h3 style="margin:10px 0 6px;font-size:15px;line-height:1.5">${escO(api.plainText(n.text||''))}</h3><textarea id="fs-oaw-text" placeholder="Write the answer you understand now…" oninput="futureSelfOverviewDraftAnswer('${api.safeId(q.id)}',this.value)">${escO(draft)}</textarea><nav class="fs-oaw-nav" aria-label="Question navigation"><button type="button" class="fs-oaw-arrow fs-oaw-arrow-prev" aria-label="Previous question" onclick="futureSelfOverviewNavigateAnswer(${JSON.stringify(idxList)},${pos},${escO(JSON.stringify(scopeLabel))},-1)" ${pos<=0?'disabled':''}>‹</button><span>${pos+1} / ${idxList.length}</span><button type="button" class="fs-oaw-arrow fs-oaw-arrow-next" aria-label="Next question" onclick="futureSelfOverviewNavigateAnswer(${JSON.stringify(idxList)},${pos},${escO(JSON.stringify(scopeLabel))},1)" ${pos>=idxList.length-1?'disabled':''}>›</button></nav><div style="display:flex;justify-content:flex-end;gap:7px;margin-top:10px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" onclick="futureSelfOverviewSubmitAnswer(${JSON.stringify(idxList)},${pos},${escO(JSON.stringify(scopeLabel))},true)">Save</button></div></div>`;
     document.body.appendChild(w);
-    setTimeout(()=>document.getElementById('fs-oaw-text')?.focus(),0);
+    w.addEventListener('click',e=>{ if(e.target===w) futureSelfOverviewCloseAnswer(idxList,pos); });
+    setTimeout(()=>{ const ta=document.getElementById('fs-oaw-text'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); } },0);
   };
-  window.futureSelfOverviewSkipAnswer=(idxList,pos,scopeLabel)=>{
-    const next=pos+1;
-    if(next<idxList.length) futureSelfOverviewOpenAnswerWindow(idxList,scopeLabel,next);
-    else { document.getElementById('future-self-overview-answer-window')?.remove(); toast('That was the last one for now.'); }
+  window.futureSelfOverviewDraftAnswer=(qid,val)=>{ overviewAnswerDrafts[qid]=val; };
+  window.futureSelfOverviewCloseAnswer=(idxList,pos)=>{
+    const ta=document.getElementById('fs-oaw-text'); const api=window.__fsInternal; const q=api&&api.questions()[idxList[pos]];
+    if(ta&&q) overviewAnswerDrafts[q.id]=ta.value;
+    document.getElementById('future-self-overview-answer-window')?.remove();
+  };
+  window.futureSelfOverviewNavigateAnswer=(idxList,pos,scopeLabel,step)=>{
+    const ta=document.getElementById('fs-oaw-text'); const api=window.__fsInternal; const q=api&&api.questions()[idxList[pos]];
+    if(ta&&q) overviewAnswerDrafts[q.id]=ta.value;
+    const next=pos+step;
+    if(next<0||next>=idxList.length) return;
+    futureSelfOverviewOpenAnswerWindow(idxList,scopeLabel,next);
   };
   window.futureSelfOverviewSubmitAnswer=(idxList,pos,scopeLabel,resolve)=>{
     const api=window.__fsInternal;
     const idx=idxList[pos]; const q=api.questions()[idx];
     if(!q){ document.getElementById('future-self-overview-answer-window')?.remove(); return; }
     const text=document.getElementById('fs-oaw-text')?.value.trim();
-    if(!text){ toast('Write your explanation first, or Skip.'); return; }
+    if(!text){ toast('Write your explanation first, or use the arrows to move on.'); return; }
     q.answer=escO(text).replace(/\n/g,'<br>'); q.initialResolutionDate=api.today(); q.updatedAt=api.today();
     if(typeof api.futureSelfLearningContext==='function') q.learningContextAtResolution=api.futureSelfLearningContext();
     if(resolve){ q.status='resolved'; q.resolvedAt=api.today(); }
     else { q.status='open'; }
     api.saveState();
+    delete overviewAnswerDrafts[q.id];
     toast(resolve?'Question resolved and archived.':'Answer saved; question remains open for another review.');
     const next=pos+1;
     if(next<idxList.length){ futureSelfOverviewOpenAnswerWindow(idxList,scopeLabel,next); }
@@ -30300,6 +30606,53 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
     document.getElementById('future-self-overview-question-window')?.remove();
     toast('Question saved to Future Self.');
     repaint();
+  };
+  // Quick-capture popup used by the Overview "Ask Future Self" button. Kept under
+  // its own name (not futureSelfOverviewNote) on purpose: a later patch elsewhere
+  // reassigns window.futureSelfOverviewNote to jump to the Questions tab instead of
+  // showing a popup, and we don't want that patch silently swallowing this button.
+  window.futureSelfOverviewQuickAsk=()=>{
+    document.getElementById('future-self-overview-question-window')?.remove();
+    const d=overviewData();
+    const subs=subOptions(d.mk);
+    const topics=d.sk?(state.topics[d.sk]||[]):[];
+    const defaultTopicIdx=d.current?topics.indexOf(d.current):-1;
+    const ov=document.createElement('div'); ov.id='future-self-overview-question-window';
+    ov.innerHTML=`<div class="fs-qw-card" style="position:relative"><button type="button" aria-label="Close" onclick="futureSelfOverviewCloseQuickAsk()" style="position:absolute;top:9px;right:11px;width:30px;height:30px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:18px;line-height:1;cursor:pointer">×</button><div style="padding-right:24px"><div class="future-self-overview-label">ASK FUTURE SELF</div><h3 style="margin:0 0 4px">Capture a learning gap</h3><div style="font-size:10px;color:var(--muted)">Tagged to what you're studying right now — change any of the three below if it's about something else.</div></div><textarea id="fs-qw-text" placeholder="Write the question exactly as it feels right now…" oninput="futureSelfOverviewDraftQuickAsk(this.value)">${escO(overviewQuickAskDraft)}</textarea><div class="future-self-overview-selectors" style="display:grid;grid-template-columns:1fr;gap:7px;margin-top:8px"><select id="fs-qw-main" onchange="futureSelfOverviewQuickAskMainChange(this.value)">${MAIN_SUBJECTS.map(x=>`<option value="${escO(x)}" ${x===d.mk?'selected':''}>${escO(x)}</option>`).join('')}</select><select id="fs-qw-sub" onchange="futureSelfOverviewQuickAskSubChange(this.value)">${subs.map(x=>`<option value="${escO(x)}" ${x===d.sk?'selected':''}>${escO(DEFAULT_TOPICS[x]?.name||x)}</option>`).join('')}</select><select id="fs-qw-topic">${'<option value="">No specific topic (comprehensive)</option>'+topics.map((t,i)=>`<option value="${i}" ${i===defaultTopicIdx?'selected':''}>${escO(t.name)}</option>`).join('')}</select></div><div style="display:flex;justify-content:flex-end;gap:7px;margin-top:10px"><button class="btn btn-primary" onclick="futureSelfOverviewSaveQuickAsk()">Save question</button></div></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click',e=>{ if(e.target===ov) futureSelfOverviewCloseQuickAsk(); });
+    setTimeout(()=>{ const ta=document.getElementById('fs-qw-text'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); } },0);
+  };
+  window.futureSelfOverviewDraftQuickAsk=v=>{ overviewQuickAskDraft=v; };
+  window.futureSelfOverviewCloseQuickAsk=()=>{
+    const ta=document.getElementById('fs-qw-text'); if(ta) overviewQuickAskDraft=ta.value;
+    document.getElementById('future-self-overview-question-window')?.remove();
+  };
+  window.futureSelfOverviewQuickAskMainChange=main=>{
+    const subs=subOptions(main); const subSel=document.getElementById('fs-qw-sub');
+    if(subSel) subSel.innerHTML=subs.map(x=>`<option value="${escO(x)}">${escO(DEFAULT_TOPICS[x]?.name||x)}</option>`).join('');
+    futureSelfOverviewQuickAskSubChange(subs[0]||'');
+  };
+  window.futureSelfOverviewQuickAskSubChange=sub=>{
+    const topSel=document.getElementById('fs-qw-topic'); const topics=sub?(state.topics[sub]||[]):[];
+    if(topSel) topSel.innerHTML='<option value="">No specific topic (comprehensive)</option>'+topics.map((t,i)=>`<option value="${i}">${escO(t.name)}</option>`).join('');
+  };
+  window.futureSelfOverviewSaveQuickAsk=()=>{
+    const api=window.__fsInternal;
+    if(!api){toast('Questions tool is unavailable right now.');return;}
+    const text=document.getElementById('fs-qw-text')?.value.trim();
+    if(!text){toast('Write the question first.');return;}
+    const main=document.getElementById('fs-qw-main')?.value||'';
+    const sub=document.getElementById('fs-qw-sub')?.value||'';
+    const topicSel=document.getElementById('fs-qw-topic');
+    const topicIdx=topicSel&&topicSel.value!==''?Number(topicSel.value):null;
+    const topicName=(topicIdx!==null&&state.topics[sub]&&state.topics[sub][topicIdx])?state.topics[sub][topicIdx].name:'';
+    api.questions().push({id:'fs_'+Date.now(),text,mainSubject:main,subSubjectKey:sub,topicIndex:topicIdx,topicName,status:'open',answer:'',createdAt:api.today(),updatedAt:api.today(),learningContextAtCreation:api.futureSelfLearningContext()});
+    api.saveState();
+    overviewQuickAskDraft='';
+    document.getElementById('future-self-overview-question-window')?.remove();
+    toast('Question saved to Future Self.');
+    if(overview) repaint();
   };
   const oldShow=window.showFutureSelfPage; window.showFutureSelfPage=()=>{overview=true; oldShow(); repaint();};
   const observer = new MutationObserver(() => {
@@ -31679,13 +32032,19 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
   'use strict';
   var DEV_KEY = 'cpale_future_self_developer_mode_v1';
   var HIDE_KEY = 'cpale_declutter_hidden_v1';
+  // These two are the only ways back to this panel (and to Settings) once
+  // something is hidden. Hiding either would make hiding permanent and
+  // un-reversible from the UI, so they're never offered as hideable and
+  // never honored even if something old in storage already hid them.
+  var PROTECTED_PAGES = ['settings', 'future-self'];
 
   function isDev(){ try { return localStorage.getItem(DEV_KEY) === '1'; } catch(e){ return false; } }
 
   function loadHidden(){
     try {
       var raw = JSON.parse(localStorage.getItem(HIDE_KEY) || '{}');
-      return { nav: Array.isArray(raw.nav) ? raw.nav : [] };
+      var nav = Array.isArray(raw.nav) ? raw.nav : [];
+      return { nav: nav.filter(function(pg){ return PROTECTED_PAGES.indexOf(pg) === -1; }) };
     } catch(e){ return { nav: [] }; }
   }
   function saveHidden(h){ try { localStorage.setItem(HIDE_KEY, JSON.stringify(h)); } catch(e){} }
@@ -31697,6 +32056,7 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
   function buildCss(){
     var rules = '';
     hidden.nav.forEach(function(pg){
+      if (PROTECTED_PAGES.indexOf(pg) !== -1) return;
       var safe = cssSafe(pg);
       if (safe) rules += '#sidebar .nav-item[data-page="' + safe + '"]{display:none !important;}';
     });
@@ -31719,7 +32079,7 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
       var pg = el.getAttribute('data-page');
       var label = (el.textContent || '').replace(/\s+/g, ' ').trim() || pg;
       return { id: pg, label: label };
-    });
+    }).filter(function(item){ return PROTECTED_PAGES.indexOf(item.id) === -1; });
   }
 
   function esc(s){
@@ -31729,6 +32089,7 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
   }
 
   function toggleNav(pg){
+    if (PROTECTED_PAGES.indexOf(pg) !== -1) return;
     var i = hidden.nav.indexOf(pg);
     if (i === -1) hidden.nav.push(pg); else hidden.nav.splice(i, 1);
     saveHidden(hidden); applyCss(); renderPanelBody();
@@ -31751,7 +32112,8 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
     var navs = navList();
     var html = '';
     html += '<div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#94a3b8);font-weight:700;margin:2px 0 6px;">Sidebar / Pages</div>';
-    if (!navs.length) html += '<div style="font-size:11px;color:var(--muted,#94a3b8);">No sidebar items found.</div>';
+    html += '<div style="font-size:10px;color:var(--muted,#94a3b8);margin-bottom:6px;">Settings and Future Self aren\'t listed — they stay visible so this panel is always reachable.</div>';
+    if (!navs.length) html += '<div style="font-size:11px;color:var(--muted,#94a3b8);">No other sidebar items found.</div>';
     navs.forEach(function(item){ html += row(item, hidden.nav.indexOf(item.id) !== -1); });
     body.innerHTML = html;
     body.querySelectorAll('[data-decl-id]').forEach(function(cb){
@@ -32046,10 +32408,14 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
 <script id="future-self-overview-dead-hook-cleanup-final">
 (function(){
   'use strict';
-  // Overview no longer exposes question capture. Keep legacy callers safe
-  // without opening the removed modal or changing saved question data.
+  // Overview DOES expose question capture (the "Ask Future Self" banner
+  // button -> futureSelfOverviewQuickAsk). Any legacy caller of this old
+  // hook name should land on that real composer instead of a dead-end
+  // toast that tells the user to go to a tab that isn't where the
+  // capture UI actually lives.
   window.futureSelfOverviewNote = function(){
-    if (typeof window.toast === 'function') window.toast('Question capture is available from the Questions tab.');
+    if (typeof window.futureSelfOverviewQuickAsk === 'function') window.futureSelfOverviewQuickAsk();
+    else if (typeof window.toast === 'function') window.toast('Question capture is available from the Questions tab.');
   };
 })();
 </script>
@@ -32264,7 +32630,16 @@ html[data-fire-tier="8"] .cpale-profile-fire-ring::after{animation-duration:10s 
 #page-future-self .future-self-overview-mode .fs-cp-current{min-height:286px!important;padding:28px!important;border:1px solid rgba(123,222,255,.3)!important;border-radius:20px!important;background:linear-gradient(120deg,rgba(18,42,61,.94),rgba(21,19,52,.82))!important;box-shadow:0 18px 45px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.08)!important;overflow:hidden!important}
 #page-future-self .future-self-overview-mode .fs-cp-current:before{content:"";position:absolute;inset:auto -80px -120px auto;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.25),transparent 68%);pointer-events:none}
 #page-future-self .future-self-overview-mode .fs-cp-current-main{min-height:235px!important;position:relative}
-#page-future-self .future-self-overview-mode .fs-cp-eyebrow{color:#64e8ff!important;font:900 9px var(--font-mono)!important;letter-spacing:.2em!important}
+#page-future-self .future-self-overview-mode .fs-cp-eyebrow{margin-bottom:8px!important}
+#page-future-self .future-self-overview-mode .fs-cp-date-badge{color:#031018!important;background:linear-gradient(120deg,#00e5ff,#7c6cff)!important;border-color:transparent!important;box-shadow:0 6px 18px rgba(0,229,255,.35)!important;font-size:16px!important}
+#page-future-self .future-self-overview-mode .fs-cp-eyebrow-sep{color:#79a6be!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-label{color:#79a6be!important}
+#page-future-self .future-self-overview-mode .fs-cp-info-icon{background:rgba(255,255,255,.06)!important;border-color:rgba(154,208,238,.3)!important;color:#9db7c9!important}
+#page-future-self .future-self-overview-mode .fs-cp-info-icon:hover{color:#67e8ff!important;border-color:#67e8ff!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace{border-color:rgba(154,208,238,.18)!important;background:rgba(5,15,28,.4)!important;backdrop-filter:blur(10px)}
+#page-future-self .future-self-overview-mode .fs-cp-pace-dots i{background:rgba(255,255,255,.14)!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-dots i.on{background:#67e8ff!important;box-shadow:0 0 0 4px rgba(103,232,255,.22)!important}
+#page-future-self .future-self-overview-mode .fs-cp-pace-marker{border-color:#0b1222!important}
 #page-future-self .future-self-overview-mode .fs-cp-subject{color:#fff!important;font-size:31px!important;font-weight:900!important;letter-spacing:-.055em!important;text-shadow:0 0 24px rgba(0,229,255,.18)}
 #page-future-self .future-self-overview-mode .fs-cp-switch-hint{color:#79a6be!important;font-size:8px!important;letter-spacing:.08em}
 #page-future-self .future-self-overview-mode .fs-cp-inline-rings{gap:18px!important;margin:17px 0!important}
@@ -32328,7 +32703,10 @@ body.light-mode #page-future-self .future-self-overview-mode .fs-cp-current{
   border-color:rgba(23,125,166,.25)!important;box-shadow:0 20px 45px rgba(26,110,143,.14),inset 0 1px #fff!important;
 }
 body.light-mode #page-future-self .future-self-overview-mode .fs-cp-current:before{background:radial-gradient(circle,rgba(0,180,220,.18),transparent 68%)}
-body.light-mode #page-future-self .future-self-overview-mode .fs-cp-eyebrow{color:#087f9e!important}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-date-badge{color:#fff!important;background:linear-gradient(120deg,#00aaca,#7357e8)!important;box-shadow:0 6px 16px rgba(0,170,202,.28)!important}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-eyebrow-sep{color:#55718a!important}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace{border-color:rgba(27,99,132,.16)!important;background:rgba(255,255,255,.62)!important}
+body.light-mode #page-future-self .future-self-overview-mode .fs-cp-pace-label{color:#55718a!important}
 body.light-mode #page-future-self .future-self-overview-mode .fs-cp-subject{color:#10243b!important;text-shadow:none}
 body.light-mode #page-future-self .future-self-overview-mode .fs-cp-switch-hint{color:#6d8799!important}
 body.light-mode #page-future-self .future-self-overview-mode .future-self-ring strong{color:#10243b!important}
@@ -32428,3 +32806,15 @@ body.light-mode #page-future-self .future-self-overview-mode .fs-ring-value{colo
   };
 })();
 </script>
+
+<!-- Future Self dev-only Overview isolated pacer -->
+<style id="future-self-dev-overview-isolated-pacer-final">
+#page-future-self .future-self-overview-mode .fs-final-pacer{display:block!important;position:relative!important;box-sizing:border-box!important;margin:10px 0 12px!important;padding:10px 14px!important;border:1px solid rgba(103,232,255,.2)!important;border-radius:10px!important;background:rgba(5,18,30,.48)!important;min-height:0!important}
+#page-future-self .fs-final-pacer-head{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;gap:12px!important;min-width:0!important}.fs-final-pacer-head>div:first-child{min-width:0!important}.fs-final-pacer-kicker{font:900 6px var(--font-mono)!important;letter-spacing:.13em!important;color:#7ea7ba!important}.fs-final-pacer-head h3{margin:2px 0 0!important;font-size:10px!important;line-height:1.2!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}.fs-final-pacer-actions{display:flex!important;align-items:center!important;gap:7px!important;flex:none!important}.fs-final-pacer-badge{display:inline-flex!important;align-items:center!important;white-space:nowrap!important;color:#67e8ff!important;font:900 6.5px var(--font-mono)!important}.fs-final-pacer-actions>button{border:0!important;background:transparent!important;color:#8ba9b9!important;font:700 6.5px var(--font-mono)!important;white-space:nowrap!important;cursor:pointer!important;padding:0!important}
+#page-future-self .fs-final-pacer-copy{display:flex!important;align-items:baseline!important;gap:7px!important;margin-top:6px!important}.fs-final-pacer-copy strong{font:900 11px var(--font-mono)!important;color:#fff!important;white-space:nowrap!important}.fs-final-pacer-copy span{font-size:7.5px!important;color:#9db7c9!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#page-future-self .fs-final-pacer-track{position:relative!important;display:block!important;height:76px!important;margin:8px 0 0!important;overflow:visible!important}.fs-final-pacer-base{position:absolute!important;left:0!important;right:0!important;top:20px!important;height:7px!important;border-radius:99px!important;background:rgba(150,180,200,.2)!important}.fs-final-pacer-fill{position:absolute!important;left:0!important;top:20px!important;height:7px!important;border-radius:99px!important;background:#67e8ff!important;opacity:.82!important}.fs-final-pacer-dot{position:absolute!important;top:18px!important;display:block!important;width:11px!important;height:11px!important;border-radius:50%!important;transform:translateX(-50%)!important;border:3px solid #0b1c29!important;box-sizing:content-box!important;z-index:2!important}.fs-final-pacer-dot-recommended{background:#67e8ff!important;box-shadow:0 0 0 3px rgba(103,232,255,.2)!important}.fs-final-pacer-dot-current{background:#c4f7ff!important;box-shadow:0 0 0 3px rgba(196,247,255,.16)!important}.fs-final-pacer-dot-goal{background:#facc15!important;box-shadow:0 0 0 3px rgba(250,204,21,.18)!important}
+.fs-final-pacer-label{position:absolute!important;display:block!important;transform:translateX(-50%)!important;padding:2px 4px!important;border-radius:4px!important;font:800 6.5px/1.15 var(--font-mono)!important;white-space:nowrap!important;background:rgba(7,17,30,.94)!important;z-index:3!important}.fs-final-pacer-label-recommended{top:35px!important;color:#67e8ff!important;border:1px solid rgba(103,232,255,.25)!important}.fs-final-pacer-label-current{top:50px!important;color:#c4f7ff!important;border:1px solid rgba(196,247,255,.2)!important}.fs-final-pacer-label-goal{top:65px!important;color:#facc15!important;border:1px solid rgba(250,204,21,.22)!important}.fs-final-pacer-finish{position:absolute!important;right:0!important;top:16px!important;width:2px!important;height:15px!important;background:#facc15!important;display:block!important}.fs-final-pacer-finish b{position:absolute!important;right:0!important;top:20px!important;transform:translateX(0)!important;color:#facc15!important;background:rgba(7,17,30,.94)!important;padding:2px 3px!important;font:800 6.5px var(--font-mono)!important;white-space:nowrap!important}
+#page-future-self .fs-final-pacer .fs-pace-info{display:inline-grid!important;place-items:center!important;width:13px!important;height:13px!important;margin-left:3px!important;padding:0!important;border:1px solid currentColor!important;border-radius:50%!important;background:transparent!important;color:inherit!important;font:900 8px/1 var(--font-mono)!important;cursor:help!important;vertical-align:middle!important}
+@media(max-width:620px){#page-future-self .fs-final-pacer{padding:9px 10px!important}.fs-final-pacer-head{display:block!important}.fs-final-pacer-actions{margin-top:5px!important}.fs-final-pacer-track{height:82px!important}.fs-final-pacer-label-recommended{top:35px!important}.fs-final-pacer-label-current{top:52px!important}.fs-final-pacer-label-goal{top:69px!important}.fs-final-pacer-label,.fs-final-pacer-finish b{font-size:6px!important}}
+body.light-mode #page-future-self .fs-final-pacer{background:rgba(255,255,255,.62)!important}.light-mode #page-future-self .fs-final-pacer-copy strong{color:#173b56!important}
+</style>
