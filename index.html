@@ -8328,6 +8328,22 @@ function mergeRemovedBuiltinSubSubjects(...sources) {
   return merged;
 }
 
+// Records that a specific built-in topic (by name) was deliberately deleted,
+// so syncBuiltInTopicLibrary() never re-adds it on the next load/refresh.
+// Only built-in names are tracked here; user-added custom topics are simply
+// gone once spliced out, since nothing ever re-seeds those.
+function markBuiltinTopicRemoved(sKey, name) {
+  if (!name) return;
+  const def = DEFAULT_TOPICS[sKey];
+  if (!def || !Array.isArray(def.topics)) return;
+  const normalized = String(name).trim().toLowerCase();
+  const isBuiltin = def.topics.some(t => String(t).trim().toLowerCase() === normalized);
+  if (!isBuiltin) return;
+  if (!state.removedBuiltinTopics) state.removedBuiltinTopics = {};
+  if (!state.removedBuiltinTopics[sKey]) state.removedBuiltinTopics[sKey] = [];
+  if (!state.removedBuiltinTopics[sKey].includes(normalized)) state.removedBuiltinTopics[sKey].push(normalized);
+}
+
 function hydrateFromIndexedDB() {
   if (_hydrationStarted) return;
   _hydrationStarted = true;
@@ -8352,7 +8368,13 @@ function hydrateFromIndexedDB() {
         local?.removedBuiltinSubSubjects,
         saved.removedBuiltinSubSubjects
       );
-      state = { ...state, ...saved, removedBuiltinSubSubjects };
+      // Same merge shape ({key: [names]}), so the generic helper works here too.
+      const removedBuiltinTopics = mergeRemovedBuiltinSubSubjects(
+        state.removedBuiltinTopics,
+        local?.removedBuiltinTopics,
+        saved.removedBuiltinTopics
+      );
+      state = { ...state, ...saved, removedBuiltinSubSubjects, removedBuiltinTopics };
       applyPersistedSubjectStructure();
       _persistenceRevision = savedRev;
 
@@ -9231,9 +9253,11 @@ function syncBuiltInTopicLibrary() {
       if (!definition || !Array.isArray(definition.topics)) return;
       const topics = Array.isArray(state.topics[subKey]) ? state.topics[subKey] : [];
       const existingNames = new Set(topics.map(t => String(t?.name || '').trim().toLowerCase()));
+      const removedNames = new Set(state.removedBuiltinTopics?.[subKey] || []);
       definition.topics.forEach((name, index) => {
         const normalized = String(name).trim().toLowerCase();
         if (existingNames.has(normalized)) return;
+        if (removedNames.has(normalized)) return;
         topics.push({ id: subKey+'_'+index, name, status:0, confidence:0, dateStarted:'', dateEnded:'' });
         existingNames.add(normalized);
       });
@@ -14766,6 +14790,7 @@ function editTopicName(sKey, idx) {
 
 function deleteTopic(sKey, idx) {
   if (confirm('Delete this topic?')) {
+    markBuiltinTopicRemoved(sKey, state.topics[sKey]?.[idx]?.name);
     state.topics[sKey].splice(idx,1);
     selectedTopicIndices = new Set();
     save(); renderTracker();
@@ -15032,7 +15057,10 @@ function bulkDeleteSelectedTopics() {
   if (!n) return;
   if (!confirm(`Delete ${n} selected topic${n>1?'s':''} from ${DEFAULT_TOPICS[currentTrackerSub]?.name||currentTrackerSub}? This can't be undone.`)) return;
   const idxs = Array.from(selectedTopicIndices).sort((a,b)=>b-a);
-  idxs.forEach(i => state.topics[currentTrackerSub].splice(i,1));
+  idxs.forEach(i => {
+    markBuiltinTopicRemoved(currentTrackerSub, state.topics[currentTrackerSub]?.[i]?.name);
+    state.topics[currentTrackerSub].splice(i,1);
+  });
   selectedTopicIndices = new Set();
   save(); renderTracker(); renderDashboard(); renderCoach();
   toast(`${n} topic${n>1?'s':''} deleted.`);
@@ -15055,7 +15083,9 @@ function saveTopicFromModal() {
   if (!name) return;
   if (editId) {
     const [sk, idx] = editId.split('|');
-    state.topics[sk][parseInt(idx)].name = name;
+    const topic = state.topics[sk][parseInt(idx)];
+    if (topic.name !== name) markBuiltinTopicRemoved(sk, topic.name); // renamed away from the built-in default text — don't let it re-seed as a duplicate
+    topic.name = name;
   } else {
     if (!state.topics[sKey]) state.topics[sKey] = [];
     const arr = state.topics[sKey];
@@ -17038,6 +17068,7 @@ function deleteTopicFromSettings(sk, idx) {
   const t = state.topics[sk]?.[idx];
   if (!t) return;
   if (confirm(`Remove topic "${t.name}"? This cannot be undone.`)) {
+    markBuiltinTopicRemoved(sk, t.name);
     state.topics[sk].splice(idx, 1);
     save();
     renderSettings();
