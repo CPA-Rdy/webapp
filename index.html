@@ -8212,8 +8212,8 @@ function openAppDb() {
     };
     req.onsuccess = () => {
       _idbDb = req.result;
-      _idbDb.onclose = () => { _idbDb = null; _idbOpenPromise = null; _idbReady = false; };
-      _idbDb.onversionchange = () => { try { _idbDb.close(); } catch(e) {} _idbDb = null; _idbOpenPromise = null; _idbReady = false; };
+      _idbDb.onclose = () => { _idbDb = null; _idbOpenPromise = null; };
+      _idbDb.onversionchange = () => { try { _idbDb.close(); } catch(e) {} _idbDb = null; _idbOpenPromise = null; };
       resolve(_idbDb);
     };
     req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
@@ -8301,6 +8301,57 @@ function save() {
   scheduleAutoDriveBackup();
 }
 
+function restoreCustomSubSubjects() {
+  if (!state || !state.customSubSubjects) return;
+  Object.entries(state.customSubSubjects).forEach(([mainKey, subs]) => {
+    if (!SUBJECTS_META[mainKey] || !Array.isArray(subs)) return;
+    subs.forEach(({ key, name, kind }) => {
+      if (!SUBJECTS_META[mainKey].subs.includes(key)) SUBJECTS_META[mainKey].subs.push(key);
+      if (!DEFAULT_TOPICS[key]) DEFAULT_TOPICS[key] = { name, subject: mainKey, topics: [], kind: kind || 'topics' };
+      else if (kind) DEFAULT_TOPICS[key].kind = kind;
+      if (!ALL_SUBJECT_KEYS.includes(key)) ALL_SUBJECT_KEYS.push(key);
+      if (!state.topics[key]) state.topics[key] = [];
+    });
+  });
+}
+
+function applyMovedBuiltinSubSubjects() {
+  if (!state || !state.movedBuiltinSubSubjects) return;
+  Object.entries(state.movedBuiltinSubSubjects).forEach(([sk, toKey]) => {
+    if (!DEFAULT_TOPICS[sk] || !SUBJECTS_META[toKey]) return;
+    MAIN_SUBJECTS.forEach(mk => {
+      if (mk !== toKey) SUBJECTS_META[mk].subs = SUBJECTS_META[mk].subs.filter(k => k !== sk);
+    });
+    if (!SUBJECTS_META[toKey].subs.includes(sk)) SUBJECTS_META[toKey].subs.push(sk);
+    DEFAULT_TOPICS[sk].subject = toKey;
+  });
+}
+
+// Redeploy safety: remember every built-in sub-subject the user's save has already
+// seen. On the first run of this system, a built-in whose topic list is missing from
+// an existing save was deleted earlier, so record it as removed instead of re-adding it.
+// Built-ins introduced by a future deploy are not in knownBuiltinSubs, so they still appear.
+function baselineBuiltinSubSubjects() {
+  try {
+    const hasSave = state && state.topics && Object.keys(state.topics).length > 0;
+    if (!state.knownBuiltinSubs || typeof state.knownBuiltinSubs !== 'object') state.knownBuiltinSubs = {};
+    const firstRun = !Object.keys(state.knownBuiltinSubs).length;
+    ALL_SUBJECT_KEYS.forEach(key => {
+      const def = DEFAULT_TOPICS[key];
+      if (!def || def.kind === 'video' || String(key).includes('_CUSTOM_')) return;
+      if (state.knownBuiltinSubs[key]) return;
+      const mainKey = def.subject;
+      const isRemoved = (state.removedBuiltinSubSubjects?.[mainKey] || []).includes(key);
+      if (firstRun && hasSave && !state.topics[key] && !isRemoved && mainKey) {
+        if (!state.removedBuiltinSubSubjects) state.removedBuiltinSubSubjects = {};
+        if (!state.removedBuiltinSubSubjects[mainKey]) state.removedBuiltinSubSubjects[mainKey] = [];
+        state.removedBuiltinSubSubjects[mainKey].push(key);
+      }
+      state.knownBuiltinSubs[key] = true;
+    });
+  } catch (e) { console.warn('Built-in baseline skipped:', e); }
+}
+
 function applyPersistedSubjectStructure() {
   const removed = state && state.removedBuiltinSubSubjects;
   if (removed && typeof removed === 'object') {
@@ -8359,7 +8410,7 @@ function hydrateFromIndexedDB() {
         return r ? JSON.parse(r) : null;
       } catch(e) { return null; }
     })();
-    const localRev = Number(local?.__persistenceRevision || state.__persistenceRevision || 0);
+    const localRev = Math.max(Number(local?.__persistenceRevision || 0), Number(state.__persistenceRevision || 0));
     const savedRev = Number(saved?.__persistenceRevision || 0);
 
     if (saved && typeof saved === 'object' && !Array.isArray(saved) && savedRev > localRev) {
@@ -8376,8 +8427,11 @@ function hydrateFromIndexedDB() {
       );
       // Boolean flags only ever go false->true, so a plain union is safe.
       const topicLibrarySynced = { ...(state.topicLibrarySynced||{}), ...(local?.topicLibrarySynced||{}), ...(saved.topicLibrarySynced||{}) };
-      state = { ...state, ...saved, removedBuiltinSubSubjects, removedBuiltinTopics, topicLibrarySynced };
+      const knownBuiltinSubs = { ...(state.knownBuiltinSubs||{}), ...(local?.knownBuiltinSubs||{}), ...(saved.knownBuiltinSubs||{}) };
+      state = { ...state, ...saved, removedBuiltinSubSubjects, removedBuiltinTopics, topicLibrarySynced, knownBuiltinSubs };
       applyPersistedSubjectStructure();
+      restoreCustomSubSubjects();
+      applyMovedBuiltinSubSubjects();
       _persistenceRevision = savedRev;
 
       ALL_SUBJECT_KEYS.forEach(key => {
@@ -8428,6 +8482,7 @@ function load() {
       _persistenceRevision = Number(state.__persistenceRevision || 0);
     } catch(e) {}
   }
+  baselineBuiltinSubSubjects();
   applyPersistedSubjectStructure();
   // Background hydration preserves the original instant startup path.
   hydrateFromIndexedDB();
@@ -14988,6 +15043,7 @@ function applyTransferTopics() {
   const dest = state.topics[newKey];
   const moving = idxs.map(i => arr[i]);
   // Remove from source, preserving relative order.
+  moving.forEach(t => markBuiltinTopicRemoved(oldKey, t.name));
   arr.splice(0, arr.length, ...arr.filter((_,i)=>!idxs.includes(i)));
   // Insert into destination.
   if (position === 'start') dest.unshift(...moving); else dest.push(...moving);
@@ -17452,6 +17508,27 @@ function setSidebarBackupStatus(msg) {
 // AUTOSAVE SYSTEM
 // ============================================================
 let _savedFileHandle = null; // remember the chosen file between saves
+let _handleNeedsPermission = false;
+function _idbSetHandle(h){return openAppDb().then(db=>new Promise((res,rej)=>{const tx=db.transaction(APP_DB_STATE_STORE,'readwrite');tx.objectStore(APP_DB_STATE_STORE).put(h,'fileHandle');tx.oncomplete=res;tx.onerror=()=>rej(tx.error);}));}
+function _idbGetHandle(){return openAppDb().then(db=>new Promise((res,rej)=>{const r=db.transaction(APP_DB_STATE_STORE,'readonly').objectStore(APP_DB_STATE_STORE).get('fileHandle');r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error);}));}
+function _idbClearHandle(){return openAppDb().then(db=>new Promise((res)=>{const tx=db.transaction(APP_DB_STATE_STORE,'readwrite');tx.objectStore(APP_DB_STATE_STORE).delete('fileHandle');tx.oncomplete=res;tx.onerror=res;})).catch(()=>{});}
+function _setSavedHandle(h){_savedFileHandle=h;_handleNeedsPermission=false;if(h)_idbSetHandle(h).catch(()=>{});}
+async function restoreSavedFileHandle(){
+  try{
+    const h=await _idbGetHandle();
+    if(!h||!h.queryPermission)return;
+    _savedFileHandle=h;
+    const perm=await h.queryPermission({mode:'readwrite'});
+    if(perm==='granted'){_handleNeedsPermission=false;showBackupIndicator('Auto-save file linked: '+h.name);return;}
+    _handleNeedsPermission=true;
+    const ind=document.getElementById('autosave-indicator');
+    if(ind){ind.textContent='⚠';ind.style.color='var(--warn)';ind.title='Click anywhere once to re-enable auto-save to '+h.name;}
+    document.addEventListener('pointerdown',async function once(){
+      document.removeEventListener('pointerdown',once,true);
+      try{if((await h.requestPermission({mode:'readwrite'}))==='granted'){_handleNeedsPermission=false;scheduleAutoSave();}}catch(e){}
+    },true);
+  }catch(e){console.warn('File handle restore skipped:',e);}
+}
 let _autoSaveTimer = null;
 let _autoSavePending = false;
 let _backupIndicatorTimer = null;
@@ -17480,7 +17557,8 @@ function scheduleAutoSave() {
   // Debounce: wait 3 seconds after last change before autosaving
   clearTimeout(_autoSaveTimer);
   _autoSaveTimer = setTimeout(async () => {
-    if (!_savedFileHandle) return; // Only autosave if user has chosen a file
+    if (!_savedFileHandle) { _autoSavePending = false; if (indicator) indicator.textContent=''; return; }
+    if (_handleNeedsPermission) return;
     try {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
       const writable = await _savedFileHandle.createWritable();
@@ -17489,9 +17567,9 @@ function scheduleAutoSave() {
       _autoSavePending = false;
       showBackupIndicator('Auto-saved to: ' + _savedFileHandle.name);
     } catch(e) {
-      // File handle invalid — clear it, user will need to re-pick
-      _savedFileHandle = null;
-      if (indicator) { indicator.textContent = ''; }
+      console.warn('Autosave failed:', e);
+      if (e && e.name === 'NotFoundError') { _savedFileHandle = null; _idbClearHandle(); if (indicator) indicator.textContent = ''; }
+      else if (indicator) { indicator.textContent = '⚠'; indicator.style.color = 'var(--warn)'; indicator.title = 'Auto-save failed — click Save to File'; }
     }
   }, 3000);
 }
@@ -17528,7 +17606,7 @@ async function saveToFile() {
         types: [{ description: 'JSON Backup', accept: { 'application/json': ['.json'] } }],
       };
       const handle = await window.showSaveFilePicker(opts);
-      _savedFileHandle = handle;
+      _setSavedHandle(handle);
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
@@ -17931,23 +18009,7 @@ function init() {
   // Ensure customWidgets state key exists
   if (!state.customWidgets) state.customWidgets = {};
 
-  // Restore custom sub-subjects from saved state
-  if (state.customSubSubjects) {
-    Object.entries(state.customSubSubjects).forEach(([mainKey, subs]) => {
-      subs.forEach(({ key, name, kind }) => {
-        if (!SUBJECTS_META[mainKey].subs.includes(key)) {
-          SUBJECTS_META[mainKey].subs.push(key);
-        }
-        if (!DEFAULT_TOPICS[key]) {
-          DEFAULT_TOPICS[key] = { name, subject: mainKey, topics: [], kind: kind || 'topics' };
-        } else if (kind) {
-          DEFAULT_TOPICS[key].kind = kind;
-        }
-        if (!ALL_SUBJECT_KEYS.includes(key)) ALL_SUBJECT_KEYS.push(key);
-        if (!state.topics[key]) state.topics[key] = [];
-      });
-    });
-  }
+  restoreCustomSubSubjects();
 
   // Re-apply any built-in sub-subjects the candidate removed via Bulk Manage —
   // DEFAULT_TOPICS/SUBJECTS_META are hardcoded on every load, so without this
@@ -17963,18 +18025,7 @@ function init() {
     });
   }
 
-  // Re-apply built-in sub-subjects the candidate moved to a different main
-  // subject via Transfer — same hardcoding issue as above.
-  if (state.movedBuiltinSubSubjects) {
-    Object.entries(state.movedBuiltinSubSubjects).forEach(([sk, toKey]) => {
-      if (!DEFAULT_TOPICS[sk] || !SUBJECTS_META[toKey]) return;
-      MAIN_SUBJECTS.forEach(mk => {
-        if (mk !== toKey) SUBJECTS_META[mk].subs = SUBJECTS_META[mk].subs.filter(k => k !== sk);
-      });
-      if (!SUBJECTS_META[toKey].subs.includes(sk)) SUBJECTS_META[toKey].subs.push(sk);
-      DEFAULT_TOPICS[sk].subject = toKey;
-    });
-  }
+  applyMovedBuiltinSubSubjects();
 
   // Backfill a lightweight footprint from existing study records so History is useful immediately.
   seedActivityFromExistingData();
@@ -18101,6 +18152,8 @@ function init() {
       showPage(lastPage);
     }
   } catch (e) {}
+
+  restoreSavedFileHandle();
 
   // Show onboarding for first-time users
   if (!state.onboarded && !state.name) {
@@ -30496,24 +30549,27 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
       const today=new Date(localDateStr()+'T00:00:00');
       const dated=subjectTopics.flatMap(t=>[t.dateStarted,t.dateEnded]).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''))).map(String).sort();
       const studyDays=Array.isArray(state.studyDays)?state.studyDays.filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''))).sort():[];
-      const first=dated.length?new Date(dated[0]+'T00:00:00'):studyDays.length?new Date(studyDays[0]+'T00:00:00'):today;
+      const firstRaw=dated.length?new Date(dated[0]+'T00:00:00'):studyDays.length?new Date(studyDays[0]+'T00:00:00'):today;
+      const first=firstRaw>today?today:firstRaw;
       const hasExamDate=/^\d{4}-\d{2}-\d{2}$/.test(String(state.examDate||''));
       const exam=new Date((hasExamDate?state.examDate:localDateStr())+'T00:00:00');
       const buffer=Math.min(84,Math.max(28,Math.round(Math.max(1,Math.ceil((exam-first)/86400000))*0.25)));
       const coverageFinish=new Date(exam.getTime()-buffer*86400000);
       const goalDate=subjectGoalDate?new Date(subjectGoalDate+'T00:00:00'):null;
       const routineConfigured=state.studySchedule&&Object.values(state.studySchedule).some(days=>Array.isArray(days)&&days.length>0);
-      const routine=routineConfigured&&typeof getScheduledMainSubjects==='function';
-      const scheduledBetween=(from,to)=>{let n=0;const cursor=new Date(from);cursor.setHours(0,0,0,0);const end=new Date(to);end.setHours(0,0,0,0);for(;cursor<=end;cursor.setDate(cursor.getDate()+1)){const scheduled=routine?getScheduledMainSubjects(localDateStr(cursor)):[];if(!routine||scheduled.includes(subject))n++;}return Math.max(1,n);};
+      const subjectHasSlot=routineConfigured&&Object.entries(state.studySchedule).some(([dow,list])=>!(state.restDays||[]).includes(Number(dow))&&Array.isArray(list)&&list.includes(subject));
+      const routine=routineConfigured&&subjectHasSlot&&typeof getScheduledMainSubjects==='function';
+      const scheduledBetween=(from,to)=>{let n=0;const cursor=new Date(from);cursor.setHours(0,0,0,0);const end=new Date(to);end.setHours(0,0,0,0);for(;cursor<=end;cursor.setDate(cursor.getDate()+1)){const scheduled=routine?getScheduledMainSubjects(localDateStr(cursor)):[];if(!routine||scheduled.includes(subject))n++;}return n;};
+      const runwayBetween=(from,to)=>Math.max(1,scheduledBetween(from,to));
       const elapsedStudy=scheduledBetween(first,today);
       // Recommended pace is always the exam-based benchmark. A personal
       // subject goal is a separate comparison marker and must never redefine
       // the recommendation.
       const recommendedDeadline=hasExamDate?new Date(exam.getTime()-buffer*86400000):today;
-      const recommendedRunway=scheduledBetween(first,recommendedDeadline);
+      const recommendedRunway=runwayBetween(first,recommendedDeadline);
       const expectedCompleted=total?(hasExamDate?Math.min(total,total*(elapsedStudy/recommendedRunway)):total*(completion/100)):0;
       const examPacePct=total?Math.max(0,Math.min(100,expectedCompleted/total*100)):0;
-      const goalPacePct=goalDate&&goalDate>=today&&total?Math.max(0,Math.min(100,total*(elapsedStudy/scheduledBetween(first,goalDate))/total*100)):null;
+      const goalPacePct=goalDate&&goalDate>=today&&total?Math.max(0,Math.min(100,total*(elapsedStudy/runwayBetween(first,goalDate))/total*100)):null;
       const personalDeadline=goalDate&&goalDate>=today?goalDate:recommendedDeadline;
       const remainingStudyDays=personalDeadline>today?scheduledBetween(today,personalDeadline):0;
       const weeklyNeed=remainingStudyDays>0?remaining/(remainingStudyDays/7):null;
@@ -30525,7 +30581,7 @@ html[data-fire-tier="8"] .cpale-profile-fire-sparks i{
       const examRaw=state.examDate, examLabel=examRaw&&/^\d{4}-\d{2}-\d{2}$/.test(examRaw)?new Date(examRaw+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'Set exam date';
       const daysLeft=Math.max(1,Number(examDays)||1), hasRoutine=typeof getScheduledMainSubjects==='function';
       let scheduledStudyDays=0, weeklyStudyDays=0;
-      for(let day=0;day<=daysLeft;day++){const dt=new Date(localDateStr()+'T00:00:00');dt.setDate(dt.getDate()+day);const scheduled=hasRoutine?getScheduledMainSubjects(localDateStr(dt)):[];if(!hasRoutine||scheduled.includes(subject)){scheduledStudyDays++;if(day<7)weeklyStudyDays++;}}
+      for(let day=0;day<=daysLeft;day++){const dt=new Date(localDateStr()+'T00:00:00');dt.setDate(dt.getDate()+day);const scheduled=hasRoutine?getScheduledMainSubjects(localDateStr(dt)):[];if(!hasRoutine||!subjectHasSlot||scheduled.includes(subject)){scheduledStudyDays++;if(day<7)weeklyStudyDays++;}}
       scheduledStudyDays=Math.max(1,scheduledStudyDays); weeklyStudyDays=hasRoutine?Math.max(0,weeklyStudyDays):7;
       const perStudyDay=remaining?Math.ceil(remaining/scheduledStudyDays):0, perWeek=remaining?Math.ceil(remaining/scheduledStudyDays*weeklyStudyDays):0;
       const recommendedPct=Math.round(examPacePct);
